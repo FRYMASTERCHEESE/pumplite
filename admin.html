@@ -1,0 +1,211 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/><title>PumpLite · Admin</title>
+<style>
+:root{color-scheme:light;--bg:#f4f7fb;--panel:#ffffff;--panel2:#e9eff6;--line:#b9c5d6;--green:#0a7d3c;--green2:#075c2c;--dim:#46536b;--txt:#0b0e11;--amber:#8a5a00;--red:#c0122f}
+*{box-sizing:border-box;margin:0;padding:0}body{background:var(--bg);color:var(--txt);font:14px ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:860px;margin:0 auto;padding:32px 18px 80px}
+h1{font-size:20px;margin-bottom:6px}h1 span{color:var(--green)}
+.sub{color:var(--dim);font-size:12px;margin-bottom:22px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:18px}
+label{display:block;font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.7px;margin:14px 0 6px;font-weight:700}
+input,select{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:9px;padding:10px 12px;font:inherit;font-size:13px;outline:none}
+input:focus,select:focus{border-color:var(--green)}
+ input::placeholder,textarea::placeholder{color:#6b7a91;opacity:1}
+.row{display:flex;gap:12px}.row>*{flex:1}
+button{font:inherit;font-weight:700;font-size:13px;cursor:pointer;border:none;border-radius:9px;padding:11px 16px;transition:.15s}
+.btn-g{background:linear-gradient(180deg,var(--green),var(--green2));color:#ffffff}.btn-g:hover{filter:brightness(1.1)}
+.btn-o{background:var(--panel2);color:var(--txt);border:1px solid var(--line)}.btn-o:hover{border-color:var(--green)}
+.hint{font-size:11px;color:var(--dim);margin-top:6px;line-height:1.55}
+.warn{background:#fff8e6;border:1px solid #c99000;color:#7a4f00;border-radius:10px;padding:12px 14px;font-size:11.5px;line-height:1.6;margin-bottom:18px}
+.crit{background:#fdeaee;border:1px solid #eeb0be;color:#8a0f24;border-radius:10px;padding:12px 14px;font-size:11.5px;line-height:1.6;margin-bottom:18px}
+.status{font-size:11px;padding:3px 9px;border-radius:999px;font-weight:700;display:inline-block}
+.on{background:#e3f5ea;color:var(--green);border:1px solid #9ecfb3}.off{background:#fdeaee;color:var(--red);border:1px solid #f0b6c0}
+#app{display:none}.lock{max-width:380px;margin:60px auto}
+.tbl{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+.tbl th,.tbl td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line)}
+.tbl th{color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.6px}
+code{background:#eef3f8;padding:2px 6px;border-radius:5px;font-size:11.5px}
+</style></head><body>
+<div class="wrap">
+
+  <!-- LOGIN -->
+  <div id="lock" class="lock">
+    <div class="panel">
+      <h1>Pump<span>Lite</span> Admin</h1>
+      <div class="sub">Enter the admin key to edit the live site.</div>
+      <label>Admin password</label>
+      <input id="pw" type="password" placeholder="••••••••" autocomplete="off"/>
+      <div style="margin-top:16px"><button class="btn-g" id="loginBtn" style="width:100%">Unlock</button></div>
+      <div class="hint" id="pwNote"></div>
+      <div class="crit" style="margin-top:16px">
+        <b>Front-end gate = cosmetic.</b> Anyone can read this page's source and see the key.
+        Move the check to Supabase Auth + RLS before you handle real money. See
+        <code>supabase/schema.sql</code>.
+      </div>
+    </div>
+  </div>
+
+  <!-- PANEL -->
+  <div id="app">
+    <h1>Pump<span>Lite</span> Admin</h1>
+    <div class="sub">Everything below writes to your live config. Changes apply on next load.
+      <span id="backend" class="status off">config.json only</span>
+    </div>
+
+    <div class="panel">
+      <label>Site name</label><input id="siteName"/>
+      <div class="row">
+        <div><label>Total trade fee (bps · 100 = 1.00%)</label><input id="totalFeeBps" type="number"/><div class="hint">pump.fun = 125</div></div>
+        <div><label>Creator share (bps)</label><input id="creatorBps" type="number"/></div>
+        <div><label>Treasury share (bps)</label><input id="treasuryBps" type="number"/></div>
+      </div>
+      <div class="row">
+        <div><label>Referral reward (bps)</label><input id="referralBps" type="number"/><div class="hint">Paid from the treasury share, not on top.</div></div>
+        <div><label>Referral program</label><select id="referralEnabled"><option value="true">Enabled</option><option value="false">Disabled</option></select></div>
+      </div>
+      <div class="row">
+        <div><label>Creation fee · SOL</label><input id="creationFeeSol" type="number" step="0.001"/></div>
+        <div><label>Creation fee · ETH</label><input id="creationFeeEth" type="number" step="0.0001"/></div>
+      </div>
+      <div class="row">
+        <div><label>Virtual SOL reserve</label><input id="virtualSol0" type="number"/></div>
+        <div><label>Virtual token reserve</label><input id="virtualToken0" type="number"/></div>
+        <div><label>Graduation (SOL)</label><input id="graduationSol" type="number"/></div>
+      </div>
+      <label>Treasury wallet (all fees route here)</label><input id="treasuryWallet" placeholder="0x… or Solana address"/>
+      <label>Site notice banner</label><input id="notice"/>
+      <label>Chains</label>
+      <div class="row">
+        <div><select id="cSolana"><option value="true">Solana · on</option><option value="false">Solana · off</option></select></div>
+        <div><select id="cBase"><option value="true">Base/EVM · on</option><option value="false">Base/EVM · off</option></select></div>
+      </div>
+      <div style="margin-top:20px;display:flex;gap:10px">
+        <button class="btn-g" id="saveBtn">Save config</button>
+        <button class="btn-o" id="resetBtn">Revert</button>
+        <button class="btn-o" id="exportBtn">Export JSON</button>
+      </div>
+      <div class="hint" id="saveNote"></div>
+    </div>
+
+    <div class="panel">
+      <h2 style="font-size:14px;margin-bottom:10px">Fee preview</h2>
+      <table class="tbl">
+        <tr><th>Trade size</th><th>Total fee</th><th>Creator</th><th>Treasury</th><th>Referrer</th></tr>
+        <tbody id="feePrev"></tbody>
+      </table>
+      <div class="hint">A 10 SOL trade at these settings. Referrer payouts come out of the treasury line.</div>
+    </div>
+
+    <div class="panel">
+      <h2 style="font-size:14px;margin-bottom:10px">Referral ledger</h2>
+      <table class="tbl">
+        <tr><th>Code</th><th>Referrer</th><th>Referred</th><th>Earned</th></tr>
+        <tbody id="refTbl"><tr><td colspan="4" style="color:var(--dim)">Connect Supabase to see live data.</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+/* Front-end gate — see the warning above. The real key should live server-side. */
+const ADMIN_KEY = 'Badboys1';
+const ADMIN_HASH = [...ADMIN_KEY].reduce((a,c)=>((a<<5)-a+c.charCodeAt(0))|0, 0).toString(16);
+
+/* Supabase wiring: set these to go from config.json-only to a real backend. */
+const SUPABASE_URL = '';      // e.g. https://xxxx.supabase.co
+const SUPABASE_ANON = '';     // your anon/public key
+let sb = null, remoteRow = null;
+
+const $ = id => document.getElementById(id);
+const defaults = {"siteName":"PumpLite","totalFeeBps":100,"creatorBps":50,"treasuryBps":50,
+ "creationFeeSol":0.005,"creationFeeEth":0.0005,"referralBps":20,"referralEnabled":true,
+ "treasuryWallet":"","graduationSol":85,"virtualSol0":30,"virtualToken0":1073000000,
+ "chains":{"solana":true,"base":true,"bitcoin":false,"dogecoin":false},
+ "notice":"Low-fee launchpad. Testnet first."};
+
+function fill(c){
+  $('siteName').value=c.siteName; $('totalFeeBps').value=c.totalFeeBps;
+  $('creatorBps').value=c.creatorBps; $('treasuryBps').value=c.treasuryBps;
+  $('referralBps').value=c.referralBps; $('referralEnabled').value=String(c.referralEnabled);
+  $('creationFeeSol').value=c.creationFeeSol; $('creationFeeEth').value=c.creationFeeEth;
+  $('virtualSol0').value=c.virtualSol0; $('virtualToken0').value=c.virtualToken0;
+  $('graduationSol').value=c.graduationSol; $('treasuryWallet').value=c.treasuryWallet||'';
+  $('notice').value=c.notice||''; $('cSolana').value=String(c.chains?.solana??true);
+  $('cBase').value=String(c.chains?.base??true); preview(c);
+}
+function read(){
+  return {"siteName":$('siteName').value,"totalFeeBps":+$('totalFeeBps').value,
+   "creatorBps":+$('creatorBps').value,"treasuryBps":+$('treasuryBps').value,
+   "referralBps":+$('referralBps').value,"referralEnabled":$('referralEnabled').value==='true',
+   "creationFeeSol":+$('creationFeeSol').value,"creationFeeEth":+$('creationFeeEth').value,
+   "virtualSol0":+$('virtualSol0').value,"virtualToken0":+$('virtualToken0').value,
+   "graduationSol":+$('graduationSol').value,"treasuryWallet":$('treasuryWallet').value,
+   "notice":$('notice').value,"chains":{"solana":$('cSolana').value==='true',
+   "base":$('cBase').value==='true',"bitcoin":false,"dogecoin":false}};
+}
+function preview(c){
+  const trade=10, total=trade*c.totalFeeBps/10000;
+  const creator=total*c.creatorBps/Math.max(1,c.totalFeeBps);
+  const treas=total- creator;
+  const ref=c.referralEnabled? total*c.referralBps/10000 : 0;
+  $('feePrev').innerHTML=`<tr><td>10.000</td><td class="g">${total.toFixed(4)}</td>
+   <td>${creator.toFixed(4)}</td><td>${(treas-ref).toFixed(4)}</td><td>${ref.toFixed(4)}</td></tr>`;
+}
+/* live preview on any change */
+['totalFeeBps','creatorBps','treasuryBps','referralBps','referralEnabled']
+  .forEach(id => $(id).addEventListener('input', () => preview(read())));
+
+/* ---------- login ---------- */
+$('loginBtn').onclick = async () => {
+  const h = [...$('pw').value].reduce((a,c)=>((a<<5)-a+c.charCodeAt(0))|0,0).toString(16);
+  if (h !== ADMIN_HASH) { $('pwNote').innerHTML = '<span style="color:var(--red)">Wrong key.</span>'; return; }
+  $('lock').style.display='none'; $('app').style.display='block';
+  await load();
+};
+
+/* ---------- backend ---------- */
+async function load(){
+  if (SUPABASE_URL && SUPABASE_ANON){
+    sb = createClient(SUPABASE_URL, SUPABASE_ANON);
+    const { data } = await sb.from('config').select('*').eq('id',1).maybeSingle();
+    remoteRow = data; $('backend').className='status on'; $('backend').textContent='Supabase live';
+    fill(data?.value || defaults);
+    await loadRefs();
+  } else {
+    try { fill(await (await fetch('config.json')).json()); }
+    catch { fill(defaults); }
+    $('backend').className='status off'; $('backend').textContent='config.json only';
+  }
+}
+async function loadRefs(){
+  if(!sb) return;
+  const { data } = await sb.from('referrals').select('*').limit(50);
+  if(!data?.length) return;
+  $('refTbl').innerHTML = data.map(r=>`<tr><td><code>${r.code}</code></td>
+   <td class="mono">${r.referrer?.slice(0,10)||'—'}…</td><td>${r.referred_count||0}</td>
+   <td class="g">${(r.earned_lamports/1e9).toFixed(4)}</td></tr>`).join('');
+}
+
+/* ---------- save ---------- */
+$('saveBtn').onclick = async () => {
+  const c = read();
+  if (sb){
+    const { error } = await sb.from('config').upsert({ id:1, value:c, updated_at:new Date().toISOString() });
+    $('saveNote').innerHTML = error ? `<span style="color:var(--red)">Save failed: ${error.message}</span>`
+      : '<span style="color:var(--green)">Saved to Supabase — live now.</span>';
+  } else {
+    const blob = new Blob([JSON.stringify(c,null,2)],{type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'config.json'; a.click();
+    $('saveNote').innerHTML = '<span style="color:var(--amber)">No backend connected — downloaded config.json. Commit it to your repo to publish.</span>';
+  }
+};
+$('resetBtn').onclick = () => fill(remoteRow?.value || defaults);
+$('exportBtn').onclick = () => {
+  const blob = new Blob([JSON.stringify(read(),null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='config.json'; a.click();
+};
+</script>
+</body></html>
