@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" /><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>PumpLite — low-fee multi-chain launchpad</title>
+<style>
+ :root{--bg:#0b0e11;--panel:#141920;--panel2:#1b222c;--line:#252d38;--green:#39ff88;--green2:#00c853;--dim:#8a97a8;--txt:#e8eef5;--amber:#ffce4d}
+ *{box-sizing:border-box;margin:0;padding:0}
+ body{background:var(--bg);color:var(--txt);font:14px ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+ a{color:var(--green);text-decoration:none}
+ .wrap{max-width:1180px;margin:0 auto;padding:0 18px}
+ header{border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(11,14,17,.93);backdrop-filter:blur(8px);z-index:20}
+ .hbar{display:flex;align-items:center;gap:14px;height:60px}
+ .logo{font-weight:800;font-size:19px;letter-spacing:-.5px}.logo span{color:var(--green)}
+ .badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:999px;background:#3a2b00;color:var(--amber);border:1px solid #6b5200;text-transform:uppercase;letter-spacing:.6px}
+ .spacer{flex:1}
+ button{font:inherit;font-weight:700;font-size:13px;cursor:pointer;border:none;border-radius:9px;padding:10px 15px;transition:.15s}
+ .btn-g{background:linear-gradient(180deg,var(--green),var(--green2));color:#04170c}.btn-g:hover{filter:brightness(1.1)}
+ .btn-o{background:var(--panel2);color:var(--txt);border:1px solid var(--line)}.btn-o:hover{border-color:var(--green);color:var(--green)}
+ button:disabled{opacity:.45;cursor:not-allowed}
+ .grid{display:grid;grid-template-columns:1fr 360px;gap:20px;padding:22px 0 60px}
+ @media(max-width:960px){.grid{grid-template-columns:1fr}}
+ .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px}
+ .panel h2{font-size:15px;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+ .dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)}
+ label{display:block;font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.7px;margin:12px 0 6px;font-weight:700}
+ input,select{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:9px;padding:10px 12px;font:inherit;font-size:13px;outline:none}
+ input:focus,select:focus{border-color:var(--green)}
+ .row{display:flex;gap:10px}.row>*{flex:1}
+ .hint{font-size:11px;color:var(--dim);margin-top:5px;line-height:1.55}
+ .chains{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+ .chain{border:1px solid var(--line);border-radius:11px;padding:12px;cursor:pointer;transition:.15s;background:var(--panel2)}
+ .chain.on{border-color:var(--green);background:#10241a}
+ .chain.off{opacity:.5;cursor:not-allowed}
+ .chain b{display:block;font-size:13px}.chain small{color:var(--dim);font-size:11px}
+ .tabs{display:flex;gap:6px;background:var(--panel2);padding:4px;border-radius:10px}
+ .tabs button{flex:1;background:transparent;color:var(--dim);padding:8px;border-radius:7px;font-size:12px}
+ .tabs button.on{background:var(--green);color:#04170c}
+ .coin{padding:13px 0;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:center}
+ .coin:last-child{border-bottom:none}
+ .av{width:36px;height:36px;border-radius:9px;background:linear-gradient(135deg,var(--green),#0af);display:flex;align-items:center;justify-content:center;font-weight:800;color:#04170c;flex-shrink:0}
+ .cn{font-weight:700;font-size:13px}.cs{font-size:11px;color:var(--dim)}
+ .mn{font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--dim);word-break:break-all}
+ canvas{width:100%;height:210px;display:block;border-radius:10px;background:var(--panel2)}
+ .stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+ .stat{background:var(--panel2);border-radius:9px;padding:10px 12px}
+ .stat b{display:block;font-size:15px;margin-top:3px}.stat span{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.6px;font-weight:700}
+ .g{color:var(--green)}.r{color:#ff4d6d}
+ .log{background:#0d1117;border:1px solid var(--line);border-radius:9px;padding:11px;font-family:ui-monospace,monospace;font-size:11px;color:var(--dim);max-height:150px;overflow:auto;white-space:pre-wrap;line-height:1.65;margin-top:12px}
+ .fee{background:linear-gradient(135deg,#0f2d1c,#141920);border:1px solid #1f5c38;border-radius:12px;padding:14px;margin-top:16px}
+ .fee h3{font-size:13px;color:var(--green);margin-bottom:8px}.fee p{font-size:12px;color:#b6c4d4;line-height:1.65}
+ .warn{background:#2a1600;border:1px solid #6b3a00;color:#ffc46b;border-radius:10px;padding:11px 13px;font-size:11.5px;line-height:1.6;margin-bottom:16px}
+ .empty{color:var(--dim);font-size:12px;text-align:center;padding:24px 0}
+ footer{border-top:1px solid var(--line);color:var(--dim);font-size:11px;padding:18px 0;text-align:center;line-height:1.8}
+ table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+ th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line)}th{color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.6px}
+</style></head>
+<body>
+<header><div class="wrap hbar">
+  <div class="logo">Pump<span>Lite</span></div>
+  <span class="badge" id="netBadge">testnet / devnet</span>
+  <div class="spacer"></div>
+  <button class="btn-o" id="faucet">Faucet</button>
+  <button class="btn-g" id="connect">Connect Wallet</button>
+</div></header>
+
+<div class="wrap">
+  <div class="warn" style="margin-top:16px">
+    <b>Testnet build.</b> You chose "real mainnet" — this repo is written so you flip one constant to go live.
+    Until you do, everything runs on <b>Solana devnet</b> and <b>Base Sepolia</b> with fake funds. Do not skip the audit.
+  </div>
+
+  <div class="grid">
+    <div>
+      <div class="panel">
+        <h2><span class="dot"></span>Launch a token</h2>
+
+        <label>Chain</label>
+        <div class="chains" id="chains">
+          <div class="chain on" data-chain="solana"><b>◎ Solana</b><small>SPL / Token-2022 · ~$0.02 launch</small></div>
+          <div class="chain" data-chain="base"><b>🔵 Base (Ethereum L2)</b><small>ERC-20 · $0.01–0.10 gas</small></div>
+          <div class="chain off" data-chain="btc"><b>₿ Bitcoin</b><small>Runes/BRC-20 · no fee hook</small></div>
+          <div class="chain off" data-chain="doge"><b>Ð Dogecoin</b><small>DRC-20 · no smart contracts</small></div>
+        </div>
+        <div class="hint" id="chainNote">Bitcoin and Dogecoin are disabled — neither has smart contracts, so no bonding curve or programmatic trade fee is possible there. See the README.</div>
+
+        <div class="row" style="margin-top:14px">
+          <div><label>Token name</label><input id="tName" placeholder="Moon Dog"/></div>
+          <div><label>Symbol</label><input id="tSym" placeholder="MOON" maxlength="10"/></div>
+        </div>
+
+        <label>Supply mode</label>
+        <div class="tabs"><button class="on" data-mode="auto">Automatic supply</button><button data-mode="manual">Manual supply</button></div>
+        <div id="autoBox"><label>Total supply (minted in one tx)</label><input id="tAuto" type="number" value="1000000000"/></div>
+        <div id="manualBox" style="display:none">
+          <label>Initial supply</label><input id="tManual" type="number" value="1000"/>
+          <label>Revoke mint authority / lock supply?</label>
+          <select id="tRevoke"><option value="no">No — mint more later</option><option value="yes">Yes — supply permanently fixed</option></select>
+        </div>
+
+        <label>Your platform fee (you control this)</label>
+        <div class="row">
+          <input id="tFee" type="number" value="1.0" step="0.05" min="0" max="10"/>
+          <div style="display:flex;align-items:center;color:var(--dim);font-size:12px">% total trade</div>
+        </div>
+        <div class="hint">pump.fun charges 1.25% total (0.30% creator / 0.93% protocol+LP). Default here is 1.00% total, split 0.50% creator / 0.50% your treasury. Lower take, same mechanism — change it in the contract.</div>
+
+        <div style="margin-top:18px;display:flex;gap:10px">
+          <button class="btn-g" id="create" disabled>Create on testnet</button>
+          <button class="btn-o" id="sim">Simulate only</button>
+        </div>
+        <div class="log" id="log">Connect a wallet, or hit “Simulate only”.</div>
+      </div>
+
+      <div class="panel" style="margin-top:20px">
+        <h2><span class="dot"></span>Launched tokens</h2>
+        <div id="list"><div class="empty">No tokens yet.</div></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel">
+        <h2><span class="dot"></span>Bonding curve (simulated)</h2>
+        <canvas id="chart" width="720" height="420"></canvas>
+        <div class="stats">
+          <div class="stat"><span>Price</span><b id="sPrice" class="g">—</b></div>
+          <div class="stat"><span>Raised</span><b id="sRaised">30.00</b></div>
+          <div class="stat"><span>Progress</span><b id="sProg">0.0%</b></div>
+          <div class="stat"><span>Your fees</span><b id="sEarn" class="g">0.0000</b></div>
+        </div>
+        <label>Buy amount</label><input id="buyAmt" type="number" value="1" step="0.1"/>
+        <div style="display:flex;gap:10px;margin-top:12px">
+          <button class="btn-g" id="buy" style="flex:1">Buy</button>
+          <button class="btn-o" id="sell" style="flex:1">Sell all</button>
+        </div>
+      </div>
+
+      <div class="fee">
+        <h3>Fee comparison</h3>
+        <table>
+          <tr><th>Platform</th><th>Trade fee</th><th>Creation</th></tr>
+          <tr><td>pump.fun</td><td>1.25%</td><td>~0.02 SOL</td></tr>
+          <tr><td><b>PumpLite</b></td><td class="g"><b>1.00%</b></td><td class="g"><b>~0</b></td></tr>
+        </table>
+        <p style="margin-top:10px">Revenue lines: trade fee split to your treasury, and an optional flat creation fee. That is all a launchpad can earn — nothing appears for free.</p>
+      </div>
+
+      <div class="panel" style="margin-top:20px">
+        <h2><span class="dot"></span>Detected wallets</h2>
+        <div id="walletList" style="display:flex;flex-direction:column;gap:8px">
+          <div class="hint">Listening for EIP-6963 (EVM) and Wallet Standard (Solana) announcements…</div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top:20px">
+        <h2><span class="dot"></span>Invite &amp; earn</h2>
+        <div id="refBox"></div>
+      </div>
+
+      <div class="panel" style="margin-top:20px">
+        <h2><span class="dot"></span>Wallet</h2>
+        <div class="mn" id="addr">Not connected</div>
+        <div class="stats" style="grid-template-columns:1fr"><div class="stat"><span>Balance</span><b id="bal">—</b></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+<footer class="wrap">PumpLite · open testnet demo · not affiliated with pump.fun · not financial advice<br/>Undeployed, unaudited code. Launching tokens people buy may be regulated securities activity.</footer>
+
+<script type="importmap">{"imports":{"@solana/web3.js":"https://esm.sh/@solana/web3.js@1.95.8","ethers":"https://esm.sh/ethers@6.13.4"}}</script>
+<script type="module">
+import {Connection,PublicKey,Keypair,Transaction,SystemProgram,LAMPORTS_PER_SOL} from '@solana/web3.js';
+
+/* ===== wallets.js (inlined) ===== */
+/* PumpLite multi-wallet discovery — EIP-6963 (EVM) + Solana Wallet Standard.
+   Extracted rule: NEVER hardcode one wallet. Announce-listen and register-listen. */
+
+const evmWallets = [];
+const solWallets = [];
+
+/* ---------- EVM: EIP-6963 multi-injected-provider discovery ---------- */
+// Docs: https://eips.ethereum.org/EIPS/eip-6963
+function discoverEvmWallets(onFound){
+  const seen = new Set();
+  function onAnnounce(e){
+    const d = e.detail;                       // { info, provider }
+    if (!d?.info?.uuid || seen.has(d.info.uuid)) return;
+    seen.add(d.info.uuid);
+    const w = { id: d.info.uuid, name: d.info.name, icon: d.info.icon,
+                rdns: d.info.rdns, provider: d.provider, chain: 'evm' };
+    evmWallets.push(w);
+    onFound(w);
+  }
+  window.addEventListener('eip6963:announceProvider', onAnnounce);
+  window.dispatchEvent(new Event('eip6963:requestProvider'));   // ask wallets to announce
+  // legacy fallback for wallets that predate EIP-6963
+  if (window.ethereum) {
+    const legacy = { id:'legacy-injected', name: window.ethereum.isMetaMask ? 'MetaMask (legacy)' : 'Injected',
+                     provider: window.ethereum, chain:'evm' };
+    if (!evmWallets.length) { evmWallets.push(legacy); onFound(legacy); }
+  }
+  return { evmWallets, stop: () => window.removeEventListener('eip6963:announceProvider', onAnnounce) };
+}
+
+/* ---------- Solana: Wallet Standard auto-detection ---------- */
+// Wallets that support the standard self-register; we listen on the register event.
+function discoverSolWallets(onFound){
+  const seen = new Set();
+  function tryAdd(provider, name){
+    if (!provider || seen.has(name)) return;
+    seen.add(name);
+    const w = { id: name, name, provider, chain:'solana' };
+    solWallets.push(w); onFound(w);
+  }
+  function onRegister(e){
+    const feats = e.detail?.features || {};
+    const provider = e.detail;
+    const nm = e.detail?.name || e.detail?.wallet?.name || 'Solana Wallet';
+    tryAdd(provider, nm);
+    void feats;
+  }
+  window.addEventListener('wallet-standard:register-wallet', onRegister);
+  window.dispatchEvent(new Event('wallet-standard:app-ready'));
+  // common injected wallets as fallback
+  tryAdd(window.phantom?.solana, 'Phantom');
+  tryAdd(window.solflare, 'Solflare');
+  tryAdd(window.backpack, 'Backpack');
+  tryAdd(window.solana, 'Solana (injected)');
+  tryAdd(window.okxwallet?.solana, 'OKX Wallet');
+  tryAdd(window.trustwallet?.solana, 'Trust Wallet');
+  tryAdd(window.coin98?.solana, 'Coin98');
+  return { solWallets, stop: () => window.removeEventListener('wallet-standard:register-wallet', onRegister) };
+}
+
+const ALL_WALLET_NAMES = () => [...new Set([...evmWallets, ...solWallets].map(w => w.name))];
+
+/* ===== referrals.js (inlined) ===== */
+/* PumpLite referral engine.
+   Model: referral reward is paid OUT OF the platform (treasury) share — never on top.
+   That keeps the trader's total fee at 1.00% while referrers earn from platform margin. */
+
+const LS_KEY = 'pumplite_ref';
+
+function getRefCode(){
+  let c = localStorage.getItem(LS_KEY);
+  if (!c) { c = Math.random().toString(36).slice(2,8).toUpperCase(); localStorage.setItem(LS_KEY, c); }
+  return c;
+}
+/* read ?ref=CODE from the URL and persist it for 30 days */
+function captureRefFromUrl(){
+  const u = new URL(location.href);
+  const ref = u.searchParams.get('ref');
+  if (ref && /^[A-Z0-9]{4,12}$/i.test(ref)) {
+    localStorage.setItem(LS_KEY, ref.toUpperCase());
+    localStorage.setItem(LS_KEY + '_ts', String(Date.now()));
+    return ref.toUpperCase();
+  }
+  const ts = +(localStorage.getItem(LS_KEY + '_ts') || 0);
+  if (ts && Date.now() - ts > 30*864e5) localStorage.removeItem(LS_KEY);
+  return localStorage.getItem(LS_KEY);
+}
+const refLink = () => `${location.origin}${location.pathname}?ref=${getRefCode()}`;
+
+/* Split a total fee into creator / treasury / referrer shares.
+   config: { totalFeeBps, creatorBps, referralBps, referralEnabled } */
+function splitFee(solAmount, cfg, hasReferrer){
+  const bps = 10_000;
+  const total    = solAmount * cfg.totalFeeBps / bps;
+  const creator  = total * cfg.creatorBps / Math.max(1, cfg.totalFeeBps);
+  let platform   = total - creator;                       // = treasury line
+  let referrer   = 0;
+  if (cfg.referralEnabled && hasReferrer && cfg.referralBps > 0){
+    referrer = solAmount * cfg.referralBps / bps;         // paid from platform margin
+    if (referrer > platform) referrer = platform;         // never exceed margin
+    platform -= referrer;
+  }
+  return { total, creator, treasury: platform, referrer };
+}
+
+/* Local ledger (works with zero backend). Supabase writer supplied separately. */
+function recordReferral(store, referrerCode, referredWallet, lamports){
+  if (!store.referrals) store.referrals = {};
+  const r = store.referrals[referrerCode] ||= { code: referrerCode, referred_count: 0, earned_lamports: 0, wallets: [] };
+  if (!r.wallets.includes(referredWallet)) { r.wallets.push(referredWallet); r.referred_count++; }
+  r.earned_lamports += lamports;
+  return store;
+}
+
+
+
+/* ---- flip these two to go mainnet (after audit) ---- */
+const MODE='testnet';                                   // 'mainnet' when ready
+const SOL_RPC = MODE==='mainnet' ? 'https://api.mainnet-beta.solana.com' : 'https://api.devnet.solana.com';
+const BASE_CHAIN_ID = MODE==='mainnet' ? 8453 : 84532;  // Base / Base Sepolia
+
+const TOKEN_PID=new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
+const ATA_PID=new PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
+const RENT=new PublicKey('SysvarRent111111111111111111111111111111111');
+const conn=new Connection(SOL_RPC,'confirmed');
+
+const VC={vs:30,vt:1073000000,creator:0,fee:1.0}; const K=VC.vs*VC.vt, GRAD=85;
+let chain='solana', provider=null, pub=null;
+const $=id=>document.getElementById(id);
+const short=a=>a.slice(0,4)+'…'+a.slice(-4);
+const log=(m,c='')=>{const e=$('log');e.innerHTML+=`\n<span class="${c}">[${new Date().toLocaleTimeString()}] ${m}</span>`;e.scrollTop=e.scrollHeight;};
+let tokens=JSON.parse(localStorage.getItem('pumplite_multi')||'[]');
+const save=()=>localStorage.setItem('pumplite_multi',JSON.stringify(tokens));
+
+function render(){ const e=$('list');
+  if(!tokens.length){e.innerHTML='<div class="empty">No tokens yet.</div>';return;}
+  e.innerHTML=tokens.map(t=>`<div class="coin"><div class="av">${t.sym.slice(0,2)}</div>
+   <div style="flex:1;min-width:0"><div class="cn">${t.name} <span style="color:var(--dim);font-weight:400">$${t.sym}</span>
+   <span style="font-size:10px;color:var(--green)">· ${t.chain}</span></div>
+   <div class="cs">${t.supply.toLocaleString()} supply · ${t.fee}% fee · ${t.mode}${t.onchain?'':' · simulated'}</div>
+   <div class="mn">${t.mint}</div></div>
+   <button class="btn-o" style="padding:6px 10px;font-size:11px" onclick="navigator.clipboard.writeText('${t.mint}')">Copy</button></div>`).join('');
+}
+const cv=$('chart'),ctx=cv.getContext('2d');
+function draw(){const W=cv.width,H=cv.height,P=32;ctx.clearRect(0,0,W,H);
+ const max=VC.vs+GRAD,px=s=>P+(s/max)*(W-P*2),pmax=K/(VC.vs*VC.vs)||1;
+ ctx.beginPath();ctx.strokeStyle='#39ff88';ctx.lineWidth=3;
+ for(let i=0;i<=200;i++){const s=(VC.vs-0)+(i/200)*(max-VC.vs);const pr=K/(s*s);const y=H-P-(pr/pmax)*(H-P*2);i?ctx.lineTo(px(s),y):ctx.moveTo(px(s),y);}
+ ctx.stroke();ctx.lineTo(px(max),H-P);ctx.lineTo(px(VC.vs),H-P);ctx.closePath();ctx.fillStyle='rgba(57,255,136,.08)';ctx.fill();
+ ctx.strokeStyle='#252d38';ctx.beginPath();ctx.moveTo(P,H-P);ctx.lineTo(W-P,H-P);ctx.moveTo(P,P);ctx.lineTo(P,H-P);ctx.stroke();
+ ctx.setLineDash([5,5]);ctx.strokeStyle='#ffce4d';ctx.beginPath();ctx.moveTo(px(max),P);ctx.lineTo(px(max),H-P);ctx.stroke();ctx.setLineDash([]);
+}
+function stats(){const pr=K/(VC.vs*VC.vs);$('sPrice').textContent=pr.toFixed(8);$('sRaised').textContent=VC.vs.toFixed(2);
+ $('sProg').textContent=Math.min(100,((VC.vs-30)/GRAD)*100).toFixed(1)+'%';$('sEarn').textContent=VC.creator.toFixed(5);draw();}
+function reset(){VC.vs=30;VC.vt=1073000000;VC.creator=0;stats();}
+function buy(sol){const f=sol*(VC.fee/100);VC.creator+=f;const n=VC.vs+(sol-f);const nvt=K/n;const o=VC.vt-nvt;VC.vs=n;VC.vt=nvt;stats();return o;}
+function sell(){const nvs=K/VC.vt;const o=VC.vs-nvs;if(o>30){VC.vs=nvs;VC.vt=1073000000;stats();return o-30;}reset();return 0;}
+
+async function connect(){
+ if(chain==='base'){ log('Base wallet: connect MetaMask manually — the factory contract call is wired in evm/contracts + scripts/deploy.js','r'); return; }
+ if(!window.solana?.isPhantom){log('Phantom not found. Install it or use Simulate only.','r');return;}
+ provider=window.solana; const r=await provider.connect(); pub=r.publicKey.toString();
+ $('addr').textContent=pub; $('connect').textContent=short(pub); $('create').disabled=false; log('Connected '+pub,'g'); bal();
+}
+async function bal(){ if(!pub)return; const b=await conn.getBalance(new PublicKey(pub)); $('bal').textContent=(b/LAMPORTS_PER_SOL).toFixed(4)+' SOL'; }
+const u64=n=>{const b=new DataView(new ArrayBuffer(8));b.setBigUint64(0,BigInt(n),true);return new Uint8Array(b.buffer);};
+
+async function createOnChain(){
+ if(!pub||!provider){log('Connect a wallet first.','r');return;}
+ const name=$('tName').value.trim(), sym=$('tSym').value.trim().toUpperCase();
+ const mode=document.querySelector('.tabs button.on').dataset.mode;
+ const dec=6, supply=Math.floor(Number(mode==='auto'?$('tAuto').value:$('tManual').value));
+ const fee=parseFloat($('tFee').value)||1, revoke=$('tRevoke').value==='yes';
+ if(!name||!sym||!supply){log('Name, symbol and supply are required.','r');return;}
+ try{
+  $('create').disabled=true;
+  if(chain==='base'){ log('Base path: call PumpLiteLaunchpad.launch() via ethers v6 — wired in evm/, needs a deployed address.','r'); return; }
+  const payer=new PublicKey(pub), mint=Keypair.generate(), amount=BigInt(supply)*BigInt(10**dec);
+  const rm=await conn.getMinimumBalanceForRentExemption(82), ra=await conn.getMinimumBalanceForRentExemption(165);
+  const [ata]=PublicKey.findProgramAddressSync([payer.toBuffer(),TOKEN_PID.toBuffer(),mint.publicKey.toBuffer()],ATA_PID);
+  const tx=new Transaction().add(
+   SystemProgram.createAccount({fromPubkey:payer,newAccountPubkey:mint.publicKey,lamports:rm,space:82,programId:TOKEN_PID}),
+   {programId:TOKEN_PID,keys:[{pubkey:mint.publicKey,isSigner:false,isWritable:true},{pubkey:RENT,isSigner:false,isWritable:false}],
+    data:new Uint8Array([0,dec,...payer.toBuffer(),revoke?0:1,...(revoke?[]:payer.toBuffer())])},
+   {programId:ATA_PID,keys:[{pubkey:payer,isSigner:true,isWritable:true},{pubkey:ata,isSigner:false,isWritable:true},{pubkey:payer,isSigner:false,isWritable:false},{pubkey:mint.publicKey,isSigner:false,isWritable:false},{pubkey:SystemProgram.programId,isSigner:false,isWritable:false},{pubkey:TOKEN_PID,isSigner:false,isWritable:false}],data:new Uint8Array()},
+   {programId:TOKEN_PID,keys:[{pubkey:mint.publicKey,isSigner:false,isWritable:true},{pubkey:ata,isSigner:false,isWritable:true},{pubkey:payer,isSigner:true,isWritable:false}],data:new Uint8Array([7,...u64(amount)])}
+  );
+  tx.feePayer=payer; const bh=await conn.getLatestBlockhash(); tx.recentBlockhash=bh.blockhash;
+  const s=await provider.signTransaction(tx); s.partialSign(mint);
+  const sig=await conn.sendRawTransaction(s.serialize()); log('Submitted '+short(sig));
+  await conn.confirmTransaction({signature:sig,...bh},'confirmed');
+  log(`Minted ${supply.toLocaleString()} ${sym} on ${MODE} ✔`,'g');
+  tokens.unshift({name,sym,supply,fee,mode,mint:mint.publicKey.toString(),chain:'solana',onchain:true});
+  save();render();reset();
+ }catch(e){log('Error: '+(e.message||e),'r');}finally{$('create').disabled=false;}
+}
+function sim(){const name=$('tName').value.trim()||'Sim Token',sym=($('tSym').value.trim()||'SIM').toUpperCase();
+ const mode=document.querySelector('.tabs button.on').dataset.mode;
+ const supply=Math.floor(Number(mode==='auto'?$('tAuto').value:$('tManual').value))||1000;
+ const fee=parseFloat($('tFee').value)||1; VC.fee=fee;
+ tokens.unshift({name,sym,supply,fee,mode,mint:'SIM_'+Math.random().toString(36).slice(2,10).toUpperCase(),chain,onchain:false});
+ save();render();reset();log(`Simulated ${name} on ${chain}, ${fee}% fee`,'g');}
+
+$('connect').onclick=connect; $('create').onclick=createOnChain; $('sim').onclick=sim;
+document.querySelectorAll('.chains .chain').forEach(c=>c.onclick=()=>{
+ if(c.classList.contains('off')){log(c.dataset.chain.toUpperCase()+' cannot run this model — no smart contracts. See README.','r');return;}
+ document.querySelectorAll('.chains .chain').forEach(x=>x.classList.remove('on')); c.classList.add('on');
+ chain=c.dataset.chain; $('netBadge').textContent=chain==='base'?`Base ${MODE==='mainnet'?'mainnet':'Sepolia'}`:`Solana ${MODE==='mainnet'?'mainnet':'devnet'}`;
+ log('Chain → '+chain);});
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{
+ document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('on')); b.classList.add('on');
+ const a=b.dataset.mode==='auto'; $('autoBox').style.display=a?'block':'none';$('manualBox').style.display=a?'none':'block';});
+$('buy').onclick=()=>{const a=parseFloat($('buyAmt').value);if(!(a>0))return;const o=buy(a);log(`Bought ${Math.round(o).toLocaleString()} tokens for ${a} SOL (raised ${VC.vs.toFixed(2)})`);};
+$('sell').onclick=()=>{sell();log('Sold — curve reset.');};
+$('faucet').onclick=()=>{window.open(chain==='base'?'https://www.alchemy.com/faucets/base-sepolia':'https://faucet.solana.com/','_blank');log('Faucet opened.');};
+
+/* ---- referrals ---- */
+const myRef = captureRefFromUrl() || getRefCode();
+document.getElementById('refBox').innerHTML =
+  `<div class="mn" id="refLink">${refLink()}</div>
+   <div style="display:flex;gap:8px;margin-top:10px">
+     <button class="btn-g" style="flex:1;padding:8px" onclick="navigator.clipboard.writeText('${refLink()}');this.textContent='Copied ✓'">Copy invite link</button>
+   </div>
+   <div class="hint" id="refStats">You earn 0.20% of every trade your invitees make — paid from the platform fee, never extra.</div>`;
+
+/* ---- multi-wallet discovery: register everything that announces itself ---- */
+function addWalletChip(w){
+  const el = document.getElementById('walletList');
+  if ([...el.children].some(c => c.dataset.id === w.id)) return;
+  const b = document.createElement('button');
+  b.className = 'btn-o'; b.dataset.id = w.id; b.style.cssText = 'padding:8px 10px;font-size:12px;text-align:left';
+  b.textContent = `${w.name} · ${w.chain}`;
+  b.onclick = () => pickWallet(w);
+  el.appendChild(b);
+}
+function pickWallet(w){
+  if (w.chain === 'solana'){ provider = w.provider; connect(); }
+  else { log('EVM wallet "'+w.name+'" detected. Base path needs the deployed factory address (see README).','r'); }
+}
+discoverEvmWallets(addWalletChip);
+discoverSolWallets(addWalletChip);
+
+render();stats();reset();setInterval(bal,15000);
+</script></body></html>

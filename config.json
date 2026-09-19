@@ -1,0 +1,16 @@
+{
+  "siteName": "PumpLite",
+  "totalFeeBps": 100,
+  "creatorBps": 50,
+  "treasuryBps": 50,
+  "creationFeeSol": 0.005,
+  "creationFeeEth": 0.0005,
+  "referralBps": 20,
+  "referralEnabled": true,
+  "treasuryWallet": "",
+  "graduationSol": 85,
+  "virtualSol0": 30,
+  "virtualToken0": 1073000000,
+  "chains": { "solana": true, "base": true, "bitcoin": false, "dogecoin": false },
+  "notice": "Low-fee launchpad. Testnet first."
+}
