@@ -3,10 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+
 <title>PumpLite — Solana Token Launchpad</title>
 
 <style>
-*{box-sizing:border-box}
+
+*{
+  box-sizing:border-box;
+}
 
 body{
   margin:0;
@@ -20,8 +24,11 @@ nav{
   align-items:center;
   gap:14px;
   padding:18px 24px;
-  border-bottom:1px solid #222832;
+  border-bottom:1px solid #242a34;
   background:#0b0f15;
+  position:sticky;
+  top:0;
+  z-index:10;
 }
 
 .logo{
@@ -45,6 +52,11 @@ button{
   cursor:pointer;
 }
 
+button:disabled{
+  opacity:.5;
+  cursor:not-allowed;
+}
+
 .primary{
   background:#39df8b;
   color:#06130b;
@@ -59,7 +71,7 @@ button{
 .wrap{
   max-width:1100px;
   margin:auto;
-  padding:30px 20px 60px;
+  padding:30px 20px 70px;
 }
 
 .hero{
@@ -78,7 +90,7 @@ button{
 }
 
 .hero p{
-  max-width:700px;
+  max-width:720px;
   color:#aeb7c5;
   font-size:17px;
   line-height:1.6;
@@ -107,9 +119,11 @@ label{
   color:#929cac;
   font-size:12px;
   text-transform:uppercase;
+  letter-spacing:.05em;
 }
 
-input,select{
+input,
+select{
   width:100%;
   padding:13px;
   border-radius:10px;
@@ -117,6 +131,12 @@ input,select{
   background:#090d13;
   color:#fff;
   font-size:15px;
+}
+
+input:focus,
+select:focus{
+  outline:none;
+  border-color:#39df8b;
 }
 
 .row{
@@ -136,15 +156,46 @@ input,select{
   margin-bottom:18px;
 }
 
+.option{
+  display:flex;
+  gap:10px;
+  align-items:flex-start;
+  padding:14px;
+  margin-top:10px;
+  border:1px solid #292f39;
+  border-radius:12px;
+  background:#0b0f15;
+}
+
+.option input{
+  width:auto;
+  margin-top:3px;
+}
+
+.option strong{
+  display:block;
+  margin-bottom:4px;
+}
+
+.option span{
+  color:#8993a2;
+  font-size:13px;
+  line-height:1.4;
+}
+
 .status{
-  margin-top:15px;
-  padding:13px;
+  margin-top:16px;
+  padding:14px;
   border-radius:10px;
   background:#090d13;
   border:1px solid #252c36;
   color:#aeb7c5;
-  line-height:1.5;
+  line-height:1.6;
   word-break:break-word;
+}
+
+.status a{
+  color:#39df8b;
 }
 
 .fees{
@@ -170,11 +221,19 @@ input,select{
   margin-top:5px;
 }
 
-a{
-  color:#39df8b;
+.warning{
+  margin-top:18px;
+  padding:13px;
+  border-radius:10px;
+  background:#211b0c;
+  border:1px solid #55441c;
+  color:#e7d28b;
+  font-size:13px;
+  line-height:1.5;
 }
 
 @media(max-width:800px){
+
   .grid{
     grid-template-columns:1fr;
   }
@@ -182,128 +241,241 @@ a{
   .row{
     grid-template-columns:1fr;
   }
+
 }
+
 </style>
 </head>
 
 <body>
 
 <nav>
-  <div class="logo">Pump<span>Lite</span></div>
+
+  <div class="logo">
+    Pump<span>Lite</span>
+  </div>
+
   <div class="spacer"></div>
-  <button class="secondary" id="connectBtn">
+
+  <button
+    class="secondary"
+    id="connectBtn">
     Connect Solana Wallet
   </button>
+
 </nav>
 
 <main class="wrap">
 
 <section class="hero">
+
   <h1>
     Launch tokens.<br>
-    <span class="green">Keep fees low.</span>
+    <span class="green">On Solana.</span>
   </h1>
 
   <p>
-    PumpLite is a low-fee Solana token launchpad.
-    Connect your wallet, create a token and receive a real
-    Solana mint address.
+    Create real SPL tokens directly on Solana Mainnet.
+    Choose a fixed supply or keep the mint authority for
+    future minting.
   </p>
+
 </section>
 
 <div class="grid">
 
 <section class="card">
 
-<h2>Create a Solana Token</h2>
+<h2>Create Solana Token</h2>
 
 <div class="notice">
-  <strong>REAL SOLANA CREATION</strong><br>
-  When you press Create Token, your connected wallet will
-  be asked to sign a real Solana transaction. This creates
-  an actual SPL token on Solana Mainnet.
+
+  <strong>REAL MAINNET</strong><br>
+
+  This page connects directly to Solana Mainnet.
+  Your wallet signs the transaction and pays the actual
+  Solana network costs.
+
 </div>
 
 <div class="row">
 
-<div>
-<label>Token name</label>
-<input id="tokenName" placeholder="My Token">
+  <div>
+
+    <label>Token name</label>
+
+    <input
+      id="tokenName"
+      maxlength="32"
+      placeholder="Find The Cash NZ">
+
+  </div>
+
+  <div>
+
+    <label>Symbol</label>
+
+    <input
+      id="tokenSymbol"
+      maxlength="10"
+      placeholder="FTC">
+
+  </div>
+
 </div>
 
-<div>
-<label>Symbol</label>
-<input id="tokenSymbol" maxlength="10" placeholder="TOKEN">
-</div>
+<label>Total initial supply</label>
 
-</div>
-
-<label>Total supply</label>
 <input
   id="tokenSupply"
   type="number"
   min="1"
-  value="1000000000"
->
+  step="1"
+  value="2000000000">
 
 <label>Decimals</label>
+
 <input
   id="tokenDecimals"
   type="number"
   min="0"
   max="9"
-  value="9"
->
+  value="9">
 
-<br><br>
+<label>Supply type</label>
 
-<button class="primary" id="createBtn">
+<label class="option">
+
+  <input
+    type="radio"
+    name="supplyType"
+    value="fixed"
+    checked>
+
+  <span>
+
+    <strong>🔒 Fixed supply</strong>
+
+    <span>
+      Mint authority is permanently removed after
+      the initial supply is created. No additional
+      tokens can be minted.
+    </span>
+
+  </span>
+
+</label>
+
+<label class="option">
+
+  <input
+    type="radio"
+    name="supplyType"
+    value="mintable">
+
+  <span>
+
+    <strong>♾️ Mintable / expandable supply</strong>
+
+    <span>
+      Your wallet remains the mint authority, allowing
+      additional tokens to be created later.
+    </span>
+
+  </span>
+
+</label>
+
+<label class="option">
+
+  <input
+    type="checkbox"
+    id="removeFreeze"
+    checked>
+
+  <span>
+
+    <strong>Remove freeze authority</strong>
+
+    <span>
+      Recommended for a simple community token.
+      Once removed, token accounts cannot be frozen
+      by the mint authority.
+    </span>
+
+  </span>
+
+</label>
+
+<br>
+
+<button
+  class="primary"
+  id="createBtn">
+
   Create Real Solana Token
+
 </button>
 
-<div class="status" id="status">
-  Connect a Solana wallet to begin.
+<div
+  class="status"
+  id="status">
+
+  Connect your Solana wallet to begin.
+
 </div>
 
 </section>
 
 <aside class="card">
 
-<h2>PumpLite Fees</h2>
+<h2>PumpLite Fee Model</h2>
 
 <div class="fees">
 
-<div class="fee">
-<small>Trading</small>
-<strong>0.25%</strong>
-</div>
+  <div class="fee">
+    <small>Total trading fee</small>
+    <strong>0.25%</strong>
+  </div>
 
-<div class="fee">
-<small>Creator</small>
-<strong>0.10%</strong>
-</div>
+  <div class="fee">
+    <small>Creator</small>
+    <strong>0.10%</strong>
+  </div>
 
-<div class="fee">
-<small>Treasury</small>
-<strong>0.05%</strong>
-</div>
+  <div class="fee">
+    <small>PumpLite</small>
+    <strong>0.05%</strong>
+  </div>
 
-<div class="fee">
-<small>Reserve</small>
-<strong>0.10%</strong>
-</div>
+  <div class="fee">
+    <small>Reserve</small>
+    <strong>0.10%</strong>
+  </div>
 
 </div>
 
 <p style="color:#929cac;line-height:1.6">
-Creation fee: <strong>0</strong><br>
-Referral fee: <strong>0</strong>
+
+  Token creation fee:
+  <strong>0</strong>
+
+  <br>
+
+  Referral fee:
+  <strong>0</strong>
+
 </p>
 
-<p style="color:#929cac;line-height:1.6;font-size:13px">
-The 0.25% trading fee will only become active when
-the PumpLite on-chain trading program is deployed and tested.
-</p>
+<div class="warning">
+
+  <strong>Trading is separate.</strong><br>
+
+  Token creation is real Mainnet functionality.
+  The PumpLite bonding curve will only be enabled
+  after its on-chain program is deployed and tested.
+
+</div>
 
 </aside>
 
@@ -315,29 +487,49 @@ the PumpLite on-chain trading program is deployed and tested.
 
 import {
   Connection,
-  PublicKey,
   SystemProgram,
   Transaction,
   Keypair
-} from "https://esm.sh/@solana/web3.js@1.98.4";
+} from
+"https://esm.sh/@solana/web3.js@1.98.4";
 
 import {
   TOKEN_PROGRAM_ID,
   MINT_SIZE,
-  getMinimumBalanceForRentExemptMint,
+  AuthorityType,
   createInitializeMintInstruction,
   createAssociatedTokenAccountInstruction,
   createMintToInstruction,
+  createSetAuthorityInstruction,
   getAssociatedTokenAddress
-} from "https://esm.sh/@solana/spl-token@0.4.13";
+} from
+"https://esm.sh/@solana/spl-token@0.4.15";
+
+
+/*
+==================================================
+SOLANA MAINNET
+==================================================
+*/
 
 const RPC =
   "https://api.mainnet-beta.solana.com";
 
 const connection =
-  new Connection(RPC, "confirmed");
+  new Connection(
+    RPC,
+    "confirmed"
+  );
+
 
 let wallet = null;
+
+
+/*
+==================================================
+ELEMENTS
+==================================================
+*/
 
 const status =
   document.getElementById("status");
@@ -348,18 +540,37 @@ const connectBtn =
 const createBtn =
   document.getElementById("createBtn");
 
+
+/*
+==================================================
+STATUS
+==================================================
+*/
+
 function setStatus(message){
+
   status.innerHTML = message;
+
 }
+
+
+/*
+==================================================
+CONNECT WALLET
+==================================================
+*/
 
 async function connectWallet(){
 
   if(!window.solana){
+
     setStatus(`
-      <strong>No Solana wallet detected.</strong><br>
+      <strong>No Solana wallet detected.</strong><br><br>
+
       Install Phantom or another compatible Solana wallet,
       then reload this page.
     `);
+
     return;
   }
 
@@ -368,16 +579,26 @@ async function connectWallet(){
     const response =
       await window.solana.connect();
 
-    wallet = response.publicKey;
+    wallet =
+      response.publicKey;
+
+    const address =
+      wallet.toBase58();
 
     connectBtn.textContent =
-      wallet.toBase58().slice(0,6) +
+      address.slice(0,6) +
       "..." +
-      wallet.toBase58().slice(-4);
+      address.slice(-4);
 
     setStatus(`
-      <strong>Wallet connected.</strong><br>
-      ${wallet.toBase58()}
+      <strong>Wallet connected.</strong><br><br>
+
+      ${address}
+
+      <br><br>
+
+      Network:
+      <strong>Solana Mainnet</strong>
     `);
 
   }catch(error){
@@ -385,58 +606,148 @@ async function connectWallet(){
     console.error(error);
 
     setStatus(
-      "Wallet connection cancelled or failed."
+      "Wallet connection was cancelled or failed."
     );
+
   }
+
 }
+
+
+/*
+==================================================
+CREATE TOKEN
+==================================================
+*/
 
 async function createToken(){
 
   if(!wallet){
 
     setStatus(
-      "Connect your Solana wallet first."
+      "Please connect your Solana wallet first."
     );
 
     return;
   }
 
+
   const name =
-    document.getElementById("tokenName")
-      .value.trim();
+    document
+      .getElementById("tokenName")
+      .value
+      .trim();
+
 
   const symbol =
-    document.getElementById("tokenSymbol")
-      .value.trim()
+    document
+      .getElementById("tokenSymbol")
+      .value
+      .trim()
       .toUpperCase();
 
-  const supply =
-    document.getElementById("tokenSupply")
-      .value;
+
+  const supplyText =
+    document
+      .getElementById("tokenSupply")
+      .value
+      .trim();
+
 
   const decimals =
     Number(
-      document.getElementById("tokenDecimals")
+      document
+        .getElementById("tokenDecimals")
         .value
     );
 
-  if(!name || !symbol){
+
+  const supplyType =
+    document
+      .querySelector(
+        'input[name="supplyType"]:checked'
+      )
+      .value;
+
+
+  const removeFreeze =
+    document
+      .getElementById("removeFreeze")
+      .checked;
+
+
+  /*
+  ----------------------------------------------
+  VALIDATION
+  ----------------------------------------------
+  */
+
+  if(!name){
 
     setStatus(
-      "Enter a token name and symbol."
+      "Enter a token name."
     );
 
     return;
   }
 
-  if(!supply || Number(supply) <= 0){
+
+  if(!symbol){
 
     setStatus(
-      "Enter a valid token supply."
+      "Enter a token symbol."
     );
 
     return;
   }
+
+
+  if(!/^[A-Z0-9]+$/.test(symbol)){
+
+    setStatus(
+      "Symbol can only contain A-Z and numbers."
+    );
+
+    return;
+  }
+
+
+  if(!supplyText){
+
+    setStatus(
+      "Enter the initial token supply."
+    );
+
+    return;
+  }
+
+
+  let supply;
+
+  try{
+
+    supply =
+      BigInt(supplyText);
+
+  }catch{
+
+    setStatus(
+      "Supply must be a whole number."
+    );
+
+    return;
+  }
+
+
+  if(supply <= 0n){
+
+    setStatus(
+      "Supply must be greater than zero."
+    );
+
+    return;
+  }
+
 
   if(decimals < 0 || decimals > 9){
 
@@ -447,27 +758,44 @@ async function createToken(){
     return;
   }
 
+
   try{
 
     createBtn.disabled = true;
 
-    setStatus(
-      "Preparing your real Solana token transaction..."
-    );
+
+    setStatus(`
+      Preparing your real Solana Mainnet transaction...
+    `);
+
 
     /*
-      Generate the token mint account.
+    ----------------------------------------------
+    CREATE MINT KEYPAIR
+    ----------------------------------------------
     */
 
     const mint =
       Keypair.generate();
 
-    const rent =
-      await connection
-        .getMinimumBalanceForRentExemptMint();
 
     /*
-      Associated token account for creator.
+    ----------------------------------------------
+    GET REAL MAINNET RENT
+    ----------------------------------------------
+    */
+
+    const rent =
+      await connection
+        .getMinimumBalanceForRentExemption(
+          MINT_SIZE
+        );
+
+
+    /*
+    ----------------------------------------------
+    CREATOR TOKEN ACCOUNT
+    ----------------------------------------------
     */
 
     const creatorATA =
@@ -476,164 +804,406 @@ async function createToken(){
         wallet
       );
 
+
     /*
-      Convert supply into base units.
+    ----------------------------------------------
+    SUPPLY CONVERSION
+    ----------------------------------------------
     */
 
     const rawSupply =
-      BigInt(supply) *
+      supply *
       (10n ** BigInt(decimals));
 
+
     /*
-      Build transaction.
+    ----------------------------------------------
+    BUILD TRANSACTION
+    ----------------------------------------------
     */
 
     const transaction =
       new Transaction();
 
+
     /*
-      Create mint account.
+    CREATE MINT ACCOUNT
     */
 
     transaction.add(
+
       SystemProgram.createAccount({
-        fromPubkey: wallet,
-        newAccountPubkey: mint.publicKey,
-        lamports: rent,
-        space: MINT_SIZE,
-        programId: TOKEN_PROGRAM_ID
+
+        fromPubkey:
+          wallet,
+
+        newAccountPubkey:
+          mint.publicKey,
+
+        lamports:
+          rent,
+
+        space:
+          MINT_SIZE,
+
+        programId:
+          TOKEN_PROGRAM_ID
+
       })
+
     );
 
+
     /*
-      Initialize mint.
+    INITIALIZE MINT
     */
 
     transaction.add(
+
       createInitializeMintInstruction(
+
         mint.publicKey,
+
         decimals,
+
         wallet,
-        wallet,
+
+        removeFreeze
+          ? null
+          : wallet,
+
         TOKEN_PROGRAM_ID
+
       )
+
     );
 
+
     /*
-      Create creator token account.
+    CREATE ASSOCIATED TOKEN ACCOUNT
     */
 
     transaction.add(
+
       createAssociatedTokenAccountInstruction(
+
         wallet,
+
         creatorATA,
+
         wallet,
+
         mint.publicKey
+
       )
+
     );
 
+
     /*
-      Mint the initial supply.
+    MINT INITIAL SUPPLY
     */
 
     transaction.add(
+
       createMintToInstruction(
+
         mint.publicKey,
+
         creatorATA,
+
         wallet,
+
         rawSupply
+
       )
+
     );
+
+
+    /*
+    ----------------------------------------------
+    FIXED SUPPLY
+    ----------------------------------------------
+
+    If fixed supply was selected,
+    permanently remove mint authority.
+    */
+
+    if(supplyType === "fixed"){
+
+      transaction.add(
+
+        createSetAuthorityInstruction(
+
+          mint.publicKey,
+
+          wallet,
+
+          AuthorityType.MintTokens,
+
+          null,
+
+          [],
+
+          TOKEN_PROGRAM_ID
+
+        )
+
+      );
+
+    }
+
+
+    /*
+    ----------------------------------------------
+    REMOVE FREEZE AUTHORITY
+    ----------------------------------------------
+    */
+
+    if(removeFreeze === false){
+
+      /*
+      Freeze authority remains with creator.
+      */
+
+    }
+
+
+    /*
+    ----------------------------------------------
+    TRANSACTION DETAILS
+    ----------------------------------------------
+    */
 
     transaction.feePayer =
       wallet;
 
+
+    const latest =
+      await connection
+        .getLatestBlockhash(
+          "confirmed"
+        );
+
+
     transaction.recentBlockhash =
-      (
-        await connection.getLatestBlockhash()
-      ).blockhash;
+      latest.blockhash;
+
 
     /*
-      The user's wallet signs.
-      The mint Keypair also signs.
+    Mint account must sign.
     */
 
-    transaction.partialSign(mint);
-
-    setStatus(
-      "Please approve the Solana transaction in your wallet..."
+    transaction.partialSign(
+      mint
     );
+
+
+    /*
+    ----------------------------------------------
+    USER WALLET SIGNATURE
+    ----------------------------------------------
+    */
+
+    setStatus(`
+      <strong>Ready.</strong><br><br>
+
+      Please approve the real Solana Mainnet
+      transaction in your wallet.
+    `);
+
 
     const signed =
       await window.solana.signTransaction(
         transaction
       );
 
+
+    /*
+    ----------------------------------------------
+    SEND TO SOLANA MAINNET
+    ----------------------------------------------
+    */
+
     const signature =
       await connection.sendRawTransaction(
-        signed.serialize()
+        signed.serialize(),
+        {
+          skipPreflight:false,
+          preflightCommitment:"confirmed"
+        }
       );
 
+
     setStatus(`
-      Transaction sent.<br>
-      Waiting for Solana confirmation...
+      Transaction submitted to Solana Mainnet.<br><br>
+
+      Waiting for confirmation...
     `);
 
+
+    /*
+    ----------------------------------------------
+    CONFIRM
+    ----------------------------------------------
+    */
+
     await connection.confirmTransaction(
-      signature,
+      {
+        signature,
+        blockhash:
+          latest.blockhash,
+        lastValidBlockHeight:
+          latest.lastValidBlockHeight
+      },
       "confirmed"
     );
+
+
+    /*
+    ----------------------------------------------
+    SUCCESS
+    ----------------------------------------------
+    */
 
     const mintAddress =
       mint.publicKey.toBase58();
 
-    setStatus(`
-      <strong>🎉 TOKEN CREATED ON SOLANA!</strong><br><br>
 
-      Token: ${name}<br>
-      Symbol: ${symbol}<br>
-      Supply: ${Number(supply).toLocaleString()}<br>
-      Mint: ${mintAddress}<br><br>
+    const supplyDescription =
+      supplyType === "fixed"
+        ? "Fixed supply 🔒"
+        : "Mintable supply ♾️";
+
+
+    setStatus(`
+
+      <strong>
+        🎉 TOKEN CREATED ON SOLANA MAINNET
+      </strong>
+
+      <br><br>
+
+      <strong>Name:</strong>
+      ${escapeHTML(name)}
+
+      <br>
+
+      <strong>Symbol:</strong>
+      ${escapeHTML(symbol)}
+
+      <br>
+
+      <strong>Initial supply:</strong>
+      ${supply.toLocaleString()}
+
+      <br>
+
+      <strong>Decimals:</strong>
+      ${decimals}
+
+      <br>
+
+      <strong>Supply:</strong>
+      ${supplyDescription}
+
+      <br><br>
+
+      <strong>Mint address:</strong><br>
+
+      ${mintAddress}
+
+      <br><br>
 
       <a
         href="https://solscan.io/token/${mintAddress}"
         target="_blank"
-        rel="noopener"
-      >
+        rel="noopener noreferrer">
+
         View token on Solscan
+
       </a>
+
       <br><br>
 
-      Transaction:
       <a
         href="https://solscan.io/tx/${signature}"
         target="_blank"
-        rel="noopener"
-      >
+        rel="noopener noreferrer">
+
         View transaction
+
       </a>
+
     `);
+
 
   }catch(error){
 
     console.error(error);
 
+    let message =
+      error?.message ||
+      String(error);
+
+
     setStatus(`
-      <strong>Transaction failed.</strong><br>
-      ${error?.message || error}
+
+      <strong>
+        Transaction failed.
+      </strong>
+
+      <br><br>
+
+      ${escapeHTML(message)}
+
+      <br><br>
+
+      Check your wallet has enough SOL for
+      the network transaction and mint account.
+
     `);
 
   }finally{
 
-    createBtn.disabled = false;
+    createBtn.disabled =
+      false;
 
   }
+
 }
+
+
+/*
+==================================================
+HTML ESCAPE
+==================================================
+*/
+
+function escapeHTML(value){
+
+  return String(value)
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+
+}
+
+
+/*
+==================================================
+EVENTS
+==================================================
+*/
 
 connectBtn.addEventListener(
   "click",
   connectWallet
 );
+
 
 createBtn.addEventListener(
   "click",
