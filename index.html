@@ -4,326 +4,94 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>PumpLite — Solana Token Launchpad</title>
-
 <style>
 *{box-sizing:border-box}
-
-body{
-  margin:0;
-  font-family:Inter,Arial,sans-serif;
-  color:#fff;
-  background:#080b10;
-}
-
-nav{
-  display:flex;
-  align-items:center;
-  gap:14px;
-  padding:18px 24px;
-  border-bottom:1px solid #222832;
-  background:#0b0f15;
-}
-
-.logo{
-  font-size:25px;
-  font-weight:900;
-}
-
-.logo span{
-  color:#39df8b;
-}
-
-.spacer{
-  flex:1;
-}
-
-button{
-  border:0;
-  border-radius:10px;
-  padding:12px 18px;
-  font-weight:800;
-  cursor:pointer;
-}
-
-.primary{
-  background:#39df8b;
-  color:#06130b;
-}
-
-.secondary{
-  background:#171c24;
-  color:#fff;
-  border:1px solid #303744;
-}
-
-.wrap{
-  max-width:1100px;
-  margin:auto;
-  padding:30px 20px 60px;
-}
-
-.hero{
-  padding:45px 0 30px;
-}
-
-.hero h1{
-  font-size:clamp(42px,7vw,75px);
-  line-height:.95;
-  margin:0 0 20px;
-  letter-spacing:-3px;
-}
-
-.green{
-  color:#39df8b;
-}
-
-.hero p{
-  max-width:700px;
-  color:#aeb7c5;
-  font-size:17px;
-  line-height:1.6;
-}
-
-.grid{
-  display:grid;
-  grid-template-columns:1.3fr .7fr;
-  gap:20px;
-}
-
-.card{
-  background:#10151c;
-  border:1px solid #252c36;
-  border-radius:18px;
-  padding:24px;
-}
-
-.card h2{
-  margin-top:0;
-}
-
-label{
-  display:block;
-  margin:16px 0 7px;
-  color:#929cac;
-  font-size:12px;
-  text-transform:uppercase;
-}
-
-input,select{
-  width:100%;
-  padding:13px;
-  border-radius:10px;
-  border:1px solid #303744;
-  background:#090d13;
-  color:#fff;
-  font-size:15px;
-}
-
-.row{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:12px;
-}
-
-.notice{
-  padding:14px;
-  border-radius:12px;
-  background:#181d25;
-  border:1px solid #303744;
-  color:#bfc8d5;
-  line-height:1.5;
-  font-size:13px;
-  margin-bottom:18px;
-}
-
-.status{
-  margin-top:15px;
-  padding:13px;
-  border-radius:10px;
-  background:#090d13;
-  border:1px solid #252c36;
-  color:#aeb7c5;
-  line-height:1.5;
-  word-break:break-word;
-}
-
-.fees{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:10px;
-}
-
-.fee{
-  padding:15px;
-  border-radius:12px;
-  background:#090d13;
-  border:1px solid #252c36;
-}
-
-.fee small{
-  color:#8791a0;
-}
-
-.fee strong{
-  display:block;
-  font-size:22px;
-  margin-top:5px;
-}
-
-a{
-  color:#39df8b;
-}
-
-@media(max-width:800px){
-  .grid{
-    grid-template-columns:1fr;
-  }
-
-  .row{
-    grid-template-columns:1fr;
-  }
-}
+body{margin:0;font-family:Inter,Arial,sans-serif;color:#fff;background:#080b10}
+nav{display:flex;align-items:center;gap:14px;padding:18px 24px;border-bottom:1px solid #222832;background:#0b0f15}
+.logo{font-size:25px;font-weight:900}
+.logo span{color:#39df8b}
+.spacer{flex:1}
+button{border:0;border-radius:10px;padding:12px 18px;font-weight:800;cursor:pointer}
+.primary{background:#39df8b;color:#06130b}
+.secondary{background:#171c24;color:#fff;border:1px solid #303744}
+.wrap{max-width:1100px;margin:auto;padding:30px 20px 60px}
+.hero{padding:45px 0 30px}
+.hero h1{font-size:clamp(42px,7vw,75px);line-height:.95;margin:0 0 20px;letter-spacing:-3px}
+.green{color:#39df8b}
+.hero p{max-width:700px;color:#aeb7c5;font-size:17px;line-height:1.6}
+.grid{display:grid;grid-template-columns:1.3fr .7fr;gap:20px}
+.card{background:#10151c;border:1px solid #252c36;border-radius:18px;padding:24px}
+.card h2{margin-top:0}
+label{display:block;margin:16px 0 7px;color:#929cac;font-size:12px;text-transform:uppercase}
+input,select{width:100%;padding:13px;border-radius:10px;border:1px solid #303744;background:#090d13;color:#fff;font-size:15px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.notice{padding:14px;border-radius:12px;background:#181d25;border:1px solid #303744;color:#bfc8d5;line-height:1.5;font-size:13px;margin-bottom:18px}
+.status{margin-top:15px;padding:13px;border-radius:10px;background:#090d13;border:1px solid #252c36;color:#aeb7c5;line-height:1.5;word-break:break-word}
+.fees{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fee{padding:15px;border-radius:12px;background:#090d13;border:1px solid #252c36}
+.fee small{color:#8791a0}
+.fee strong{display:block;font-size:22px;margin-top:5px}
+a{color:#39df8b}
+@media(max-width:800px){.grid{grid-template-columns:1fr}.row{grid-template-columns:1fr}}
 </style>
 </head>
-
 <body>
-
 <nav>
   <div class="logo">Pump<span>Lite</span></div>
   <div class="spacer"></div>
-  <button class="secondary" id="connectBtn">
-    Connect Solana Wallet
-  </button>
+  <button class="secondary" id="connectBtn">Connect Solana Wallet</button>
 </nav>
-
 <main class="wrap">
-
-<section class="hero">
-  <h1>
-    Launch tokens.<br>
-    <span class="green">Keep fees low.</span>
-  </h1>
-
-  <p>
-    PumpLite is a low-fee Solana token launchpad.
-    Connect your wallet, create a token and receive a real
-    Solana mint address.
-  </p>
-</section>
-
-<div class="grid">
-
-<section class="card">
-
-<h2>Create a Solana Token</h2>
-
-<div class="notice">
-  <strong>REAL SOLANA CREATION</strong><br>
-  When you press Create Token, your connected wallet will
-  be asked to sign a real Solana transaction. This creates
-  an actual SPL token on Solana Mainnet.
-</div>
-
-<div class="row">
-
-<div>
-<label>Token name</label>
-<input id="tokenName" placeholder="My Token">
-</div>
-
-<div>
-<label>Symbol</label>
-<input id="tokenSymbol" maxlength="10" placeholder="TOKEN">
-</div>
-
-</div>
-
-<label>Total supply</label>
-<input
-  id="tokenSupply"
-  type="number"
-  min="1"
-  value="1000000000"
->
-
-<label>Decimals</label>
-<input
-  id="tokenDecimals"
-  type="number"
-  min="0"
-  max="9"
-  value="9"
->
-
-<br><br>
-
-<button class="primary" id="createBtn">
-  Create Real Solana Token
-</button>
-
-<div class="status" id="status">
-  Connect a Solana wallet to begin.
-</div>
-
-</section>
-
-<aside class="card">
-
-<h2>PumpLite Fees</h2>
-
-<div class="fees">
-
-<div class="fee">
-<small>Trading</small>
-<strong>0.25%</strong>
-</div>
-
-<div class="fee">
-<small>Creator</small>
-<strong>0.10%</strong>
-</div>
-
-<div class="fee">
-<small>Treasury</small>
-<strong>0.05%</strong>
-</div>
-
-<div class="fee">
-<small>Reserve</small>
-<strong>0.10%</strong>
-</div>
-
-</div>
-
-<p style="color:#929cac;line-height:1.6">
-Creation fee: <strong>0</strong><br>
-Referral fee: <strong>0</strong>
-</p>
-
-<p style="color:#929cac;line-height:1.6;font-size:13px">
-The 0.25% trading fee will only become active when
-the PumpLite on-chain trading program is deployed and tested.
-</p>
-
-</aside>
-
-</div>
-
+  <section class="hero">
+    <h1>Launch tokens.<br><span class="green">Keep fees low.</span></h1>
+    <p>PumpLite is a low-fee Solana token launchpad. Connect your wallet, create a token and receive a real Solana mint address.</p>
+  </section>
+  <div class="grid">
+    <section class="card">
+      <h2>Create a Solana Token</h2>
+      <div class="notice">
+        <strong>REAL SOLANA CREATION</strong><br>
+        When you press Create Token, your connected wallet will be asked to sign a real Solana transaction. This creates an actual SPL token on Solana Mainnet.
+      </div>
+      <div class="row">
+        <div>
+          <label>Token name</label>
+          <input id="tokenName" placeholder="My Token">
+        </div>
+        <div>
+          <label>Symbol</label>
+          <input id="tokenSymbol" maxlength="10" placeholder="TOKEN">
+        </div>
+      </div>
+      <label>Total supply</label>
+      <input id="tokenSupply" type="number" min="1" value="1000000000">
+      <label>Decimals</label>
+      <input id="tokenDecimals" type="number" min="0" max="9" value="9">
+      <br><br>
+      <button class="primary" id="createBtn">Create Real Solana Token</button>
+      <div class="status" id="status">Connect a Solana wallet to begin.</div>
+    </section>
+    <aside class="card">
+      <h2>PumpLite Fees</h2>
+      <div class="fees">
+        <div class="fee"><small>Trading</small><strong>0.25%</strong></div>
+        <div class="fee"><small>Creator</small><strong>0.10%</strong></div>
+        <div class="fee"><small>Treasury</small><strong>0.05%</strong></div>
+        <div class="fee"><small>Reserve</small><strong>0.10%</strong></div>
+      </div>
+      <p style="color:#929cac;line-height:1.6">Creation fee: <strong>0</strong><br>Referral fee: <strong>0</strong></p>
+      <p style="color:#929cac;line-height:1.6;font-size:13px">Trading fees only work after the on-chain program is deployed.</p>
+    </aside>
+  </div>
 </main>
 
 <script type="module">
-
 import {
-  Connection,
-  PublicKey,
-  SystemProgram,
-  Transaction,
-  Keypair
+  Connection, SystemProgram, Transaction, Keypair
 } from "https://esm.sh/@solana/web3.js@1.98.4";
 
 import {
-  TOKEN_PROGRAM_ID,
-  MINT_SIZE,
+  TOKEN_PROGRAM_ID, MINT_SIZE,
   getMinimumBalanceForRentExemptMint,
   createInitializeMintInstruction,
   createAssociatedTokenAccountInstruction,
@@ -331,47 +99,43 @@ import {
   getAssociatedTokenAddress
 } from "https://esm.sh/@solana/spl-token@0.4.13";
 
-const RPC = "https://solana-rpc.publicnode.com";
-const connection = new Connection(RPC, "confirmed");
+// Better public RPCs – try these if one fails
+const RPCS = [
+  "https://solana-rpc.publicnode.com",
+  "https://rpc.ankr.com/solana",
+  "https://solana.drpc.org",
+  "https://solana-mainnet.gateway.tatum.io"
+];
 
+let connection = new Connection(RPCS[0], "confirmed");
 let wallet = null;
 
 const status = document.getElementById("status");
 const connectBtn = document.getElementById("connectBtn");
 const createBtn = document.getElementById("createBtn");
 
-function setStatus(message){
-  status.innerHTML = message;
+function setStatus(msg) {
+  status.innerHTML = msg;
 }
 
-async function connectWallet(){
-  if(!window.solana){
-    setStatus(
-      "<strong>No Solana wallet detected.</strong><br>" +
-      "Install Phantom or another compatible Solana wallet, then reload this page."
-    );
+async function connectWallet() {
+  if (!window.solana) {
+    setStatus("<strong>No Solana wallet detected.</strong><br>Install Phantom and reload.");
     return;
   }
-
-  try{
-    const response = await window.solana.connect();
-    wallet = response.publicKey;
-
-    connectBtn.textContent =
-      wallet.toBase58().slice(0,6) + "..." + wallet.toBase58().slice(-4);
-
-    setStatus(
-      "<strong>Wallet connected.</strong><br>" + wallet.toBase58()
-    );
-  }catch(error){
-    console.error(error);
-    setStatus("Wallet connection cancelled or failed.");
+  try {
+    const res = await window.solana.connect();
+    wallet = res.publicKey;
+    connectBtn.textContent = wallet.toBase58().slice(0,4) + "..." + wallet.toBase58().slice(-4);
+    setStatus("<strong>Wallet connected.</strong><br>" + wallet.toBase58());
+  } catch (e) {
+    setStatus("Connection cancelled.");
   }
 }
 
-async function createToken(){
-  if(!wallet){
-    setStatus("Connect your Solana wallet first.");
+async function createToken() {
+  if (!wallet) {
+    setStatus("Connect your wallet first.");
     return;
   }
 
@@ -380,127 +144,71 @@ async function createToken(){
   const supply = document.getElementById("tokenSupply").value;
   const decimals = Number(document.getElementById("tokenDecimals").value);
 
-  if(!name || !symbol){
-    setStatus("Enter a token name and symbol.");
-    return;
-  }
+  if (!name || !symbol) return setStatus("Enter name and symbol.");
+  if (!supply || Number(supply) <= 0) return setStatus("Enter valid supply.");
 
-  if(!supply || Number(supply) <= 0){
-    setStatus("Enter a valid token supply.");
-    return;
-  }
-
-  if(decimals < 0 || decimals > 9){
-    setStatus("Decimals must be between 0 and 9.");
-    return;
-  }
-
-  try{
+  try {
     createBtn.disabled = true;
-    setStatus("Preparing your real Solana token transaction...");
+    setStatus("Preparing transaction...");
 
-    // Generate the token mint account
     const mint = Keypair.generate();
-
-    // FIXED: call the imported function, not a method on connection
     const rent = await getMinimumBalanceForRentExemptMint(connection);
-
-    // Associated token account for creator
-    const creatorATA = await getAssociatedTokenAddress(
-      mint.publicKey,
-      wallet
-    );
-
-    // Convert supply into base units
+    const ata = await getAssociatedTokenAddress(mint.publicKey, wallet);
     const rawSupply = BigInt(supply) * (10n ** BigInt(decimals));
 
-    // Build transaction
-    const transaction = new Transaction();
+    const tx = new Transaction();
 
-    // Create mint account
-    transaction.add(
-      SystemProgram.createAccount({
-        fromPubkey: wallet,
-        newAccountPubkey: mint.publicKey,
-        lamports: rent,
-        space: MINT_SIZE,
-        programId: TOKEN_PROGRAM_ID
-      })
-    );
+    tx.add(SystemProgram.createAccount({
+      fromPubkey: wallet,
+      newAccountPubkey: mint.publicKey,
+      lamports: rent,
+      space: MINT_SIZE,
+      programId: TOKEN_PROGRAM_ID
+    }));
 
-    // Initialize mint
-    transaction.add(
-      createInitializeMintInstruction(
-        mint.publicKey,
-        decimals,
-        wallet,          // mint authority
-        wallet,          // freeze authority
-        TOKEN_PROGRAM_ID
-      )
-    );
+    tx.add(createInitializeMintInstruction(
+      mint.publicKey, decimals, wallet, wallet, TOKEN_PROGRAM_ID
+    ));
 
-    // Create creator token account
-    transaction.add(
-      createAssociatedTokenAccountInstruction(
-        wallet,
-        creatorATA,
-        wallet,
-        mint.publicKey
-      )
-    );
+    tx.add(createAssociatedTokenAccountInstruction(
+      wallet, ata, wallet, mint.publicKey
+    ));
 
-    // Mint the initial supply
-    transaction.add(
-      createMintToInstruction(
-        mint.publicKey,
-        creatorATA,
-        wallet,
-        rawSupply
-      )
-    );
+    tx.add(createMintToInstruction(
+      mint.publicKey, ata, wallet, rawSupply
+    ));
 
-    transaction.feePayer = wallet;
-    transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+    tx.feePayer = wallet;
+    tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+    tx.partialSign(mint);
 
-    // The mint Keypair must also sign
-    transaction.partialSign(mint);
+    setStatus("Approve in your wallet...");
 
-    setStatus("Please approve the Solana transaction in your wallet...");
+    const signed = await window.solana.signTransaction(tx);
+    const sig = await connection.sendRawTransaction(signed.serialize());
 
-    const signed = await window.solana.signTransaction(transaction);
-    const signature = await connection.sendRawTransaction(signed.serialize());
+    setStatus("Confirming...");
+    await connection.confirmTransaction(sig, "confirmed");
 
-    setStatus("Transaction sent.<br>Waiting for Solana confirmation...");
-
-    await connection.confirmTransaction(signature, "confirmed");
-
-    const mintAddress = mint.publicKey.toBase58();
+    const mintAddr = mint.publicKey.toBase58();
 
     setStatus(
-      "<strong>🎉 TOKEN CREATED ON SOLANA!</strong><br><br>" +
-      "Token: " + name + "<br>" +
+      "<strong>Token created!</strong><br><br>" +
+      "Name: " + name + "<br>" +
       "Symbol: " + symbol + "<br>" +
-      "Supply: " + Number(supply).toLocaleString() + "<br>" +
-      "Mint: " + mintAddress + "<br><br>" +
-      '<a href="https://solscan.io/token/' + mintAddress + '" target="_blank" rel="noopener">View token on Solscan</a><br><br>' +
-      'Transaction: <a href="https://solscan.io/tx/' + signature + '" target="_blank" rel="noopener">View transaction</a>'
+      "Mint: " + mintAddr + "<br><br>" +
+      '<a href="https://solscan.io/token/' + mintAddr + '" target="_blank">View on Solscan</a>'
     );
-
-  }catch(error){
-    console.error(error);
-    setStatus(
-      "<strong>Transaction failed.</strong><br>" +
-      (error && error.message ? error.message : error)
-    );
-  }finally{
+  } catch (err) {
+    console.error(err);
+    setStatus("<strong>Failed:</strong><br>" + (err.message || err));
+  } finally {
     createBtn.disabled = false;
   }
 }
 
-connectBtn.addEventListener("click", connectWallet);
-createBtn.addEventListener("click", createToken);
-
+connectBtn.onclick = connectWallet;
+createBtn.onclick = createToken;
 </script>
-
 </body>
 </html>
