@@ -1,16 +1,20 @@
 {
   "siteName": "PumpLite",
-  "totalFeeBps": 100,
-  "creatorBps": 50,
-  "treasuryBps": 50,
-  "creationFeeSol": 0.005,
-  "creationFeeEth": 0.0005,
-  "referralBps": 20,
-  "referralEnabled": true,
-  "treasuryWallet": "",
-  "graduationSol": 85,
-  "virtualSol0": 30,
-  "virtualToken0": 1073000000,
-  "chains": { "solana": true, "base": true, "bitcoin": false, "dogecoin": false },
-  "notice": "Low-fee launchpad. Testnet first."
+  "network": "solana-mainnet",
+  "totalFeeBps": 25,
+  "creatorBps": 10,
+  "treasuryBps": 5,
+  "marketReserveBps": 10,
+  "creationFeeSol": 0,
+  "referralEnabled": false,
+  "treasuryWallet": "BNpFPPuy2h12dryy4dayemjA4YS17ccVaF82jBDuiwct",
+  "baseTreasuryWallet": "0x0de7fdcc798f7fac6b03b366c529133a9c60794d",
+  "chains": {
+    "solana": true,
+    "base": true
+  },
+  "trading": {
+    "enabled": false,
+    "reason": "Trading remains disabled until the PumpLite on-chain bonding-curve program has been deployed, tested and reviewed."
+  }
 }
