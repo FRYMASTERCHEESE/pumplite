@@ -87,7 +87,9 @@ a{color:#39df8b}
 </main>
 <script type="module">
 import { PublicKey } from "https://esm.sh/@solana/web3.js@1.98.4";
+
 let ALLOWED_ADMINS = [];
+
 const connectBtn = document.getElementById("connectBtn");
 const authStatus = document.getElementById("authStatus");
 const accessBadge = document.getElementById("accessBadge");
@@ -98,17 +100,21 @@ const treasuryLink = document.getElementById("treasuryLink");
 const adminWalletInput = document.getElementById("adminWalletInput");
 const saveAdminBtn = document.getElementById("saveAdminBtn");
 const localStatus = document.getElementById("localStatus");
+
 let wallet = null;
 let config = null;
+
 function short(addr) {
   if (!addr || addr.length < 10) return addr || "—";
   return addr.slice(0, 6) + "…" + addr.slice(-4);
 }
+
 function isAllowed(pubkey) {
   if (!pubkey) return false;
   const base58 = pubkey.toBase58();
-  return ALLOWED_ADMINS.some(a => a === base58);
+  return ALLOWED_ADMINS.some(function(a) { return a === base58; });
 }
+
 function setLocked(locked) {
   if (locked) {
     adminPanel.classList.add("locked");
@@ -120,39 +126,52 @@ function setLocked(locked) {
     accessBadge.className = "badge ok";
   }
 }
+
 function renderConfig() {
   if (!config) return;
+
   const rows = [
     ["Site", config.siteName || "PumpLite"],
     ["Network", config.network || "mainnet-beta"],
     ["Program ID", config.programId || "—"],
     ["Treasury", config.treasuryWallet || "—"],
-    ["Total fee", (config.totalFeeBps ?? 25) + " bps"],
-    ["Creator", (config.creatorBps ?? 10) + " bps"],
-    ["Treasury fee", (config.treasuryBps ?? 5) + " bps"],
-    ["Reserve", (config.marketReserveBps ?? 5) + " bps"],
-    ["Referral", (config.referralBps ?? 5) + " bps"],
-    ["Creation fee", (config.creationFeeSol ?? 0) + " SOL"],
+    ["Total fee", (config.totalFeeBps != null ? config.totalFeeBps : 25) + " bps"],
+    ["Creator", (config.creatorBps != null ? config.creatorBps : 10) + " bps"],
+    ["Treasury fee", (config.treasuryBps != null ? config.treasuryBps : 5) + " bps"],
+    ["Reserve", (config.marketReserveBps != null ? config.marketReserveBps : 5) + " bps"],
+    ["Referral", (config.referralBps != null ? config.referralBps : 5) + " bps"],
+    ["Creation fee", (config.creationFeeSol != null ? config.creationFeeSol : 0) + " SOL"]
   ];
-  configView.innerHTML = rows.map(([k, v]) => `<div>\( {k}</div><div><b> \){v}</b></div>`).join("");
-  if (config.programId) programLink.href = `https://solscan.io/account/${config.programId}`;
+
+  // Safe string building (no template literals)
+  configView.innerHTML = rows.map(function(row) {
+    return "<div>" + row[0] + "</div><div><b>" + row[1] + "</b></div>";
+  }).join("");
+
+  if (config.programId) {
+    programLink.href = "https://solscan.io/account/" + config.programId;
+  }
   if (config.treasuryWallet) {
-    treasuryLink.href = `https://solscan.io/account/${config.treasuryWallet}`;
+    treasuryLink.href = "https://solscan.io/account/" + config.treasuryWallet;
     adminWalletInput.value = config.treasuryWallet;
   }
 }
+
 async function loadConfig() {
   try {
     const res = await fetch("./config.json?t=" + Date.now());
     config = await res.json();
     ALLOWED_ADMINS = [];
-    if (config.treasuryWallet) ALLOWED_ADMINS.push(config.treasuryWallet);
+    if (config.treasuryWallet) {
+      ALLOWED_ADMINS.push(config.treasuryWallet);
+    }
     renderConfig();
   } catch (e) {
     configView.innerHTML = "Failed to load config.json";
     console.error(e);
   }
 }
+
 async function connectWallet() {
   if (!window.solana) {
     authStatus.innerHTML = "<strong>No Solana wallet detected.</strong><br>Install Phantom (or compatible) and reload.";
@@ -162,11 +181,12 @@ async function connectWallet() {
     const resp = await window.solana.connect();
     wallet = resp.publicKey;
     connectBtn.textContent = short(wallet.toBase58());
+
     if (isAllowed(wallet)) {
-      authStatus.innerHTML = `<strong>Admin wallet connected.</strong><br>${wallet.toBase58()}`;
+      authStatus.innerHTML = "<strong>Admin wallet connected.</strong><br>" + wallet.toBase58();
       setLocked(false);
     } else {
-      authStatus.innerHTML = `<strong>Wrong wallet.</strong><br>Connected: ${wallet.toBase58()}<br>This address is not in the allowed admin list.`;
+      authStatus.innerHTML = "<strong>Wrong wallet.</strong><br>Connected: " + wallet.toBase58() + "<br>This address is not in the allowed admin list.";
       setLocked(true);
     }
   } catch (e) {
@@ -175,30 +195,36 @@ async function connectWallet() {
     setLocked(true);
   }
 }
-saveAdminBtn.addEventListener("click", () => {
+
+saveAdminBtn.addEventListener("click", function() {
   const val = adminWalletInput.value.trim();
   try {
     new PublicKey(val);
     ALLOWED_ADMINS = [val];
     localStatus.style.display = "block";
-    localStatus.innerHTML = `Local check now uses <b>${val}</b>. Re-connect the wallet to test.`;
+    localStatus.innerHTML = "Local check now uses <b>" + val + "</b>. Re-connect the wallet to test.";
     if (wallet && isAllowed(wallet)) {
       setLocked(false);
-      authStatus.innerHTML = `<strong>Admin wallet connected.</strong><br>${wallet.toBase58()}`;
-    } else setLocked(true);
-  } catch {
+      authStatus.innerHTML = "<strong>Admin wallet connected.</strong><br>" + wallet.toBase58();
+    } else {
+      setLocked(true);
+    }
+  } catch (e) {
     localStatus.style.display = "block";
     localStatus.textContent = "Invalid base58 address.";
   }
 });
+
 connectBtn.addEventListener("click", connectWallet);
-if (window.solana?.isConnected && window.solana.publicKey) {
+
+if (window.solana && window.solana.isConnected && window.solana.publicKey) {
   wallet = window.solana.publicKey;
   connectBtn.textContent = short(wallet.toBase58());
 }
-loadConfig().then(() => {
+
+loadConfig().then(function() {
   if (wallet && isAllowed(wallet)) {
-    authStatus.innerHTML = `<strong>Admin wallet connected.</strong><br>${wallet.toBase58()}`;
+    authStatus.innerHTML = "<strong>Admin wallet connected.</strong><br>" + wallet.toBase58();
     setLocked(false);
   }
 });
