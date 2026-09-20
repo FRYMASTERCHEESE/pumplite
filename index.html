@@ -15,10 +15,11 @@
   nav {
     background: #ffffff;
     border-bottom: 1px solid #e5e7eb;
-    padding: 16px 20px;
+    padding: 14px 20px;
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 12px;
+    flex-wrap: wrap;
   }
   .logo {
     font-size: 22px;
@@ -29,9 +30,9 @@
   button {
     border: none;
     border-radius: 10px;
-    padding: 11px 18px;
+    padding: 10px 16px;
     font-weight: 700;
-    font-size: 15px;
+    font-size: 14px;
     cursor: pointer;
   }
   .primary {
@@ -47,24 +48,50 @@
     color: #111;
     border: 1px solid #d1d5db;
   }
+  .network-btn {
+    background: #f3f4f6;
+    border: 1px solid #d1d5db;
+    color: #374151;
+  }
+  .network-btn.active {
+    background: #16a34a;
+    color: white;
+    border-color: #16a34a;
+  }
   .wrap {
     max-width: 920px;
     margin: 0 auto;
-    padding: 30px 16px 60px;
+    padding: 28px 16px 60px;
   }
   .hero {
     text-align: center;
-    margin-bottom: 32px;
+    margin-bottom: 28px;
   }
   .hero h1 {
-    font-size: clamp(32px, 6vw, 48px);
+    font-size: clamp(28px, 6vw, 42px);
     font-weight: 800;
     letter-spacing: -1px;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
   }
   .hero p {
     color: #4b5563;
-    font-size: 17px;
+    font-size: 16px;
+  }
+  .network-badge {
+    display: inline-block;
+    margin-top: 10px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .badge-mainnet {
+    background: #dcfce7;
+    color: #166534;
+  }
+  .badge-devnet {
+    background: #e0f2fe;
+    color: #075985;
   }
   .grid {
     display: grid;
@@ -82,8 +109,8 @@
     box-shadow: 0 1px 3px rgba(0,0,0,0.05);
   }
   .card h2 {
-    font-size: 20px;
-    margin-bottom: 18px;
+    font-size: 19px;
+    margin-bottom: 16px;
   }
   label {
     display: block;
@@ -106,7 +133,7 @@
     background: white;
   }
   textarea {
-    min-height: 90px;
+    min-height: 80px;
     resize: vertical;
   }
   .row {
@@ -120,33 +147,37 @@
   .image-box {
     border: 2px dashed #d1d5db;
     border-radius: 12px;
-    padding: 28px 16px;
+    padding: 24px 16px;
     text-align: center;
     background: #fafafa;
     cursor: pointer;
-    transition: 0.2s;
   }
   .image-box:hover {
     border-color: #16a34a;
     background: #f0fdf4;
   }
   .image-box img {
-    max-width: 140px;
-    max-height: 140px;
+    max-width: 130px;
+    max-height: 130px;
     border-radius: 12px;
-    margin-top: 10px;
+    margin-top: 8px;
   }
   .notice {
     background: #f0fdf4;
     border: 1px solid #bbf7d0;
     color: #166534;
-    padding: 14px;
+    padding: 13px;
     border-radius: 10px;
     font-size: 14px;
-    margin-bottom: 18px;
+    margin-bottom: 16px;
+  }
+  .notice.devnet {
+    background: #e0f2fe;
+    border-color: #7dd3fc;
+    color: #075985;
   }
   .status {
-    margin-top: 18px;
+    margin-top: 16px;
     padding: 14px;
     border-radius: 10px;
     background: #f9fafb;
@@ -158,23 +189,23 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 10px;
-    margin-bottom: 16px;
+    margin-bottom: 14px;
   }
   .fee {
     background: #f9fafb;
     border: 1px solid #e5e7eb;
     border-radius: 10px;
-    padding: 14px;
+    padding: 12px;
     text-align: center;
   }
   .fee small {
     display: block;
     color: #6b7280;
     font-size: 12px;
-    margin-bottom: 4px;
+    margin-bottom: 3px;
   }
   .fee strong {
-    font-size: 20px;
+    font-size: 18px;
   }
   a { color: #16a34a; }
 </style>
@@ -184,23 +215,26 @@
 <nav>
   <div class="logo">Pump<span>Lite</span></div>
   <div class="spacer"></div>
+
+  <button class="network-btn active" id="btnMainnet">Mainnet</button>
+  <button class="network-btn" id="btnDevnet">Devnet</button>
+
   <button class="secondary" id="connectBtn">Connect Wallet</button>
 </nav>
 
 <main class="wrap">
   <section class="hero">
     <h1>Create a Solana Token</h1>
-    <p>Simple, fast, and real tokens on Solana Mainnet</p>
+    <p>Simple & real tokens on Solana</p>
+    <div class="network-badge badge-mainnet" id="networkBadge">Mainnet</div>
   </section>
 
   <div class="grid">
-    <!-- Create Form -->
     <section class="card">
       <h2>Token Details</h2>
 
-      <div class="notice">
-        This creates a <strong>real SPL token</strong> on Solana Mainnet.  
-        You will need a small amount of SOL for the network fee.
+      <div class="notice" id="networkNotice">
+        You are on <strong>Mainnet</strong>. Creating a token costs a small amount of real SOL.
       </div>
 
       <label>Token Name</label>
@@ -232,7 +266,7 @@
 
       <br>
       <button class="primary" id="createBtn" style="width:100%; padding:14px;">
-        Create Real Solana Token
+        Create Solana Token
       </button>
 
       <div class="status" id="status">
@@ -240,30 +274,21 @@
       </div>
     </section>
 
-    <!-- Fees Card -->
     <aside class="card">
       <h2>Fees</h2>
       <div class="fees">
-        <div class="fee">
-          <small>Trading</small>
-          <strong>0.25%</strong>
-        </div>
-        <div class="fee">
-          <small>Creator</small>
-          <strong>0.10%</strong>
-        </div>
-        <div class="fee">
-          <small>Treasury</small>
-          <strong>0.05%</strong>
-        </div>
-        <div class="fee">
-          <small>Reserve</small>
-          <strong>0.10%</strong>
-        </div>
+        <div class="fee"><small>Trading</small><strong>0.25%</strong></div>
+        <div class="fee"><small>Creator</small><strong>0.10%</strong></div>
+        <div class="fee"><small>Treasury</small><strong>0.05%</strong></div>
+        <div class="fee"><small>Reserve</small><strong>0.10%</strong></div>
       </div>
       <p style="color:#6b7280; font-size:14px; line-height:1.6;">
         Creation fee: <strong>0 SOL</strong><br>
         Trading fees only work after the on-chain program is deployed.
+      </p>
+      <p style="margin-top:14px; font-size:13px; color:#6b7280;">
+        <strong>Devnet tip:</strong> Get free SOL at<br>
+        <a href="https://faucet.solana.com" target="_blank">faucet.solana.com</a>
       </p>
     </aside>
   </div>
@@ -274,7 +299,8 @@ import {
   Connection,
   SystemProgram,
   Transaction,
-  Keypair
+  Keypair,
+  clusterApiUrl
 } from "https://esm.sh/@solana/web3.js@1.98.4";
 
 import {
@@ -287,20 +313,17 @@ import {
   getAssociatedTokenAddress
 } from "https://esm.sh/@solana/spl-token@0.4.13";
 
-// Try multiple public RPCs
-const RPCS = [
-  "https://solana-rpc.publicnode.com",
-  "https://rpc.ankr.com/solana",
-  "https://solana.drpc.org"
-];
-
-let connection = new Connection(RPCS[0], "confirmed");
+let currentNetwork = "mainnet-beta"; // or "devnet"
+let connection = new Connection(clusterApiUrl("mainnet-beta"), "confirmed");
 let wallet = null;
-let selectedImage = null;
 
 const statusEl = document.getElementById("status");
 const connectBtn = document.getElementById("connectBtn");
 const createBtn = document.getElementById("createBtn");
+const btnMainnet = document.getElementById("btnMainnet");
+const btnDevnet = document.getElementById("btnDevnet");
+const networkBadge = document.getElementById("networkBadge");
+const networkNotice = document.getElementById("networkNotice");
 const imageBox = document.getElementById("imageBox");
 const imageInput = document.getElementById("tokenImage");
 const imagePreview = document.getElementById("imagePreview");
@@ -310,12 +333,36 @@ function setStatus(msg) {
   statusEl.innerHTML = msg;
 }
 
-// Image upload preview
+function updateNetworkUI() {
+  if (currentNetwork === "mainnet-beta") {
+    btnMainnet.classList.add("active");
+    btnDevnet.classList.remove("active");
+    networkBadge.textContent = "Mainnet";
+    networkBadge.className = "network-badge badge-mainnet";
+    networkNotice.className = "notice";
+    networkNotice.innerHTML = "You are on <strong>Mainnet</strong>. Creating a token costs a small amount of real SOL.";
+  } else {
+    btnMainnet.classList.remove("active");
+    btnDevnet.classList.add("active");
+    networkBadge.textContent = "Devnet (Free Testing)";
+    networkBadge.className = "network-badge badge-devnet";
+    networkNotice.className = "notice devnet";
+    networkNotice.innerHTML = "You are on <strong>Devnet</strong> (free). Get free SOL from the faucet before creating.";
+  }
+}
+
+function switchNetwork(network) {
+  currentNetwork = network;
+  connection = new Connection(clusterApiUrl(network), "confirmed");
+  updateNetworkUI();
+  setStatus("Switched to " + (network === "mainnet-beta" ? "Mainnet" : "Devnet") + ". Connect wallet again if needed.");
+}
+
+// Image preview
 imageBox.addEventListener("click", () => imageInput.click());
 imageInput.addEventListener("change", (e) => {
   const file = e.target.files[0];
   if (!file) return;
-  selectedImage = file;
   const reader = new FileReader();
   reader.onload = (ev) => {
     imagePreview.src = ev.target.result;
@@ -350,7 +397,6 @@ async function createToken() {
   const symbol = document.getElementById("tokenSymbol").value.trim().toUpperCase();
   const supply = document.getElementById("tokenSupply").value;
   const decimals = Number(document.getElementById("tokenDecimals").value);
-  const desc = document.getElementById("tokenDesc").value.trim();
 
   if (!name || !symbol) {
     setStatus("Please enter both Name and Symbol.");
@@ -363,7 +409,7 @@ async function createToken() {
 
   try {
     createBtn.disabled = true;
-    setStatus("Preparing transaction...");
+    setStatus("Preparing transaction on " + (currentNetwork === "mainnet-beta" ? "Mainnet" : "Devnet") + "...");
 
     const mint = Keypair.generate();
     const rent = await getMinimumBalanceForRentExemptMint(connection);
@@ -372,7 +418,6 @@ async function createToken() {
 
     const tx = new Transaction();
 
-    // Create mint account
     tx.add(SystemProgram.createAccount({
       fromPubkey: wallet,
       newAccountPubkey: mint.publicKey,
@@ -381,29 +426,16 @@ async function createToken() {
       programId: TOKEN_PROGRAM_ID
     }));
 
-    // Initialize mint
     tx.add(createInitializeMintInstruction(
-      mint.publicKey,
-      decimals,
-      wallet,
-      wallet,
-      TOKEN_PROGRAM_ID
+      mint.publicKey, decimals, wallet, wallet, TOKEN_PROGRAM_ID
     ));
 
-    // Create associated token account
     tx.add(createAssociatedTokenAccountInstruction(
-      wallet,
-      ata,
-      wallet,
-      mint.publicKey
+      wallet, ata, wallet, mint.publicKey
     ));
 
-    // Mint supply to creator
     tx.add(createMintToInstruction(
-      mint.publicKey,
-      ata,
-      wallet,
-      rawSupply
+      mint.publicKey, ata, wallet, rawSupply
     ));
 
     tx.feePayer = wallet;
@@ -419,14 +451,22 @@ async function createToken() {
     await connection.confirmTransaction(signature, "confirmed");
 
     const mintAddress = mint.publicKey.toBase58();
+    const clusterParam = currentNetwork === "devnet" ? "?cluster=devnet" : "";
+    const explorerTx = currentNetwork === "devnet" 
+      ? `https://explorer.solana.com/tx/${signature}?cluster=devnet`
+      : `https://solscan.io/tx/${signature}`;
+    const explorerToken = currentNetwork === "devnet"
+      ? `https://explorer.solana.com/address/${mintAddress}?cluster=devnet`
+      : `https://solscan.io/token/${mintAddress}`;
 
     setStatus(
       "<strong style='color:#16a34a'>Token created successfully!</strong><br><br>" +
+      "<b>Network:</b> " + (currentNetwork === "mainnet-beta" ? "Mainnet" : "Devnet") + "<br>" +
       "<b>Name:</b> " + name + "<br>" +
       "<b>Symbol:</b> " + symbol + "<br>" +
-      "<b>Mint Address:</b><br>" + mintAddress + "<br><br>" +
-      '<a href="https://solscan.io/token/' + mintAddress + '" target="_blank">View on Solscan</a> · ' +
-      '<a href="https://solscan.io/tx/' + signature + '" target="_blank">View Transaction</a>'
+      "<b>Mint:</b><br>" + mintAddress + "<br><br>" +
+      `<a href="${explorerToken}" target="_blank">View Token</a> · ` +
+      `<a href="${explorerTx}" target="_blank">View Transaction</a>`
     );
 
   } catch (err) {
@@ -437,8 +477,14 @@ async function createToken() {
   }
 }
 
+// Event listeners
+btnMainnet.addEventListener("click", () => switchNetwork("mainnet-beta"));
+btnDevnet.addEventListener("click", () => switchNetwork("devnet"));
 connectBtn.addEventListener("click", connectWallet);
 createBtn.addEventListener("click", createToken);
+
+// Init
+updateNetworkUI();
 </script>
 </body>
-                          </html>
+</html>
