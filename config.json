@@ -1,15 +1,21 @@
 {
-  "siteName": "PumpLite",
-  "network": "mainnet-beta",
-  "totalFeeBps": 25,
-  "creatorBps": 10,
-  "treasuryBps": 5,
-  "marketReserveBps": 5,
-  "referralBps": 5,
-  "creationFeeSol": 0,
-  "referralEnabled": true,
-  "treasuryWallet": "BNpFPPuy2h12dryy4dayemjA4YS17ccVaF82jBDuiwct",
-  "programId": "7yCAWc9Tk8F5eTjn731ZZKxNypoBrbaXvFEm6c9z8ybY",
-  "chains": {"solana": true, "base": false, "bitcoin": false, "dogecoin": false},
-  "notice": "Mainnet source build. Do not invite public users until the deployed program has been compiled, verified and independently reviewed."
+  "schemaVersion": 1,
+  "transactionsEnabled": false,
+  "feeBps": 25,
+  "solana": {
+    "name": "Solana Mainnet",
+    "rpcUrl": "https://api.mainnet-beta.solana.com",
+    "genesisHash": "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+    "programId": null,
+    "treasury": "BNpFPPuy2h12dryy4dayemjA4YS17ccVaF82jBDuiwct",
+    "explorer": "https://solscan.io"
+  },
+  "base": {
+    "name": "Base Mainnet",
+    "chainId": 8453,
+    "rpcUrl": "https://mainnet.base.org",
+    "factory": null,
+    "treasury": "0x0de7fdcc798f7fac6b03b366c529133a9c60794d",
+    "explorer": "https://basescan.org"
+  }
 }

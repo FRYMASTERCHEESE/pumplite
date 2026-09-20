@@ -2,523 +2,82 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PumpLite — Create Solana Token</title>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: Inter, system-ui, -apple-system, sans-serif;
-    background: #f4f6f9;
-    color: #1a1a1a;
-    line-height: 1.5;
-  }
-  nav {
-    background: #ffffff;
-    border-bottom: 1px solid #e5e7eb;
-    padding: 14px 20px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-  }
-  .logo { font-size: 22px; font-weight: 800; }
-  .logo span { color: #16a34a; }
-  .spacer { flex: 1; }
-  button {
-    border: none;
-    border-radius: 10px;
-    padding: 10px 16px;
-    font-weight: 700;
-    font-size: 14px;
-    cursor: pointer;
-  }
-  .primary { background: #16a34a; color: white; }
-  .primary:disabled { background: #86efac; cursor: not-allowed; }
-  .secondary {
-    background: #f3f4f6;
-    color: #111;
-    border: 1px solid #d1d5db;
-  }
-  .network-btn {
-    background: #f3f4f6;
-    border: 1px solid #d1d5db;
-    color: #374151;
-  }
-  .network-btn.active {
-    background: #16a34a;
-    color: white;
-    border-color: #16a34a;
-  }
-  .wrap {
-    max-width: 920px;
-    margin: 0 auto;
-    padding: 28px 16px 60px;
-  }
-  .hero { text-align: center; margin-bottom: 28px; }
-  .hero h1 {
-    font-size: clamp(28px, 6vw, 42px);
-    font-weight: 800;
-    letter-spacing: -1px;
-    margin-bottom: 8px;
-  }
-  .hero p { color: #4b5563; font-size: 16px; }
-  .network-badge {
-    display: inline-block;
-    margin-top: 10px;
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 13px;
-    font-weight: 600;
-  }
-  .badge-mainnet { background: #dcfce7; color: #166534; }
-  .badge-devnet { background: #e0f2fe; color: #075985; }
-  .grid {
-    display: grid;
-    grid-template-columns: 1.4fr 0.9fr;
-    gap: 24px;
-  }
-  @media (max-width: 800px) { .grid { grid-template-columns: 1fr; } }
-  .card {
-    background: white;
-    border: 1px solid #e5e7eb;
-    border-radius: 16px;
-    padding: 24px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-  }
-  .card h2 { font-size: 19px; margin-bottom: 16px; }
-  label {
-    display: block;
-    font-size: 13px;
-    font-weight: 600;
-    color: #374151;
-    margin: 14px 0 6px;
-  }
-  input, textarea {
-    width: 100%;
-    padding: 12px 14px;
-    border: 1px solid #d1d5db;
-    border-radius: 10px;
-    font-size: 15px;
-    background: #fafafa;
-  }
-  input:focus, textarea:focus {
-    outline: none;
-    border-color: #16a34a;
-    background: white;
-  }
-  textarea { min-height: 80px; resize: vertical; }
-  .row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 14px;
-  }
-  @media (max-width: 600px) { .row { grid-template-columns: 1fr; } }
-  .image-box {
-    border: 2px dashed #d1d5db;
-    border-radius: 12px;
-    padding: 24px 16px;
-    text-align: center;
-    background: #fafafa;
-    cursor: pointer;
-  }
-  .image-box:hover {
-    border-color: #16a34a;
-    background: #f0fdf4;
-  }
-  .image-box.has-image {
-    border-style: solid;
-    border-color: #16a34a;
-  }
-  .image-box img {
-    max-width: 140px;
-    max-height: 140px;
-    border-radius: 12px;
-    margin-top: 8px;
-  }
-  .notice {
-    background: #f0fdf4;
-    border: 1px solid #bbf7d0;
-    color: #166534;
-    padding: 13px;
-    border-radius: 10px;
-    font-size: 14px;
-    margin-bottom: 16px;
-  }
-  .notice.devnet {
-    background: #e0f2fe;
-    border-color: #7dd3fc;
-    color: #075985;
-  }
-  .status {
-    margin-top: 16px;
-    padding: 14px;
-    border-radius: 10px;
-    background: #f9fafb;
-    border: 1px solid #e5e7eb;
-    font-size: 14px;
-    word-break: break-word;
-  }
-  .fees {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    margin-bottom: 14px;
-  }
-  .fee {
-    background: #f9fafb;
-    border: 1px solid #e5e7eb;
-    border-radius: 10px;
-    padding: 12px;
-    text-align: center;
-  }
-  .fee small {
-    display: block;
-    color: #6b7280;
-    font-size: 12px;
-    margin-bottom: 3px;
-  }
-  .fee strong { font-size: 18px; }
-  a { color: #16a34a; }
-</style>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#101b18">
+<meta name="description" content="PumpLite: a lightweight fixed-supply token launchpad for Solana and Base.">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://api.mainnet-beta.solana.com wss://api.mainnet-beta.solana.com https://mainnet.base.org; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>PumpLite · Token launches, kept simple</title>
+<link rel="stylesheet" href="./web/styles.css">
+<script type="module" src="./web/app.js"></script>
 </head>
 <body>
-
-<nav>
-  <div class="logo">Pump<span>Lite</span></div>
-  <div class="spacer"></div>
-  <button class="network-btn active" id="btnMainnet">Mainnet</button>
-  <button class="network-btn" id="btnDevnet">Devnet</button>
-  <button class="secondary" id="connectBtn">Connect Wallet</button>
-</nav>
-
-<main class="wrap">
-  <section class="hero">
-    <h1>Create a Solana Token</h1>
-    <p>With Name, Symbol & Image</p>
-    <div class="network-badge badge-mainnet" id="networkBadge">Mainnet</div>
-  </section>
-
-  <div class="grid">
-    <section class="card">
-      <h2>Token Details</h2>
-
-      <div class="notice" id="networkNotice">
-        You are on <strong>Mainnet</strong>. Creating a token costs a small amount of real SOL.
-      </div>
-
-      <label>Token Name *</label>
-      <input id="tokenName" placeholder="e.g. Corey Vibe" maxlength="32">
-
-      <div class="row">
-        <div>
-          <label>Symbol / Ticker *</label>
-          <input id="tokenSymbol" placeholder="e.g. CV" maxlength="10">
-        </div>
-        <div>
-          <label>Decimals</label>
-          <input id="tokenDecimals" type="number" value="9" min="0" max="9">
-        </div>
-      </div>
-
-      <label>Total Supply</label>
-      <input id="tokenSupply" type="number" value="1000000000" min="1">
-
-      <label>Description (optional)</label>
-      <textarea id="tokenDesc" placeholder="Short description of your token"></textarea>
-
-      <label>Token Image</label>
-      <div class="image-box" id="imageBox">
-        <div id="imageText">
-          Tap to select image<br>
-          <small>JPG or PNG recommended</small>
-        </div>
-        <img id="imagePreview" style="display:none;">
-        <input type="file" id="tokenImage" accept="image/*" style="display:none;">
-      </div>
-
-      <br>
-      <button class="primary" id="createBtn" style="width:100%; padding:14px;">
-        Create Solana Token
-      </button>
-
-      <div class="status" id="status">
-        Connect your wallet to begin.
-      </div>
-    </section>
-
-    <aside class="card">
-      <h2>Fees</h2>
-      <div class="fees">
-        <div class="fee"><small>Trading</small><strong>0.25%</strong></div>
-        <div class="fee"><small>Creator</small><strong>0.10%</strong></div>
-        <div class="fee"><small>Treasury</small><strong>0.05%</strong></div>
-        <div class="fee"><small>Reserve</small><strong>0.10%</strong></div>
-      </div>
-      <p style="color:#6b7280; font-size:14px; line-height:1.6;">
-        Creation fee: <strong>0 SOL</strong><br>
-        Image preview works. Full on-chain image support is limited on static sites.
-      </p>
-      <p style="margin-top:14px; font-size:13px; color:#6b7280;">
-        <strong>Devnet tip:</strong> Get free SOL at<br>
-        <a href="https://faucet.solana.com" target="_blank">faucet.solana.com</a>
-      </p>
-    </aside>
+<header>
+  <a class="brand" href="#" aria-label="PumpLite home"><span class="mark" aria-hidden="true">↗</span> PumpLite<span class="beta">LOCAL BUILD</span></a>
+  <div class="header-controls">
+    <label class="sr-only" for="chain">Network</label>
+    <select id="chain"><option value="solana">Solana Mainnet</option><option value="base">Base Mainnet</option></select>
+    <button id="connect" class="outline">Connect wallet</button>
   </div>
+</header>
+<main>
+  <div class="notice" id="deployment" role="status">Local implementation. No contracts configured. Trading is disabled.</div>
+  <section id="home">
+    <div class="hero">
+      <div><p class="eyebrow">SMALL FOOTPRINT. ON-CHAIN MARKETS.</p><h1>A simple start.<br>A transparent market.</h1>
+      <p class="intro">Launch a fixed-supply token. Trade against a public bonding curve. Keep control of your wallet.</p></div>
+      <div class="principles"><span><i>01</i><b>Fixed supply</b><small>No future minting</small></span><span><i>02</i><b>0.25% platform fee</b><small>Paid on every trade</small></span><span><i>03</i><b>Wallet-signed</b><small>No custodial account</small></span></div>
+    </div>
+    <div class="workspace">
+      <section class="panel discovery">
+        <div class="section-title"><div><p class="eyebrow">EXPLORE</p><h2>Token markets</h2></div><button id="refresh" class="outline">Refresh</button></div>
+        <p class="muted">Fetched on request. No background polling or invented activity.</p>
+        <form id="open-form" class="search"><label class="sr-only" for="market-address">Market address</label><input id="market-address" placeholder="Open a market address" required autocomplete="off"><button type="submit" class="outline">Open</button></form>
+        <div id="markets" class="market-list"><p class="empty">No verified deployment configured.<br>Markets will appear here after deployment is reviewed.</p></div>
+        <button id="more" class="outline" hidden>Load more</button>
+      </section>
+      <section class="panel launch">
+        <p class="eyebrow">CREATE</p><h2>Start a token</h2>
+        <p class="muted">1 billion tokens. No creator allocation. All supply starts in the market vault.</p>
+        <form id="create-form">
+          <label for="name">Token name</label><input id="name" placeholder="Your token name" required maxlength="32" autocomplete="off">
+          <label for="symbol">Symbol</label><input id="symbol" placeholder="TOKEN" required maxlength="10" pattern="[A-Z0-9]{1,10}" autocomplete="off">
+          <label for="uri">Metadata URI <span class="muted">optional</span></label><input id="uri" placeholder="https://… or ipfs://…" maxlength="200" autocomplete="off">
+          <p class="fine">Use an existing public metadata document. Uploads are not provided. Network and account-creation costs apply.</p>
+          <button id="create" class="primary" type="submit" disabled>Create token</button>
+        </form>
+      </section>
+    </div>
+  </section>
+  <section id="market-page" hidden>
+    <a id="back" class="back" href="#">← All markets</a>
+    <div class="section-title market-heading"><div><p class="eyebrow" id="market-symbol">TOKEN MARKET</p><h1 id="market-name">Loading market…</h1></div><button id="refresh-market" class="outline">Refresh market</button></div>
+    <p id="market-source" class="muted"></p>
+    <div class="workspace">
+      <section class="panel">
+        <p class="eyebrow">ON-CHAIN RESERVES</p>
+        <dl class="stats"><div><dt>Real native reserve</dt><dd id="native-reserve">—</dd></div><div><dt>Tokens in vault accounting</dt><dd id="token-reserve">—</dd></div><div><dt>Cumulative trade volume</dt><dd id="volume">—</dd></div><div><dt>Virtual pricing offset</dt><dd id="virtual">—</dd></div></dl>
+        <label for="distribution">Supply distributed from vault</label><progress id="distribution" max="100" value="0"></progress><p id="distribution-label" class="fine"></p>
+        <h3>How the curve works</h3><p class="muted">Buys add native currency and remove tokens. Sells return tokens and withdraw native currency. Quotes round down. The virtual offset sets starting pricing; it is not money available to withdraw.</p>
+        <p class="fine">No scheduled graduation, liquidity migration, owner withdrawal, or price guarantee. Direct donations are excluded from quotes and cannot be recovered.</p>
+        <div class="links"><a id="market-link" target="_blank" rel="noopener noreferrer">Market ↗</a><a id="token-link" target="_blank" rel="noopener noreferrer">Token ↗</a></div>
+      </section>
+      <section class="panel">
+        <p class="eyebrow">TRADE</p><h2>Your wallet. Your decision.</h2>
+        <p id="balance" class="fine">Connect a wallet to read balances.</p>
+        <form id="trade-form">
+          <label for="side">Direction</label><select id="side"><option value="buy">Buy tokens</option><option value="sell">Sell tokens</option></select>
+          <label for="amount" id="amount-label">Amount</label><input id="amount" inputmode="decimal" placeholder="0.00" required autocomplete="off">
+          <label for="slippage">Slippage tolerance (%)</label><input id="slippage" type="number" min="0.01" max="5" step="0.01" value="1" required>
+          <button id="get-quote" type="button" class="outline full">Get current quote</button>
+          <dl class="quote"><div><dt>Expected output</dt><dd id="quote-output">—</dd></div><div><dt>Minimum received</dt><dd id="quote-min">—</dd></div><div><dt>Platform fee</dt><dd id="quote-fee">—</dd></div></dl>
+          <p id="quote-age" class="fine">Quotes use chain reserves. Refresh before signing.</p>
+          <button id="trade" type="submit" class="primary" disabled>Review in wallet</button>
+        </form>
+      </section>
+    </div>
+  </section>
+  <div id="status" class="status" role="status" aria-live="polite"><span id="status-text">No wallet connected. No transactions submitted.</span><a id="status-link" target="_blank" rel="noopener noreferrer" hidden>View transaction ↗</a></div>
 </main>
-
-<script type="module">
-import {
-  Connection,
-  SystemProgram,
-  Transaction,
-  Keypair,
-  PublicKey,
-  clusterApiUrl
-} from "https://esm.sh/@solana/web3.js@1.98.4";
-
-import {
-  TOKEN_PROGRAM_ID,
-  MINT_SIZE,
-  getMinimumBalanceForRentExemptMint,
-  createInitializeMintInstruction,
-  createAssociatedTokenAccountInstruction,
-  createMintToInstruction,
-  getAssociatedTokenAddress
-} from "https://esm.sh/@solana/spl-token@0.4.13";
-
-import {
-  createCreateMetadataAccountV3Instruction,
-  PROGRAM_ID as TOKEN_METADATA_PROGRAM_ID
-} from "https://esm.sh/@metaplex-foundation/mpl-token-metadata@2.13.0";
-
-let currentNetwork = "mainnet-beta";
-let connection = new Connection(clusterApiUrl("mainnet-beta"), "confirmed");
-let wallet = null;
-let imageBase64 = "";
-
-const statusEl = document.getElementById("status");
-const connectBtn = document.getElementById("connectBtn");
-const createBtn = document.getElementById("createBtn");
-const btnMainnet = document.getElementById("btnMainnet");
-const btnDevnet = document.getElementById("btnDevnet");
-const networkBadge = document.getElementById("networkBadge");
-const networkNotice = document.getElementById("networkNotice");
-const imageBox = document.getElementById("imageBox");
-const imageInput = document.getElementById("tokenImage");
-const imagePreview = document.getElementById("imagePreview");
-const imageText = document.getElementById("imageText");
-
-function setStatus(msg) {
-  statusEl.innerHTML = msg;
-}
-
-function updateNetworkUI() {
-  if (currentNetwork === "mainnet-beta") {
-    btnMainnet.classList.add("active");
-    btnDevnet.classList.remove("active");
-    networkBadge.textContent = "Mainnet";
-    networkBadge.className = "network-badge badge-mainnet";
-    networkNotice.className = "notice";
-    networkNotice.innerHTML = "You are on <strong>Mainnet</strong>. Creating a token costs a small amount of real SOL.";
-  } else {
-    btnMainnet.classList.remove("active");
-    btnDevnet.classList.add("active");
-    networkBadge.textContent = "Devnet (Free Testing)";
-    networkBadge.className = "network-badge badge-devnet";
-    networkNotice.className = "notice devnet";
-    networkNotice.innerHTML = "You are on <strong>Devnet</strong> (free). Get free SOL from the faucet before creating.";
-  }
-}
-
-function switchNetwork(network) {
-  currentNetwork = network;
-  connection = new Connection(clusterApiUrl(network), "confirmed");
-  updateNetworkUI();
-  setStatus("Switched to " + (network === "mainnet-beta" ? "Mainnet" : "Devnet"));
-}
-
-// Image preview
-imageBox.addEventListener("click", () => imageInput.click());
-imageInput.addEventListener("change", (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  const reader = new FileReader();
-  reader.onload = (ev) => {
-    imageBase64 = ev.target.result;
-    imagePreview.src = imageBase64;
-    imagePreview.style.display = "block";
-    imageText.style.display = "none";
-    imageBox.classList.add("has-image");
-  };
-  reader.readAsDataURL(file);
-});
-
-async function connectWallet() {
-  if (!window.solana) {
-    setStatus("<strong>No wallet found.</strong><br>Please install Phantom.");
-    return;
-  }
-  try {
-    const res = await window.solana.connect();
-    wallet = res.publicKey;
-    connectBtn.textContent = wallet.toBase58().slice(0,4) + "..." + wallet.toBase58().slice(-4);
-    setStatus("<strong>Wallet connected</strong><br>" + wallet.toBase58());
-  } catch (err) {
-    setStatus("Connection cancelled.");
-  }
-}
-
-async function createToken() {
-  if (!wallet) {
-    setStatus("Please connect your wallet first.");
-    return;
-  }
-
-  const name = document.getElementById("tokenName").value.trim();
-  const symbol = document.getElementById("tokenSymbol").value.trim().toUpperCase();
-  const supply = document.getElementById("tokenSupply").value;
-  const decimals = Number(document.getElementById("tokenDecimals").value);
-
-  if (!name || !symbol) {
-    setStatus("Please enter both Name and Symbol.");
-    return;
-  }
-  if (!supply || Number(supply) <= 0) {
-    setStatus("Please enter a valid supply.");
-    return;
-  }
-
-  try {
-    createBtn.disabled = true;
-    setStatus("Preparing token + metadata...");
-
-    const mint = Keypair.generate();
-    const rent = await getMinimumBalanceForRentExemptMint(connection);
-    const ata = await getAssociatedTokenAddress(mint.publicKey, wallet);
-    const rawSupply = BigInt(supply) * (10n ** BigInt(decimals));
-
-    // Fixed: Use TextEncoder instead of Buffer
-    const [metadataPDA] = PublicKey.findProgramAddressSync(
-      [
-        new TextEncoder().encode("metadata"),
-        TOKEN_METADATA_PROGRAM_ID.toBuffer(),
-        mint.publicKey.toBuffer()
-      ],
-      TOKEN_METADATA_PROGRAM_ID
-    );
-
-    // For now we use empty URI to avoid transaction size limits
-    // (full base64 images are usually too big for one transaction)
-    const uri = "";
-
-    const tx = new Transaction();
-
-    // 1. Create mint account
-    tx.add(SystemProgram.createAccount({
-      fromPubkey: wallet,
-      newAccountPubkey: mint.publicKey,
-      lamports: rent,
-      space: MINT_SIZE,
-      programId: TOKEN_PROGRAM_ID
-    }));
-
-    // 2. Initialize mint
-    tx.add(createInitializeMintInstruction(
-      mint.publicKey,
-      decimals,
-      wallet,
-      wallet,
-      TOKEN_PROGRAM_ID
-    ));
-
-    // 3. Create metadata (Name + Symbol)
-    tx.add(createCreateMetadataAccountV3Instruction(
-      {
-        metadata: metadataPDA,
-        mint: mint.publicKey,
-        mintAuthority: wallet,
-        payer: wallet,
-        updateAuthority: wallet
-      },
-      {
-        createMetadataAccountArgsV3: {
-          data: {
-            name: name.slice(0, 32),
-            symbol: symbol.slice(0, 10),
-            uri: uri,
-            sellerFeeBasisPoints: 0,
-            creators: null,
-            collection: null,
-            uses: null
-          },
-          isMutable: true,
-          collectionDetails: null
-        }
-      }
-    ));
-
-    // 4. Create Associated Token Account
-    tx.add(createAssociatedTokenAccountInstruction(
-      wallet,
-      ata,
-      wallet,
-      mint.publicKey
-    ));
-
-    // 5. Mint the supply
-    tx.add(createMintToInstruction(
-      mint.publicKey,
-      ata,
-      wallet,
-      rawSupply
-    ));
-
-    tx.feePayer = wallet;
-    const latest = await connection.getLatestBlockhash();
-    tx.recentBlockhash = latest.blockhash;
-    tx.partialSign(mint);
-
-    setStatus("Please approve the transaction in your wallet...");
-
-    const signed = await window.solana.signTransaction(tx);
-    const signature = await connection.sendRawTransaction(signed.serialize());
-
-    setStatus("Confirming transaction...");
-    await connection.confirmTransaction(signature, "confirmed");
-
-    const mintAddress = mint.publicKey.toBase58();
-    const explorerToken = currentNetwork === "devnet"
-      ? `https://explorer.solana.com/address/${mintAddress}?cluster=devnet`
-      : `https://solscan.io/token/${mintAddress}`;
-    const explorerTx = currentNetwork === "devnet"
-      ? `https://explorer.solana.com/tx/${signature}?cluster=devnet`
-      : `https://solscan.io/tx/${signature}`;
-
-    setStatus(
-      "<strong style='color:#16a34a'>Token created successfully!</strong><br><br>" +
-      "<b>Network:</b> " + (currentNetwork === "mainnet-beta" ? "Mainnet" : "Devnet") + "<br>" +
-      "<b>Name:</b> " + name + "<br>" +
-      "<b>Symbol:</b> " + symbol + "<br>" +
-      "<b>Mint:</b><br>" + mintAddress + "<br><br>" +
-      `<a href="${explorerToken}" target="_blank">View Token</a> · ` +
-      `<a href="${explorerTx}" target="_blank">View Transaction</a>`
-    );
-
-  } catch (err) {
-    console.error(err);
-    setStatus("<strong style='color:#dc2626'>Transaction failed</strong><br>" + (err.message || err));
-  } finally {
-    createBtn.disabled = false;
-  }
-}
-
-btnMainnet.addEventListener("click", () => switchNetwork("mainnet-beta"));
-btnDevnet.addEventListener("click", () => switchNetwork("devnet"));
-connectBtn.addEventListener("click", connectWallet);
-createBtn.addEventListener("click", createToken);
-
-updateNetworkUI();
-</script>
+<footer><b>PumpLite</b><span>Solana + Base · Mainnet only</span><p>Tokens can lose all value. Wallet approval spends real funds. This local build is unaudited and not enabled for trading.</p></footer>
 </body>
 </html>

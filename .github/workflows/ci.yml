@@ -1,0 +1,38 @@
+name: Local verification
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  web-and-base:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.11.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm build
+      - run: pnpm check
+      - run: pnpm test
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Browser checks against local files only
+        run: |
+          node scripts/serve.mjs > /tmp/pumplite-preview.log 2>&1 &
+          pnpm test:browser
+  solana-host:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test --workspace
+      - run: cargo check -p pumplite --features idl-build
+# No deployment jobs, blockchain credentials, wallet files, or signing secrets.
+# Host tests are not an SBF runtime test. Mainnet release requires the additional
+# independent gates documented in docs/SECURITY.md.
