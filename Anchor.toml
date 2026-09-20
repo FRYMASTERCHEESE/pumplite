@@ -1,0 +1,16 @@
+[toolchain]
+anchor_version = "0.32.1"
+solana_version = "2.3.0"
+
+[features]
+resolution = true
+skip-lint = false
+
+[programs.mainnet]
+pumplite = "7yCAWc9Tk8F5eTjn731ZZKxNypoBrbaXvFEm6c9z8ybY"
+
+[provider]
+cluster = "mainnet"
+wallet = "~/.config/solana/id.json"
+
+[scripts]

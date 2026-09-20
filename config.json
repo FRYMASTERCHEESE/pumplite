@@ -1,0 +1,15 @@
+{
+  "siteName": "PumpLite",
+  "network": "mainnet-beta",
+  "totalFeeBps": 25,
+  "creatorBps": 10,
+  "treasuryBps": 5,
+  "marketReserveBps": 5,
+  "referralBps": 5,
+  "creationFeeSol": 0,
+  "referralEnabled": true,
+  "treasuryWallet": "BNpFPPuy2h12dryy4dayemjA4YS17ccVaF82jBDuiwct",
+  "programId": "7yCAWc9Tk8F5eTjn731ZZKxNypoBrbaXvFEm6c9z8ybY",
+  "chains": {"solana": true, "base": false, "bitcoin": false, "dogecoin": false},
+  "notice": "Mainnet source build. Do not invite public users until the deployed program has been compiled, verified and independently reviewed."
+}
