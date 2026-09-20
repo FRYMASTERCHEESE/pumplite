@@ -1,1 +1,207 @@
-<!-- Keep your existing admin.html. Do not expose admin secrets in frontend code. -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PumpLite Admin</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,Arial,sans-serif;color:#fff;background:#080b10}
+nav{display:flex;align-items:center;gap:14px;padding:18px 24px;border-bottom:1px solid #222832;background:#0b0f15}
+.logo{font-size:25px;font-weight:900}
+.logo span{color:#39df8b}
+.spacer{flex:1}
+button{border:0;border-radius:10px;padding:12px 18px;font-weight:800;cursor:pointer}
+.primary{background:#39df8b;color:#06130b}
+.secondary{background:#171c24;color:#fff;border:1px solid #303744}
+.wrap{max-width:900px;margin:auto;padding:30px 20px 60px}
+.card{background:#10151c;border:1px solid #252c36;border-radius:18px;padding:24px;margin-bottom:20px}
+.card h2{margin-top:0}
+label{display:block;margin:16px 0 7px;color:#929cac;font-size:12px;text-transform:uppercase}
+input{width:100%;padding:13px;border-radius:10px;border:1px solid #303744;background:#090d13;color:#fff;font-size:15px}
+.notice{padding:14px;border-radius:12px;background:#181d25;border:1px solid #303744;color:#bfc8d5;line-height:1.5;font-size:13px;margin-bottom:18px}
+.status{margin-top:15px;padding:13px;border-radius:10px;background:#090d13;border:1px solid #252c36;color:#aeb7c5;line-height:1.5;word-break:break-word}
+.locked{opacity:.45;pointer-events:none}
+.badge{display:inline-block;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700}
+.badge.ok{background:#143 intermediate;color:#39df8b}
+.badge.bad{background:#3a1518;color:#ff8a8a}
+.kv{display:grid;grid-template-columns:140px 1fr;gap:8px 12px;font-size:14px;color:#bfc8d5}
+.kv b{color:#fff}
+a{color:#39df8b}
+@media(max-width:700px){.kv{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<nav>
+  <div class="logo">Pump<span>Lite</span> <span style="font-size:14px;color:#929cac;font-weight:600;margin-left:8px">Admin</span></div>
+  <div class="spacer"></div>
+  <a href="index.html" style="color:#aeb7c5;text-decoration:none;font-size:14px;margin-right:10px">← Public site</a>
+  <button class="secondary" id="connectBtn">Connect Admin Wallet</button>
+</nav>
+<main class="wrap">
+  <div class="card">
+    <h2>Owner-only access</h2>
+    <div class="notice">
+      This panel is gated to the configured admin / treasury wallet.
+      No private keys or secrets are stored in the page. Connect the correct wallet to unlock controls.
+    </div>
+    <div class="status" id="authStatus">Not connected. Connect the admin wallet to continue.</div>
+    <div style="margin-top:12px">
+      <span class="badge bad" id="accessBadge">LOCKED</span>
+    </div>
+  </div>
+  <div id="adminPanel" class="locked">
+    <div class="card">
+      <h2>Live config</h2>
+      <div class="kv" id="configView">Loading config.json…</div>
+    </div>
+    <div class="card">
+      <h2>Quick links</h2>
+      <p style="color:#aeb7c5;line-height:1.7;margin:0">
+        <a id="programLink" href="#" target="_blank" rel="noopener">View program on Solscan</a><br>
+        <a id="treasuryLink" href="#" target="_blank" rel="noopener">View treasury wallet on Solscan</a><br>
+        <a href="https://github.com/FRYMASTERCHEESE/pumplite" target="_blank" rel="noopener">GitHub repository</a>
+      </p>
+    </div>
+    <div class="card">
+      <h2>Admin notes</h2>
+      <ul style="color:#aeb7c5;line-height:1.7;margin:0;padding-left:18px">
+        <li>Never put seed phrases or private keys in HTML / JS / GitHub.</li>
+        <li>Public mainnet RPC is rate-limited — switch to a private RPC for production traffic.</li>
+        <li>Trading fees only activate after the on-chain program is deployed and verified.</li>
+        <li>Future: treasury withdraw / fee updates will appear here once the program exposes those instructions.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h2>Change admin wallet (local only)</h2>
+      <p style="color:#929cac;font-size:13px;margin-top:0">
+        This only updates the check in your browser for this session. To permanently change the allowed wallet, update config.json → treasuryWallet and redeploy.
+      </p>
+      <label>Allowed admin wallet (base58)</label>
+      <input id="adminWalletInput" placeholder="Paste base58 address">
+      <br><br>
+      <button class="secondary" id="saveAdminBtn">Use this wallet for local check</button>
+      <div class="status" id="localStatus" style="display:none"></div>
+    </div>
+  </div>
+</main>
+<script type="module">
+import { PublicKey } from "https://esm.sh/@solana/web3.js@1.98.4";
+let ALLOWED_ADMINS = [];
+const connectBtn = document.getElementById("connectBtn");
+const authStatus = document.getElementById("authStatus");
+const accessBadge = document.getElementById("accessBadge");
+const adminPanel = document.getElementById("adminPanel");
+const configView = document.getElementById("configView");
+const programLink = document.getElementById("programLink");
+const treasuryLink = document.getElementById("treasuryLink");
+const adminWalletInput = document.getElementById("adminWalletInput");
+const saveAdminBtn = document.getElementById("saveAdminBtn");
+const localStatus = document.getElementById("localStatus");
+let wallet = null;
+let config = null;
+function short(addr) {
+  if (!addr || addr.length < 10) return addr || "—";
+  return addr.slice(0, 6) + "…" + addr.slice(-4);
+}
+function isAllowed(pubkey) {
+  if (!pubkey) return false;
+  const base58 = pubkey.toBase58();
+  return ALLOWED_ADMINS.some(a => a === base58);
+}
+function setLocked(locked) {
+  if (locked) {
+    adminPanel.classList.add("locked");
+    accessBadge.textContent = "LOCKED";
+    accessBadge.className = "badge bad";
+  } else {
+    adminPanel.classList.remove("locked");
+    accessBadge.textContent = "UNLOCKED";
+    accessBadge.className = "badge ok";
+  }
+}
+function renderConfig() {
+  if (!config) return;
+  const rows = [
+    ["Site", config.siteName || "PumpLite"],
+    ["Network", config.network || "mainnet-beta"],
+    ["Program ID", config.programId || "—"],
+    ["Treasury", config.treasuryWallet || "—"],
+    ["Total fee", (config.totalFeeBps ?? 25) + " bps"],
+    ["Creator", (config.creatorBps ?? 10) + " bps"],
+    ["Treasury fee", (config.treasuryBps ?? 5) + " bps"],
+    ["Reserve", (config.marketReserveBps ?? 5) + " bps"],
+    ["Referral", (config.referralBps ?? 5) + " bps"],
+    ["Creation fee", (config.creationFeeSol ?? 0) + " SOL"],
+  ];
+  configView.innerHTML = rows.map(([k, v]) => `<div>\( {k}</div><div><b> \){v}</b></div>`).join("");
+  if (config.programId) programLink.href = `https://solscan.io/account/${config.programId}`;
+  if (config.treasuryWallet) {
+    treasuryLink.href = `https://solscan.io/account/${config.treasuryWallet}`;
+    adminWalletInput.value = config.treasuryWallet;
+  }
+}
+async function loadConfig() {
+  try {
+    const res = await fetch("./config.json?t=" + Date.now());
+    config = await res.json();
+    ALLOWED_ADMINS = [];
+    if (config.treasuryWallet) ALLOWED_ADMINS.push(config.treasuryWallet);
+    renderConfig();
+  } catch (e) {
+    configView.innerHTML = "Failed to load config.json";
+    console.error(e);
+  }
+}
+async function connectWallet() {
+  if (!window.solana) {
+    authStatus.innerHTML = "<strong>No Solana wallet detected.</strong><br>Install Phantom (or compatible) and reload.";
+    return;
+  }
+  try {
+    const resp = await window.solana.connect();
+    wallet = resp.publicKey;
+    connectBtn.textContent = short(wallet.toBase58());
+    if (isAllowed(wallet)) {
+      authStatus.innerHTML = `<strong>Admin wallet connected.</strong><br>${wallet.toBase58()}`;
+      setLocked(false);
+    } else {
+      authStatus.innerHTML = `<strong>Wrong wallet.</strong><br>Connected: ${wallet.toBase58()}<br>This address is not in the allowed admin list.`;
+      setLocked(true);
+    }
+  } catch (e) {
+    console.error(e);
+    authStatus.textContent = "Connection cancelled or failed.";
+    setLocked(true);
+  }
+}
+saveAdminBtn.addEventListener("click", () => {
+  const val = adminWalletInput.value.trim();
+  try {
+    new PublicKey(val);
+    ALLOWED_ADMINS = [val];
+    localStatus.style.display = "block";
+    localStatus.innerHTML = `Local check now uses <b>${val}</b>. Re-connect the wallet to test.`;
+    if (wallet && isAllowed(wallet)) {
+      setLocked(false);
+      authStatus.innerHTML = `<strong>Admin wallet connected.</strong><br>${wallet.toBase58()}`;
+    } else setLocked(true);
+  } catch {
+    localStatus.style.display = "block";
+    localStatus.textContent = "Invalid base58 address.";
+  }
+});
+connectBtn.addEventListener("click", connectWallet);
+if (window.solana?.isConnected && window.solana.publicKey) {
+  wallet = window.solana.publicKey;
+  connectBtn.textContent = short(wallet.toBase58());
+}
+loadConfig().then(() => {
+  if (wallet && isAllowed(wallet)) {
+    authStatus.innerHTML = `<strong>Admin wallet connected.</strong><br>${wallet.toBase58()}`;
+    setLocked(false);
+  }
+});
+</script>
+</body>
+</html>
