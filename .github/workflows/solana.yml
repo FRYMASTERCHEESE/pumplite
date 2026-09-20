@@ -1,0 +1,79 @@
+name: Solana program verification
+on:
+  push:
+    paths: ["Cargo.toml", "Cargo.lock", "rust-toolchain.toml", ".cargo/**", "Anchor.toml", "programs/**", "tests/solana/**", "scripts/build-solana.mjs", "scripts/check-solana-idl.mjs", "config.json", ".github/workflows/solana.yml"]
+  pull_request:
+    paths: ["Cargo.toml", "Cargo.lock", "rust-toolchain.toml", ".cargo/**", "Anchor.toml", "programs/**", "tests/solana/**", "scripts/build-solana.mjs", "scripts/check-solana-idl.mjs", "config.json", ".github/workflows/solana.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: solana-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  sbf-and-runtime:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      CARGO_TERM_COLOR: always
+      PUMPLITE_SBF: ${{ github.workspace }}/target/deploy/pumplite.so
+      PUMPLITE_SKIP_TOOLS_INSTALL: "1"
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Install pinned Rust, Agave, Anchor and SBF compilers
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.94.0 --profile minimal --component rustfmt
+          tools="$RUNNER_TEMP/pumplite-tools"
+          mkdir -p "$tools"
+          cd "$tools"
+          curl --fail --location --retry 3 -o agave.tar.bz2 https://github.com/anza-xyz/agave/releases/download/v3.1.10/solana-release-x86_64-unknown-linux-gnu.tar.bz2
+          echo "a7205ff29bcf0f7199740225ecae2b85a28ea9668892d5ec21bd9749882984a1  agave.tar.bz2" | sha256sum --check --strict
+          tar -xjf agave.tar.bz2
+          curl --fail --location --retry 3 -o anchor https://github.com/otter-sec/anchor/releases/download/v1.0.0/anchor-1.0.0-x86_64-unknown-linux-gnu
+          echo "56c5a838ace02fcaa45d7d85920f228e476b2477803a24d80bc11d0040aa1d8d  anchor" | sha256sum --check --strict
+          chmod +x anchor
+          curl --fail --location --retry 3 -o platform.tar.bz2 https://github.com/anza-xyz/platform-tools/releases/download/v1.52/platform-tools-linux-x86_64.tar.bz2
+          echo "8b3861e93daf085ec12b65c4fac374d9bec4587a3de16871da6b08ab0c1d907e  platform.tar.bz2" | sha256sum --check --strict
+          mkdir -p solana-release/bin/platform-tools-sdk/sbf/dependencies/platform-tools
+          tar -xjf platform.tar.bz2 -C solana-release/bin/platform-tools-sdk/sbf/dependencies/platform-tools
+          echo "$tools" >> "$GITHUB_PATH"
+          echo "$tools/solana-release/bin" >> "$GITHUB_PATH"
+      - name: Record tool versions
+        run: |
+          rustc --version
+          cargo --version
+          solana --version
+          anchor --version
+          cargo-build-sbf --version
+          node --version
+      - name: Formatting and host arithmetic tests
+        run: |
+          cargo fmt --all -- --check
+          cargo test --locked -p pumplite --lib
+      - name: Build SBF without generating deployment keys
+        run: node scripts/build-solana.mjs
+      - name: Generate IDL with the pinned Anchor CLI
+        run: |
+          mkdir -p target/idl
+          anchor idl build --program-name pumplite --out target/idl/pumplite.json -- --locked
+      - name: Check generated interface against the reviewed client schema
+        run: node scripts/check-solana-idl.mjs
+      - name: Execute compiled program in an isolated SVM
+        run: cargo test --locked -p pumplite-svm-tests --features sbf-tests --test markets
+      - name: Verify no deployment signing files were created
+        if: always()
+        shell: bash
+        run: |
+          test ! -e target/NO_WALLET_CONFIGURED
+          test ! -e target/deploy/pumplite-keypair.json
+          # Cargo fingerprints contain lib-solana_keypair.json; scan publication artifacts only.
+          if [ -d target/deploy ] && find target/deploy -type f -iname '*keypair*.json' -print -quit | grep -q .; then
+            echo "Unexpected signing file in build output"
+            exit 1
+          fi
+# No validator, RPC endpoint, wallet configuration, deployment, or signing secrets.
+# Runtime fixture signers exist in process memory only; no accounts hold real funds.

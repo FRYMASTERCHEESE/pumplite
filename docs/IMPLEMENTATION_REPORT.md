@@ -1,6 +1,10 @@
 # Local implementation report
 
-Date: 2026-09-20. This report describes local source/build/test work only.
+Date: 2026-09-20. This report describes the original local implementation work.
+
+**Solana verification update (2026-09-21):** later build/test results supersede the original
+Solana-unverified notes below. See [Solana verification](SOLANA_VERIFICATION.md) for the exact
+new file manifest, pinned toolchain, 4 passing host tests, 21 passing SBF runtime tests and remaining gates.
 
 **No commit, push, Mainnet deployment, public-chain transaction, real wallet connection, or private-key export occurred.**
 Public deployment addresses remain null and transactionsEnabled remains false.

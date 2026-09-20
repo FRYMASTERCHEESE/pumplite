@@ -2,6 +2,7 @@
 name = "pumplite"
 version = "0.2.0"
 edition = "2021"
+rust-version = "1.89"
 publish = false
 
 [lib]
@@ -19,6 +20,11 @@ anchor-debug = []
 custom-heap = []
 custom-panic = []
 
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("solana"))'] }
+
 [dependencies]
 anchor-lang = "=1.0.0"
-anchor-spl = { version = "=1.0.0", default-features = false, features = ["token", "associated_token"] }
+# Anchor 1.0 mint init code references token-interface extension helpers even for legacy SPL mints.
+# Program<Token> still restricts all product operations to the legacy SPL Token program.
+anchor-spl = { version = "=1.0.0", default-features = false, features = ["token", "associated_token", "token_2022", "token_2022_extensions"] }

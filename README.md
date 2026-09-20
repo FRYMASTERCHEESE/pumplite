@@ -69,18 +69,30 @@ in the publishing branch. Running these build/test commands alone does not updat
 
 `programs/pumplite/src/lib.rs` is the Anchor program; `math.rs` contains pure checked arithmetic and unit tests.
 The root Cargo workspace and Anchor configuration replace the previous misplaced root source file.
-Anchor dependencies are pinned to 1.0.0; a compatible Rust/Agave build environment is required.
-
-Host-only verification, without any wallet or network transactions:
+The verification toolchain is pinned to Rust 1.94.0, Anchor 1.0.0, Agave 3.1.10 and
+SBF platform-tools v1.52 (bundled Rust 1.89.0-dev). Cargo.lock pins the resolved dependencies,
+including the Anchor macro crates. The Anchor SPL interface/extension features are required by
+Anchor's generated initialization code; the program still accepts only the legacy SPL Token program.
 
 ```sh
-cargo test --workspace
-cargo check -p pumplite --features idl-build
+cargo fmt --all -- --check
+cargo test --locked -p pumplite --lib
+node scripts/build-solana.mjs
+mkdir -p target/idl
+anchor idl build --program-name pumplite --out target/idl/pumplite.json -- --locked
+node scripts/check-solana-idl.mjs
+PUMPLITE_SBF="$PWD/target/deploy/pumplite.so" cargo test --locked -p pumplite-svm-tests --features sbf-tests --test markets
 ```
 
-Rust/Anchor/Agave were unavailable on the implementation host. These commands and the SBF build have **not** been verified there.
-Generate and review a Cargo lockfile in that toolchain before release. Do not treat the current build identity as a deployed program.
-A local SVM integration suite exercising token CPIs, constraints, rent, and rollback is still a release blocker.
+The workflow in .github/workflows/solana.yml runs these checks on Ubuntu 24.04 without a wallet,
+validator, RPC endpoint, deployment, or secrets. Downloads are versioned and checksum-verified.
+The build wrapper prevents Agave from automatically generating a deployment keypair.
+Anchor's required provider configuration names a deliberately nonexistent wallet path; verification never reads it.
+
+Local Windows verification passed the SBF build, IDL generation/schema check, 4 host tests and 21 compiled-program
+SVM integration tests. The GitHub-hosted workflow has not been run. A passing build is not Mainnet approval.
+See [test instructions](tests/solana/README.md) and the [exact verification report](docs/SOLANA_VERIFICATION.md).
+The program identity remains build configuration only; transactions are still disabled.
 
 ## Base contracts
 

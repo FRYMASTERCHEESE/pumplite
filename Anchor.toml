@@ -1,5 +1,6 @@
 [toolchain]
 anchor_version = "1.0.0"
+solana_version = "3.1.10"
 
 [features]
 resolution = true
@@ -9,4 +10,10 @@ skip-lint = false
 [programs.localnet]
 pumplite = "7yCAWc9Tk8F5eTjn731ZZKxNypoBrbaXvFEm6c9z8ybY"
 
-# Deliberately no Mainnet provider, wallet path, or deployment scripts.
+# Required by the Anchor CLI parser for IDL generation. No wallet exists at this path.
+# Verification never reads it, starts a validator, or uses the provider's RPC.
+[provider]
+cluster = "Localnet"
+wallet = "target/NO_WALLET_CONFIGURED"
+
+# No Mainnet provider or deployment scripts.

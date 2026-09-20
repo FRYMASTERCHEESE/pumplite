@@ -1,6 +1,9 @@
 [workspace]
-members = ["programs/pumplite"]
+members = ["programs/pumplite", "tests/solana"]
 resolver = "2"
+
+[workspace.metadata.solana]
+tools-version = "v1.52"
 
 [profile.release]
 overflow-checks = true
