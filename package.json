@@ -11,7 +11,10 @@
     "test:base": "node scripts/compile-base.mjs && node --test tests/base.test.mjs",
     "check": "node scripts/check.mjs",
     "preview": "node scripts/serve.mjs",
-    "test:browser": "node tests/browser.mjs"
+    "test:browser": "node tests/browser.mjs",
+    "build:pages": "node scripts/build.mjs",
+    "check:pages": "node scripts/build.mjs --check",
+    "test:pages": "node tests/pages.mjs"
   },
   "dependencies": {
     "@solana/web3.js": "1.98.4",

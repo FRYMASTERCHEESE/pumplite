@@ -31,6 +31,40 @@ pnpm test:browser
 An installed browser can be selected with `BROWSER_EXECUTABLE`.
 `PLAYWRIGHT_MODULE` optionally points to a host-provided Playwright module (use a file URL on Windows).
 
+## GitHub Pages (repository root at /pumplite/)
+
+The root `index.html` loads `./assets/app.js` and `./assets/styles.css`.
+The `assets/` directory is generated **publication content** and must be versioned with the HTML.
+Unlike ignored `dist/`, it is served directly when Pages publishes the repository root.
+Never point the root HTML at `web/app.js`: the source adapters contain npm imports that require bundling.
+
+```sh
+pnpm build:pages
+pnpm check:pages
+pnpm test:pages
+```
+
+`build:pages` bundles the frontend only; it does not compile, deploy, or interact with contracts.
+It uses the existing generated Base ABI. `pnpm build` still compiles contracts locally before building the frontend.
+Both commands produce the same root assets and a matching ignored `dist/` preview.
+`check:pages` rebuilds in memory and fails if the publishable assets are missing, stale or different.
+CI runs this check before regenerating files.
+
+All HTML links, configuration fetches and generated chunk imports are relative, so the project prefix
+`/pumplite/` is retained. Hash routes need no server-side rewrite.
+Solana and Base SDKs are bundled locally, loaded only on demand, and do not rely on a CDN or import map.
+The root `.nojekyll` marker disables Jekyll processing for this static output
+([GitHub Pages documentation](https://docs.github.com/en/pages/getting-started-with-github-pages/creating-a-github-pages-site#static-site-generators)).
+
+`test:pages` exports only root HTML, configuration, `.nojekyll` and generated assets into an isolated directory.
+It serves those exact files at `/pumplite/` with ordinary static MIME types, no bundler, no npm resolution,
+no source files and no SPA fallback. It tests mobile/desktop layout, both lazy SDK module graphs,
+relative paths, configuration loading and hash-route reloads. Wallet methods and external network requests
+are prohibited. It does not connect wallets or submit transactions.
+
+When a future publication is explicitly approved, include `assets/`, `index.html` and `.nojekyll`
+in the publishing branch. Running these build/test commands alone does not update the hosted site.
+
 ## Solana workspace
 
 `programs/pumplite/src/lib.rs` is the Anchor program; `math.rs` contains pure checked arithmetic and unit tests.

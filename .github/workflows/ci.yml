@@ -17,10 +17,12 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm check:pages
       - run: pnpm build
       - run: pnpm check
       - run: pnpm test
       - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:pages
       - name: Browser checks against local files only
         run: |
           node scripts/serve.mjs > /tmp/pumplite-preview.log 2>&1 &
