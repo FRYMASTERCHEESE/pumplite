@@ -331,170 +331,93 @@ import {
   getAssociatedTokenAddress
 } from "https://esm.sh/@solana/spl-token@0.4.13";
 
-const RPC =
-  "https://api.mainnet-beta.solana.com";
-
-const connection =
-  new Connection(RPC, "confirmed");
+const RPC = "https://api.mainnet-beta.solana.com";
+const connection = new Connection(RPC, "confirmed");
 
 let wallet = null;
 
-const status =
-  document.getElementById("status");
-
-const connectBtn =
-  document.getElementById("connectBtn");
-
-const createBtn =
-  document.getElementById("createBtn");
+const status = document.getElementById("status");
+const connectBtn = document.getElementById("connectBtn");
+const createBtn = document.getElementById("createBtn");
 
 function setStatus(message){
   status.innerHTML = message;
 }
 
 async function connectWallet(){
-
   if(!window.solana){
-    setStatus(`
-      <strong>No Solana wallet detected.</strong><br>
-      Install Phantom or another compatible Solana wallet,
-      then reload this page.
-    `);
+    setStatus(
+      "<strong>No Solana wallet detected.</strong><br>" +
+      "Install Phantom or another compatible Solana wallet, then reload this page."
+    );
     return;
   }
 
   try{
-
-    const response =
-      await window.solana.connect();
-
+    const response = await window.solana.connect();
     wallet = response.publicKey;
 
     connectBtn.textContent =
-      wallet.toBase58().slice(0,6) +
-      "..." +
-      wallet.toBase58().slice(-4);
-
-    setStatus(`
-      <strong>Wallet connected.</strong><br>
-      ${wallet.toBase58()}
-    `);
-
-  }catch(error){
-
-    console.error(error);
+      wallet.toBase58().slice(0,6) + "..." + wallet.toBase58().slice(-4);
 
     setStatus(
-      "Wallet connection cancelled or failed."
+      "<strong>Wallet connected.</strong><br>" + wallet.toBase58()
     );
+  }catch(error){
+    console.error(error);
+    setStatus("Wallet connection cancelled or failed.");
   }
 }
 
 async function createToken(){
-
   if(!wallet){
-
-    setStatus(
-      "Connect your Solana wallet first."
-    );
-
+    setStatus("Connect your Solana wallet first.");
     return;
   }
 
-  const name =
-    document.getElementById("tokenName")
-      .value.trim();
-
-  const symbol =
-    document.getElementById("tokenSymbol")
-      .value.trim()
-      .toUpperCase();
-
-  const supply =
-    document.getElementById("tokenSupply")
-      .value;
-
-  const decimals =
-    Number(
-      document.getElementById("tokenDecimals")
-        .value
-    );
+  const name = document.getElementById("tokenName").value.trim();
+  const symbol = document.getElementById("tokenSymbol").value.trim().toUpperCase();
+  const supply = document.getElementById("tokenSupply").value;
+  const decimals = Number(document.getElementById("tokenDecimals").value);
 
   if(!name || !symbol){
-
-    setStatus(
-      "Enter a token name and symbol."
-    );
-
+    setStatus("Enter a token name and symbol.");
     return;
   }
 
   if(!supply || Number(supply) <= 0){
-
-    setStatus(
-      "Enter a valid token supply."
-    );
-
+    setStatus("Enter a valid token supply.");
     return;
   }
 
   if(decimals < 0 || decimals > 9){
-
-    setStatus(
-      "Decimals must be between 0 and 9."
-    );
-
+    setStatus("Decimals must be between 0 and 9.");
     return;
   }
 
   try{
-
     createBtn.disabled = true;
+    setStatus("Preparing your real Solana token transaction...");
 
-    setStatus(
-      "Preparing your real Solana token transaction..."
+    // Generate the token mint account
+    const mint = Keypair.generate();
+
+    // FIXED: call the imported function, not a method on connection
+    const rent = await getMinimumBalanceForRentExemptMint(connection);
+
+    // Associated token account for creator
+    const creatorATA = await getAssociatedTokenAddress(
+      mint.publicKey,
+      wallet
     );
 
-    /*
-      Generate the token mint account.
-    */
+    // Convert supply into base units
+    const rawSupply = BigInt(supply) * (10n ** BigInt(decimals));
 
-    const mint =
-      Keypair.generate();
+    // Build transaction
+    const transaction = new Transaction();
 
-    const rent =
-      await connection
-        .getMinimumBalanceForRentExemptMint();
-
-    /*
-      Associated token account for creator.
-    */
-
-    const creatorATA =
-      await getAssociatedTokenAddress(
-        mint.publicKey,
-        wallet
-      );
-
-    /*
-      Convert supply into base units.
-    */
-
-    const rawSupply =
-      BigInt(supply) *
-      (10n ** BigInt(decimals));
-
-    /*
-      Build transaction.
-    */
-
-    const transaction =
-      new Transaction();
-
-    /*
-      Create mint account.
-    */
-
+    // Create mint account
     transaction.add(
       SystemProgram.createAccount({
         fromPubkey: wallet,
@@ -505,24 +428,18 @@ async function createToken(){
       })
     );
 
-    /*
-      Initialize mint.
-    */
-
+    // Initialize mint
     transaction.add(
       createInitializeMintInstruction(
         mint.publicKey,
         decimals,
-        wallet,
-        wallet,
+        wallet,          // mint authority
+        wallet,          // freeze authority
         TOKEN_PROGRAM_ID
       )
     );
 
-    /*
-      Create creator token account.
-    */
-
+    // Create creator token account
     transaction.add(
       createAssociatedTokenAccountInstruction(
         wallet,
@@ -532,10 +449,7 @@ async function createToken(){
       )
     );
 
-    /*
-      Mint the initial supply.
-    */
-
+    // Mint the initial supply
     transaction.add(
       createMintToInstruction(
         mint.publicKey,
@@ -545,100 +459,46 @@ async function createToken(){
       )
     );
 
-    transaction.feePayer =
-      wallet;
+    transaction.feePayer = wallet;
+    transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
 
-    transaction.recentBlockhash =
-      (
-        await connection.getLatestBlockhash()
-      ).blockhash;
-
-    /*
-      The user's wallet signs.
-      The mint Keypair also signs.
-    */
-
+    // The mint Keypair must also sign
     transaction.partialSign(mint);
 
+    setStatus("Please approve the Solana transaction in your wallet...");
+
+    const signed = await window.solana.signTransaction(transaction);
+    const signature = await connection.sendRawTransaction(signed.serialize());
+
+    setStatus("Transaction sent.<br>Waiting for Solana confirmation...");
+
+    await connection.confirmTransaction(signature, "confirmed");
+
+    const mintAddress = mint.publicKey.toBase58();
+
     setStatus(
-      "Please approve the Solana transaction in your wallet..."
+      "<strong>🎉 TOKEN CREATED ON SOLANA!</strong><br><br>" +
+      "Token: " + name + "<br>" +
+      "Symbol: " + symbol + "<br>" +
+      "Supply: " + Number(supply).toLocaleString() + "<br>" +
+      "Mint: " + mintAddress + "<br><br>" +
+      '<a href="https://solscan.io/token/' + mintAddress + '" target="_blank" rel="noopener">View token on Solscan</a><br><br>' +
+      'Transaction: <a href="https://solscan.io/tx/' + signature + '" target="_blank" rel="noopener">View transaction</a>'
     );
-
-    const signed =
-      await window.solana.signTransaction(
-        transaction
-      );
-
-    const signature =
-      await connection.sendRawTransaction(
-        signed.serialize()
-      );
-
-    setStatus(`
-      Transaction sent.<br>
-      Waiting for Solana confirmation...
-    `);
-
-    await connection.confirmTransaction(
-      signature,
-      "confirmed"
-    );
-
-    const mintAddress =
-      mint.publicKey.toBase58();
-
-    setStatus(`
-      <strong>🎉 TOKEN CREATED ON SOLANA!</strong><br><br>
-
-      Token: ${name}<br>
-      Symbol: ${symbol}<br>
-      Supply: ${Number(supply).toLocaleString()}<br>
-      Mint: ${mintAddress}<br><br>
-
-      <a
-        href="https://solscan.io/token/${mintAddress}"
-        target="_blank"
-        rel="noopener"
-      >
-        View token on Solscan
-      </a>
-      <br><br>
-
-      Transaction:
-      <a
-        href="https://solscan.io/tx/${signature}"
-        target="_blank"
-        rel="noopener"
-      >
-        View transaction
-      </a>
-    `);
 
   }catch(error){
-
     console.error(error);
-
-    setStatus(`
-      <strong>Transaction failed.</strong><br>
-      ${error?.message || error}
-    `);
-
+    setStatus(
+      "<strong>Transaction failed.</strong><br>" +
+      (error && error.message ? error.message : error)
+    );
   }finally{
-
     createBtn.disabled = false;
-
   }
 }
 
-connectBtn.addEventListener(
-  "click",
-  connectWallet
-);
-
-createBtn.addEventListener(
-  "click",
-  createToken
-);
+connectBtn.addEventListener("click", connectWallet);
+createBtn.addEventListener("click", createToken);
 
 </script>
 
