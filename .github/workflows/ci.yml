@@ -27,4 +27,18 @@ jobs:
         run: |
           node scripts/serve.mjs > /tmp/pumplite-preview.log 2>&1 &
           pnpm test:browser
+  # Linux freshness is checked above; also protect Windows-generated Pages assets.
+  pages-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.11.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm check:pages
 # Solana host, SBF and VM verification lives in solana.yml.

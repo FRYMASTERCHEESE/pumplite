@@ -48,7 +48,12 @@ pnpm test:pages
 It uses the existing generated Base ABI. `pnpm build` still compiles contracts locally before building the frontend.
 Both commands produce the same root assets and a matching ignored `dist/` preview.
 `check:pages` rebuilds in memory and fails if the publishable assets are missing, stale or different.
-CI runs this check before regenerating files.
+CI runs this check before regenerating files on both Linux and Windows.
+
+Use the pinned pnpm 10.11.0 and run `pnpm install --frozen-lockfile --ignore-scripts` before building.
+The repository `.npmrc` pins `virtual-store-dir-max-length=60`: pnpm otherwise uses different
+dependency folder names on Windows and Linux, which changes esbuild chunk hashes even when the
+JavaScript is identical. Reinstall dependencies after changing this setting; do not bypass the freshness check.
 
 All HTML links, configuration fetches and generated chunk imports are relative, so the project prefix
 `/pumplite/` is retained. Hash routes need no server-side rewrite.
