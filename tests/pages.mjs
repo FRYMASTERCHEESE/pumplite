@@ -88,6 +88,13 @@ try {
     await page.waitForFunction(() => document.querySelector('#status-text').textContent.includes('No reviewed deployment'));
     await page.locator('#back').click();
     await page.waitForFunction(() => !document.querySelector('#home').hidden);
+    await page.evaluate(() => {
+      document.querySelector('#home').hidden = true;
+      document.querySelector('#market-page').hidden = false;
+      document.querySelector('#market-metadata').textContent = '<img src=x onerror=alert(1)> https://example.invalid/' + 'x'.repeat(175);
+    });
+    assert.equal(await page.locator('#market-metadata img').count(), 0);
+    assert.equal(await page.locator('body').evaluate(el => el.scrollWidth <= innerWidth), true);
     assert.deepEqual(await page.evaluate(() => window.__walletCalls), []);
     assert.ok(requests.every(url => url === origin + '/pumplite' || url.startsWith(base)), 'All assets stay beneath /pumplite/');
     assert.deepEqual(errors, []);

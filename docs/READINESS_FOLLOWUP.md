@@ -1,5 +1,7 @@
 # Readiness follow-up — 2026-09-22
 
+> Historical checkpoint. Superseded by [release-candidate verification](RELEASE_CANDIDATE.md).
+
 ## Outcome
 
 Local release-candidate work only; neither chain is approved for Mainnet deployment.

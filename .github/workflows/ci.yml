@@ -19,8 +19,12 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile --ignore-scripts
-      - name: Reject high and critical dependency advisories
-        run: pnpm audit --audit-level=high
+      - name: Reject unreviewed dependency advisories
+        run: |
+          mkdir -p build
+          # Audit returns nonzero for the documented moderate finding; parser fails closed on errors.
+          pnpm audit --json > build/dependency-audit.json || true
+          node scripts/check-dependency-review.mjs
       - run: pnpm check:pages
       - run: pnpm build
       - run: pnpm check
@@ -31,6 +35,15 @@ jobs:
         run: |
           node scripts/serve.mjs > /tmp/pumplite-preview.log 2>&1 &
           pnpm test:browser
+      - name: Retain source verification input and Base artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: base-verification
+          retention-days: 30
+          if-no-files-found: error
+          path: |
+            build/base/*.json
+            build/dependency-audit.json
   # Linux freshness is checked above; also protect Windows-generated Pages assets.
   pages-windows:
     runs-on: windows-latest

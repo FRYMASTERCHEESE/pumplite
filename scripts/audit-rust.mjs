@@ -1,6 +1,9 @@
 // Query public registry package identities only. No RPC, wallet, or credentials.
 // RustSec records are canonical; OSV also returns duplicate GHSA aliases.
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
+import { assertReviewCurrent } from './dependency-policy.mjs';
+const review = JSON.parse(await readFile('docs/dependency-review.json', 'utf8'));
+assertReviewCurrent(review);
 const lock = await readFile('Cargo.lock', 'utf8');
 const packages = lock.split('[[package]]').slice(1).filter(block => /source = "registry\+/.test(block)).map(block => ({
   name: block.match(/^name = "([^"]+)"/m)[1], version: block.match(/^version = "([^"]+)"/m)[1]
@@ -26,6 +29,7 @@ const report = findings.map(finding => {
   const informational = matching?.database_specific?.informational;
   const status = detail.withdrawn ? 'withdrawn' : informational ? 'warning' : 'vulnerability';
   if (status === 'vulnerability') blockers++;
+  if (status === 'warning' && !review.rust.some(r => r.id === finding.id && r.name === finding.name && r.version === finding.version && r.informational === informational)) blockers++;
   console.log(`${status.toUpperCase()} ${finding.name}@${finding.version}: ${finding.id} ${detail.summary}`);
   return { ...finding, status, informational, summary: detail.summary, url: `https://rustsec.org/advisories/${finding.id}.html` };
 });

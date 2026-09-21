@@ -5,6 +5,7 @@ import { assertSolanaMainnet } from '../solana-network.js';
 import { SOL_SUPPLY, assertSolanaConfirmation } from '../math.js';
 
 const enc = new TextEncoder();
+const TOKEN = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
 
 export function adapter(config, notify) {
   assertSolanaMainnet(config.genesisHash);
@@ -26,7 +27,7 @@ export function adapter(config, notify) {
     let offset = 10;
     const publicKey = () => { const k = new PublicKey(b.subarray(offset, offset + 32)); offset += 32; return k.toBase58(); };
     const creator = publicKey(), token = publicKey();
-    offset += 8; // nonce
+    const nonce = b.subarray(offset, offset + 8); offset += 8;
     const integer = () => { const v = b.readBigUInt64LE(offset); offset += 8; return v; };
     const nativeReserve = integer(), tokenReserve = integer();
     const low = integer(), high = integer(), volume = low + (high << 64n);
@@ -36,8 +37,11 @@ export function adapter(config, notify) {
       const text = new TextDecoder('utf-8', { fatal: true }).decode(b.subarray(offset, offset + length)); offset += length; return text;
     };
     const name = string(32), symbol = string(10), uri = string(200);
-    const [expected] = PublicKey.findProgramAddressSync([enc.encode('market'), new PublicKey(token).toBuffer()], program());
-    if (expected.toBase58() !== id) throw Error('Unexpected market PDA');
+    if (tokenReserve <= 0n || tokenReserve > SOL_SUPPLY) throw Error('Invalid token reserves');
+    const [expectedMint] = PublicKey.findProgramAddressSync([enc.encode('mint'), new PublicKey(creator).toBuffer(), nonce], program());
+    if (expectedMint.toBase58() !== token) throw Error('Unexpected mint PDA');
+    const [expected, bump] = PublicKey.findProgramAddressSync([enc.encode('market'), new PublicKey(token).toBuffer()], program());
+    if (expected.toBase58() !== id || b[9] !== bump) throw Error('Unexpected market PDA');
     return { id, token, creator, name, symbol, uri, nativeReserve, tokenReserve, volume,
       decimals: 6, nativeDecimals: 9, unit: 'SOL', virtualNative: 30_000_000_000n, supply: SOL_SUPPLY,
       source: 'Solana confirmed slot ' + slot, observedAt: Date.now() };
@@ -52,7 +56,9 @@ export function adapter(config, notify) {
     const latest = await connection.getLatestBlockhash('confirmed');
     const tx = new Transaction({ feePayer: owner, ...latest }).add(...instructions);
     notify('Review and approve the transaction in your wallet.');
+    const message = Buffer.from(tx.serializeMessage());
     const signed = await window.solana.signTransaction(tx);
+    if (!signed?.serializeMessage || !message.equals(Buffer.from(signed.serializeMessage()))) throw Error('Wallet changed the transaction');
     await wallet();
     const signature = await connection.sendRawTransaction(signed.serialize());
     notify('Submitted. Waiting for Solana confirmation.', config.explorer + '/tx/' + signature);
@@ -64,10 +70,13 @@ export function adapter(config, notify) {
   return {
     async connect() {
       if (!window.solana?.connect) throw Error('Install a compatible Solana wallet');
-      await network();
-      connected = (await window.solana.connect()).publicKey;
-      await wallet();
-      return connected.toBase58();
+      connected = undefined;
+      try {
+        await network();
+        connected = (await window.solana.connect()).publicKey;
+        await wallet();
+        return connected.toBase58();
+      } catch (error) { connected = undefined; throw error; }
     },
     async list(offset = 0) {
       await network();
@@ -86,6 +95,12 @@ export function adapter(config, notify) {
       const [native, info] = await Promise.all([connection.getBalance(owner), connection.getAccountInfo(ata(new PublicKey(m.token), owner))]);
       // web3.js balance API uses number; reject anything outside exact integer range.
       if (!Number.isSafeInteger(native)) throw Error('Native balance exceeds safe RPC integer range');
+      if (info) {
+        const data = Buffer.from(info.data);
+        if (!info.owner.equals(TOKEN) || data.length !== 165 || data[108] !== 1 ||
+            !new PublicKey(data.subarray(0, 32)).equals(new PublicKey(m.token)) ||
+            !new PublicKey(data.subarray(32, 64)).equals(owner)) throw Error('Invalid wallet token account');
+      }
       return { native: BigInt(native), tokens: info ? Buffer.from(info.data).readBigUInt64LE(64) : 0n };
     },
     async create({ name, symbol, uri }) {
@@ -96,7 +111,8 @@ export function adapter(config, notify) {
     },
     async trade(m, side, amount, min) {
       const owner = await wallet(), mint = new PublicKey(m.token), id = new PublicKey(m.id);
-      await market(m.id);
+      const verified = await market(m.id);
+      if (verified.token !== m.token) throw Error('Market token changed; reload');
       const slot = await connection.getSlot('confirmed'), timestamp = await connection.getBlockTime(slot);
       if (timestamp === null) throw Error('Unable to obtain chain time');
       const instructions = await tradeInstructions({ owner, mint, market: id, treasury: new PublicKey(config.treasury),

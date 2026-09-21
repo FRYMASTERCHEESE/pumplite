@@ -15,6 +15,13 @@ assertSolanaMainnet(config.solana.genesisHash);
 assert.equal(config.transactionsEnabled, false, 'This local stage must remain write-disabled');
 assert.equal(config.solana.programId, null);
 assert.equal(config.base.factory, null);
+for (const chain of [config.solana, config.base]) {
+  const rpc = new URL(chain.rpcUrl);
+  assert.equal(rpc.protocol, 'https:', 'Production RPC requires HTTPS');
+  assert.ok(!rpc.username && !rpc.password, 'Public configuration must not contain credentials');
+}
+assert.equal(config.solana.explorer, 'https://solscan.io');
+assert.equal(config.base.explorer, 'https://basescan.org');
 assert.equal(config.solana.treasury, 'BNpFPPuy2h12dryy4dayemjA4YS17ccVaF82jBDuiwct');
 assert.equal(config.base.treasury, '0x0de7fdcc798f7fac6b03b366c529133a9c60794d');
 await assert.rejects(access('admin.html'));

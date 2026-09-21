@@ -75,3 +75,9 @@ Empty/unconfigured/error states must remain empty/unavailable.
 Test fixtures are confined to tests and never bundled into the product.
 User-controlled text is rendered with textContent; metadata URI contents are not rendered.
 Do not enable production features by replacing failures with example data.
+
+## Current verification and dependency disposition
+
+See [RELEASE_CANDIDATE.md](RELEASE_CANDIDATE.md) and [dependency-review.json](dependency-review.json).
+Advisories are version-scoped and review-dated; changed/new findings and expired reviews fail CI.
+These engineering dispositions do not substitute for independent audit approval.

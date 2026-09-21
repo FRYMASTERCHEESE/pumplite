@@ -952,3 +952,46 @@ fn substituted_executable_system_program_is_rejected_for_create_buy_and_sell() {
         assert_eq!(f.snapshot(), before);
     }
 }
+
+#[test]
+fn unexpected_mint_or_freeze_authority_rejects_both_trade_directions() {
+    // VM fault injection only: users have no path to restore revoked mint authority.
+    for freeze in [false, true] {
+        let mut f = TestMarket::new();
+        let ix = f.buy_ix(SOL, 1);
+        f.send(vec![ix], false).unwrap();
+        let mut account = f.svm.get_account(&f.mint).unwrap();
+        let mut mint = MintState::unpack(&account.data).unwrap();
+        let authority = Some(pk(f.creator.pubkey())).into();
+        if freeze {
+            mint.freeze_authority = authority;
+        } else {
+            mint.mint_authority = authority;
+        }
+        MintState::pack(mint, &mut account.data).unwrap();
+        f.svm.set_account(f.mint, account).unwrap();
+        let buy = f.buy_ix(SOL, 1);
+        f.reject(buy, error(pumplite::LaunchError::Authority));
+        let sell = f.sell_ix(f.tokens(f.trader_tokens) / 2, 1);
+        f.reject(sell, error(pumplite::LaunchError::Authority));
+    }
+}
+#[test]
+fn incorrect_market_bump_and_readonly_reserves_cannot_authorize_transfers() {
+    let mut f = TestMarket::new();
+    let mut account = f.svm.get_account(&f.market).unwrap();
+    account.data[9] = account.data[9].wrapping_sub(1);
+    f.svm.set_account(f.market, account).unwrap();
+    let before = f.snapshot();
+    let ix = f.buy_ix(SOL, 1);
+    assert!(f.send(vec![ix], false).is_err());
+    assert_eq!(f.snapshot(), before);
+    let mut f = TestMarket::new();
+    for index in [1, 3, 4, 5] {
+        let mut ix = f.buy_ix(SOL, 1);
+        ix.accounts[index].is_writable = false;
+        let before = f.snapshot();
+        assert!(f.send(vec![ix], false).is_err());
+        assert_eq!(f.snapshot(), before);
+    }
+}

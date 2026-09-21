@@ -19,7 +19,7 @@ async function fixture() {
   const event = receipt.logs.map(l => { try { return factory.interface.parseLog(l); } catch { return null; } }).find(e => e?.name === 'MarketCreated');
   const market = new Contract(event.args.market, artifacts.CurveMarket.abi, alice);
   const token = new Contract(event.args.token, artifacts.LaunchToken.abi, alice);
-  return { market, token };
+  return { market, token, receipt };
 }
 async function reserves(market) { return { nativeReserve: await market.nativeReserve(), tokenReserve: await market.tokenReserve(), virtualNative: parseEther('1'), supply: BASE_SUPPLY }; }
 async function balance(address) { return BigInt(await rpc.request({ method: 'eth_getBalance', params: [address, 'latest'] })); }
@@ -146,4 +146,91 @@ test('metadata rejects invalid names, symbols, lengths and protocols', async () 
   for (const args of [['', 'A', ''], ['Token','bad',''], ['😀'.repeat(9),'A',''], ['Token','A','javascript:bad']]) {
     await assert.rejects(() => factory.createMarket(...args));
   }
+});
+
+function normalizedRuntime(bytes, artifact) {
+  const data = Buffer.from(bytes.replace(/^0x/, ''), 'hex');
+  for (const ranges of Object.values(artifact.evm.deployedBytecode.immutableReferences ?? {})) {
+    for (const { start, length } of ranges) data.fill(0, start, start + length);
+  }
+  return data;
+}
+test('VM bytecode matches compiled source; immutable values and gas budgets are verified', async () => {
+  const estimate = await factory.createMarket.estimateGas('Test Token', 'TEST', 'ipfs://test');
+  const { market, token, receipt } = await fixture();
+  assert.ok(estimate >= receipt.gasUsed && estimate < 3_000_000n);
+  for (const [contract, artifact] of [[factory, artifacts.LaunchFactory], [market, artifacts.CurveMarket], [token, artifacts.LaunchToken]]) {
+    assert.deepEqual(normalizedRuntime(await provider.getCode(contract.target), artifact), normalizedRuntime(artifact.evm.deployedBytecode.object, artifact));
+  }
+  assert.equal(await market.creator(), owner.address); assert.equal(await market.token(), token.target);
+  const d = await deadline(), input = parseEther('0.01');
+  const buyEstimate = await market.buy.estimateGas(1, d, { value: input });
+  const buy = await transact(market.buy(1, d, { value: input }));
+  const held = await token.balanceOf(alice.address);
+  const approval = await transact(token.approve(market.target, held));
+  const sellEstimate = await market.sell.estimateGas(held, 1, d);
+  const sell = await transact(market.sell(held, 1, d));
+  assert.ok(buyEstimate >= buy.gasUsed && buyEstimate < 200_000n);
+  assert.ok(sellEstimate >= sell.gasUsed && sellEstimate < 200_000n);
+  assert.equal(await token.allowance(alice.address, market.target), 0n);
+  console.log('Local EVM gas: create=' + receipt.gasUsed + ', buy=' + buy.gasUsed + ', approve=' + approval.gasUsed + ', sell=' + sell.gasUsed);
+});
+test('rejecting treasury rolls back sell inventory, reserves, allowance and fees', async () => {
+  const { market, token } = await fixture();
+  await transact(market.buy(1, await deadline(), { value: parseEther('0.1') }));
+  const held = await token.balanceOf(alice.address); await transact(token.approve(market.target, held));
+  const before = await reserves(market), treasury = await balance(TREASURY);
+  await rpc.request({ method: 'evm_setAccountCode', params: [TREASURY, '0x60006000fd'] });
+  try {
+    await assert.rejects(() => transact(market.sell(held, 1, deadline())));
+    assert.deepEqual(await reserves(market), before);
+    assert.equal(await token.balanceOf(alice.address), held);
+    assert.equal(await token.allowance(alice.address, market.target), held);
+    assert.equal(await balance(TREASURY), treasury);
+  } finally { await rpc.request({ method: 'evm_setAccountCode', params: [TREASURY, '0x'] }); }
+});
+test('three-user seeded trades preserve exact fees, balances, supply, volume and invariant', { timeout: 120_000 }, async () => {
+  const users = [owner, alice, await provider.getSigner(2)];
+  for (const seed of [17n, 239n]) {
+    const { market, token } = await fixture(); let state = seed, native = 0n, inventory = BASE_SUPPLY, volume = 0n;
+    const next = () => state = (state * 1664525n + 1013904223n) & 0xffffffffn;
+    for (let i = 0; i < 32; i++) {
+      const trader = users[Number(next() % 3n)], curve = market.connect(trader), coin = token.connect(trader);
+      const held = await token.balanceOf(trader.address), selling = held > 1000000n && ((next() >> 9n) & 1n) === 1n;
+      const input = selling ? held / 3n : (next() % 1000n + 1n) * 1000000000000n;
+      const gross = selling ? (10n ** 18n + native) * input / (inventory + input) : input;
+      const fee = gross * 25n / 10000n, net = gross - fee;
+      const output = selling ? net : inventory * net / (10n ** 18n + native + net);
+      const treasury = await balance(TREASURY), beforeNative = await balance(trader.address), invariant = (10n ** 18n + native) * inventory;
+      if (i % 8 === 0) {
+        const prior = await reserves(market);
+        await assert.rejects(() => curve.buy.staticCall(BASE_SUPPLY, deadline(), { value: input }));
+        assert.deepEqual(await reserves(market), prior);
+      }
+      if (selling) await transact(coin.approve(market.target, input));
+      const afterApprovalNative = await balance(trader.address);
+      const receipt = await transact(selling ? curve.sell(input, output, deadline()) : curve.buy(output, deadline(), { value: input }));
+      assert.equal(await balance(trader.address), (selling ? afterApprovalNative + output : beforeNative - input) - receipt.fee);
+      native += selling ? -gross : net; inventory += selling ? input : -output; volume += gross;
+      assert.equal(await market.nativeReserve(), native); assert.equal(await market.tokenReserve(), inventory);
+      assert.equal(await market.volume(), volume); assert.equal(await balance(market.target), native);
+      assert.equal(await token.balanceOf(market.target), inventory); assert.equal(await token.totalSupply(), BASE_SUPPLY);
+      assert.equal(await balance(TREASURY) - treasury, fee);
+      assert.ok((10n ** 18n + native) * inventory >= invariant);
+      const event = receipt.logs.map(l => { try { return market.interface.parseLog(l); } catch { return null; } }).find(e => e?.name === 'Trade');
+      assert.equal(event.args.trader, trader.address); assert.equal(event.args.output, output); assert.equal(event.args.fee, fee);
+    }
+  }
+});
+test('integer extremes, missing allowance and insufficient balances fail without accounting changes', async () => {
+  const { market, token } = await fixture();
+  await transact(market.buy(1, await deadline(), { value: parseEther('0.01') }));
+  const prior = await reserves(market), held = await token.balanceOf(alice.address);
+  const [hugeOutput] = await market.quoteBuy((1n << 256n) - 1n);
+  assert.equal(hugeOutput, prior.tokenReserve - 1n, 'Full-precision mulDiv must handle a uint256 maximum quote without wrapping');
+  await assert.rejects(() => market.quoteSell(BASE_SUPPLY));
+  await assert.rejects(() => market.sell.staticCall(held, 1, deadline()));
+  await transact(token.approve(market.target, held));
+  await assert.rejects(() => market.connect(owner).sell.staticCall(held, 1, deadline()));
+  assert.deepEqual(await reserves(market), prior);
 });

@@ -144,6 +144,8 @@ Mobile support currently means an injected-wallet browser, not WalletConnect or 
 
 See [architecture](docs/ARCHITECTURE.md), [security and release gates](docs/SECURITY.md),
 and [implementation/verification report](docs/IMPLEMENTATION_REPORT.md).
-The inherited root LICENSE is still a placeholder; project-wide licensing must be resolved before publication.
+The root LICENSE is proprietary, Copyright © 2026 Corey Vibe, All Rights Reserved. Explicit file-level and third-party licenses remain unchanged.
 
 See [the readiness follow-up](docs/READINESS_FOLLOWUP.md) for the Anchor security patch, expanded client/runtime coverage and current advisory results.
+
+See [the current release-candidate verification](docs/RELEASE_CANDIDATE.md) for the final local gates, scoped dependency review, deployment prerequisites and full test/file inventories.

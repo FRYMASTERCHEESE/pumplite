@@ -67,6 +67,7 @@ async function discover(append = false) {
   status('Read ' + result.markets.length + ' markets from ' + state.config[state.chain].name + '. Refresh to update.');
 }
 function renderMarket(m) {
+  $('market-metadata').textContent = m.uri ? 'Creator metadata URI (not fetched or verified): ' + m.uri : 'No creator metadata URI supplied.';
   $('market-name').textContent = m.name; $('market-symbol').textContent = m.symbol + ' / ' + m.unit;
   $('market-source').textContent = m.source + ' · fetched ' + new Date(m.observedAt).toLocaleTimeString() + ' · refresh on demand';
   $('native-reserve').textContent = formatUnits(m.nativeReserve, m.nativeDecimals) + ' ' + m.unit;
@@ -102,7 +103,7 @@ async function route() {
   $('home').hidden = Boolean(id); $('market-page').hidden = !id;
   if (id) {
     $('market-name').textContent = 'Loading market…';
-    for (const field of ['market-source','native-reserve','token-reserve','volume','virtual','distribution-label']) $(field).textContent = '—';
+    for (const field of ['market-source','market-metadata','native-reserve','token-reserve','volume','virtual','distribution-label']) $(field).textContent = '—';
     $('distribution').value = 0;
     $('market-link').removeAttribute('href'); $('token-link').removeAttribute('href');
     await loadMarket(id);

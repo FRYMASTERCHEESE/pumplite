@@ -2,6 +2,16 @@ import { BrowserProvider, JsonRpcProvider, Contract, getAddress } from 'ethers';
 import abis from '../generated/base-abi.json' with { type: 'json' };
 import { BASE_SUPPLY, assertReceipt } from '../math.js';
 
+export async function settleBase(tx, notify, explorer) {
+  notify('Submitted. Waiting for a Base receipt.', explorer + '/tx/' + tx.hash);
+  // Bound waiting, never resend automatically, and never silently accept a replacement.
+  const receipt = await tx.wait(2, 120_000);
+  assertReceipt(receipt);
+  if (receipt.hash !== tx.hash) throw Error('Unexpected transaction receipt');
+  notify('Confirmed on Base (2 confirmations).', explorer + '/tx/' + receipt.hash);
+  return receipt;
+}
+
 export function adapter(config, notify) {
   if (config.chainId !== 8453) throw Error('Unsupported Base chain configuration');
   const provider = new JsonRpcProvider(config.rpcUrl, undefined, { batchMaxCount: 1 });
@@ -22,27 +32,20 @@ export function adapter(config, notify) {
     await network();
     return signer;
   }
-  async function settle(tx) {
-    notify('Submitted. Waiting for a Base receipt.', config.explorer + '/tx/' + tx.hash);
-    // A replacement is not silently treated as success for this operation.
-    const receipt = await tx.wait(2);
-    assertReceipt(receipt);
-    notify('Confirmed on Base (2 confirmations).', config.explorer + '/tx/' + receipt.hash);
-    return receipt;
-  }
+  const settle = tx => settleBase(tx, notify, config.explorer);
   async function market(id) {
     await network();
     const blockTag = await provider.getBlockNumber();
     if (!await factory().isMarket(id, { blockTag })) throw Error('Market is not in the configured factory');
     const curve = new Contract(id, abis.CurveMarket, provider);
-    const [tokenAddress, nativeReserve, tokenReserve, volume, creator, treasury] = await Promise.all([
+    const [tokenAddress, nativeReserve, tokenReserve, volume, creator, treasury, uri] = await Promise.all([
       curve.token({ blockTag }), curve.nativeReserve({ blockTag }), curve.tokenReserve({ blockTag }),
-      curve.volume({ blockTag }), curve.creator({ blockTag }), curve.TREASURY({ blockTag })
+      curve.volume({ blockTag }), curve.creator({ blockTag }), curve.TREASURY({ blockTag }), curve.metadataURI({ blockTag })
     ]);
     if (getAddress(treasury) !== getAddress(config.treasury)) throw Error('Unexpected platform treasury');
     const token = new Contract(tokenAddress, abis.LaunchToken, provider);
     const [name, symbol] = await Promise.all([token.name({ blockTag }), token.symbol({ blockTag })]);
-    return { id: getAddress(id), token: tokenAddress, creator, name, symbol, nativeReserve, tokenReserve, volume,
+    return { id: getAddress(id), token: tokenAddress, creator, name, symbol, uri, nativeReserve, tokenReserve, volume,
       decimals: 18, nativeDecimals: 18, unit: 'ETH', virtualNative: 10n ** 18n, supply: BASE_SUPPLY,
       source: 'Base block ' + blockTag, observedAt: Date.now() };
   }
