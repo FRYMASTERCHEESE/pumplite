@@ -1,5 +1,6 @@
 import { Connection, PublicKey, Transaction, TransactionInstruction, SystemProgram } from '@solana/web3.js';
 import { Buffer } from 'buffer';
+import { assertSolanaMainnet } from '../solana-network.js';
 import { SOL_SUPPLY, assertSolanaConfirmation } from '../math.js';
 
 const TOKEN = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
@@ -20,11 +21,12 @@ const key = (pubkey, isWritable = false, isSigner = false) => ({ pubkey, isWrita
 const ata = (mint, owner) => PublicKey.findProgramAddressSync([owner.toBuffer(), TOKEN.toBuffer(), mint.toBuffer()], ATA)[0];
 
 export function adapter(config, notify) {
+  assertSolanaMainnet(config.genesisHash);
   const connection = new Connection(config.rpcUrl, 'confirmed');
   let connected;
   const program = () => { if (!config.programId) throw Error('Solana program has not been deployed'); return new PublicKey(config.programId); };
   async function network() {
-    if (await connection.getGenesisHash() !== config.genesisHash) throw Error('RPC is not Solana Mainnet');
+    assertSolanaMainnet(await connection.getGenesisHash());
   }
   async function wallet() {
     if (!connected || !window.solana?.publicKey?.equals(connected)) throw Error('Wallet changed or disconnected; reconnect');
@@ -76,6 +78,7 @@ export function adapter(config, notify) {
   return {
     async connect() {
       if (!window.solana?.connect) throw Error('Install a compatible Solana wallet');
+      await network();
       connected = (await window.solana.connect()).publicKey;
       await wallet();
       return connected.toBase58();

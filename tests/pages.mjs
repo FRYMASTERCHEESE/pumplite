@@ -68,6 +68,17 @@ try {
       const type = await page.evaluate(async url => typeof (await import(url)).adapter, base + 'assets/chunks/' + chunk);
       assert.equal(type, 'function');
     }
+    // Check the published guard without RPC requests or wallet calls.
+    const chainGuard = await page.evaluate(async ({ url, configUrl }) => {
+      const { adapter } = await import(url);
+      const { solana } = await (await fetch(configUrl)).json();
+      adapter(solana, () => {});
+      try {
+        adapter({ ...solana, genesisHash: solana.genesisHash.slice(0, 32) }, () => {});
+        return false;
+      } catch (error) { return error.message === 'RPC is not Solana Mainnet'; }
+    }, { url: base + 'assets/chunks/' + chunks.find(chunk => chunk.startsWith('solana-')), configUrl: base + 'config.json' });
+    assert.equal(chainGuard, true, 'Published Solana adapter rejects truncated chain configuration');
     await page.selectOption('#chain', 'base');
     assert.match(await page.locator('#deployment').textContent(), /Base Mainnet/);
     assert.equal(await page.locator('#create').isDisabled(), true);

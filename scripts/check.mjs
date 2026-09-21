@@ -1,6 +1,7 @@
 import { readFile, readdir, access } from 'node:fs/promises';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { assertSolanaMainnet } from '../web/solana-network.js';
 async function files(dir) {
   const entries = await readdir(dir, { withFileTypes: true });
   return (await Promise.all(entries.map(e => e.isDirectory() ? files(dir + '/' + e.name) : dir + '/' + e.name))).flat();
@@ -10,6 +11,7 @@ for (const path of [...await files('web'), ...await files('scripts'), ...await f
   assert.equal(result.status, 0, result.stderr);
 }
 const config = JSON.parse(await readFile('config.json', 'utf8'));
+assertSolanaMainnet(config.solana.genesisHash);
 assert.equal(config.transactionsEnabled, false, 'This local stage must remain write-disabled');
 assert.equal(config.solana.programId, null);
 assert.equal(config.base.factory, null);

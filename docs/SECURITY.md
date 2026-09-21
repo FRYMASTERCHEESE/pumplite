@@ -21,19 +21,24 @@ No wallet credentials are required by CI.
 The pinned Windows build in the recovered checkout passed host compilation (4 tests), actual SBF
 compilation, generated IDL/schema verification and 21 LiteSVM runtime tests. See
 [SOLANA_VERIFICATION.md](SOLANA_VERIFICATION.md) for exact commands, coverage and limitations.
-The Ubuntu GitHub Actions job has been statically validated but has not run remotely.
+At the original Solana verification, the Ubuntu job had only been statically validated.
+The user subsequently reported green Pages/web CI and Pages deployment; that does not by itself
+establish the separate Solana runtime workflow result.
 These results clear the initial local build/runtime gate, not the release gates below.
 
-The frontend currently configures a truncated CAIP-style genesis identifier while comparing it
-against the full RPC genesis hash. Correct and test this check before any production enablement;
-see the verification report. Transactions remain disabled.
+The frontend full genesis-hash blocker is now fixed and covered by seven loopback-only regression
+checks plus published-bundle validation at mobile/desktop widths. Both configuration and RPC
+responses must exactly match the pinned Mainnet hash; truncated references and RPC failures are
+rejected. Identity is rechecked rather than cached. Transactions remain disabled and deployment
+addresses remain null. A genesis response alone cannot authenticate a malicious RPC or establish
+wallet interoperability; those release gates remain.
 
 ## Required before Mainnet deployment
 
 1. Obtain explicit user approval for any eventual deployment; the current task authorizes local work only.
 2. Reproduce the pinned host/SBF/IDL/runtime checks in the clean Linux CI environment and review Cargo.lock.
    The local schema check covers the reviewed ABI; complete actual client-constructed transaction tests
-   against a local harness, including the corrected full genesis-hash check.
+   against a local harness; the full genesis-hash regression check is now covered.
 3. Extend the passing runtime suite with multi-user stateful fuzzing, worst-case metadata/compute/transaction
    sizes, integer extremes and feature-set compatibility. Keep the signer, PDA, CPI, reserve, fee,
    slippage, liquidity and atomic rollback regression tests passing.
@@ -50,7 +55,7 @@ see the verification report. Transactions remain disabled.
 9. Decide how to publish immutable Solana token metadata recognizable by wallets.
    The current market metadata alone does not register Metaplex metadata.
 10. Resolve dependency audit findings and review the pinned toolchain/actions for release.
-    Run the new Solana runtime CI job after publication is approved; no remote CI has been run.
+    Verify the separate Solana runtime CI result for the exact release commit; green web/Pages CI is insufficient.
 11. Configure production RPC capacity without exposing secrets. Update CSP for reviewed RPC hosts,
     serve compressed assets with appropriate immutable caching, enforce HTTPS and server-side security headers,
     and use a bounded discovery service when Solana market enumeration becomes large.

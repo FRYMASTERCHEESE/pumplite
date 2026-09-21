@@ -143,13 +143,17 @@ not retested as part of this Solana completion task.
 No creator minting, substituted-treasury payout, unauthorized vault transfer or unbacked reserve payout
 succeeded in the covered runtime tests. This is scoped test evidence, not a security audit.
 
-1. **Frontend chain-check blocker:** config.json contains the truncated 32-character CAIP reference,
-   while web/adapters/solana.js compares it to the full getGenesisHash response. A valid Mainnet RPC
-   would be rejected. Correct this configuration and add a local regression test before product
-   enablement. The full hash is
-   `5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d`; see the primary
+1. **Frontend chain-check blocker resolved locally (2026-09-21 follow-up):** configuration now uses
+   the full RPC hash `5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d`, verified against the
    [Solana namespace specification](https://namespaces.chainagnostic.org/solana/caip2).
-   This existing frontend issue was documented, not changed in this program-testing task.
+   The adapter pins that identity independently of configuration, rejects mismatched configuration,
+   rechecks RPC identity on reads/wallet operations and checks before requesting wallet connection.
+   Seven local regression tests exercise configuration, valid/wrong/changing identities and RPC
+   error/malformed responses using only a loopback HTTP fixture; no wallet is connected or transaction sent.
+   Static Pages tests also exercise the bundled configuration guard. Six existing math/status tests,
+   production asset generation/freshness, IDL/schema and source/deployment-lock checks pass.
+   This is an RPC identity sanity check, not authentication of an untrusted RPC or proof of a wallet's
+   selected network. Wallet interoperability and the transaction lifecycle remain separate gates.
 2. **Economic decisions need review:** the 30 SOL virtual offset is pricing only, not spendable
    liquidity. Real reserves begin at zero. Fees and outputs round down; fees below 400 raw lamports
    round to zero. Slippage protection cannot eliminate sandwich/MEV risk within a user's tolerance.
