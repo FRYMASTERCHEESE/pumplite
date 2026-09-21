@@ -7,6 +7,8 @@ settings:
 overrides:
   ethers>ws: 8.21.0
   jayson>uuid: 11.1.1
+  solc>tmp: 0.2.7
+  '@trufflesuite/uws-js-unofficial>ws': 8.21.0
 
 importers:
 
@@ -597,10 +599,6 @@ packages:
     resolution: {integrity: sha512-LA4ZjwlnUblHVgq0oBF3Jl/6h/Nvs5fzBLwdEF4nuxnFdsfajde4WfxtJr3CaiH+F6ewcIB/q4jQ4UzPyid+CQ==}
     hasBin: true
 
-  os-tmpdir@1.0.2:
-    resolution: {integrity: sha512-D2FR03Vir7FIu45XBY20mTb+/ZSWB00sjU9jdQXt83gDrI4Ztz5Fs7/yy74g2N5SVQY4xY1qDr4rNddwYRVX0g==}
-    engines: {node: '>=0.10.0'}
-
   playwright-core@1.62.1:
     resolution: {integrity: sha512-wPYSwEBJY9GHraISXqyqtx0na0LpO3XEX7jNDhntbex7tzUS7kLnZsOlFruFJB4Hi/rhDMjXGqHewDZ68nYZVw==}
     engines: {node: '>=20'}
@@ -642,9 +640,9 @@ packages:
   text-encoding-utf-8@1.0.2:
     resolution: {integrity: sha512-8bw4MY9WjdsD2aMtO0OzOCY3pXGYNx2d2FfHRVUKkiCPDWjKuOlhLVASS+pD7VkLTVjW268LYJHwsnPFlBpbAg==}
 
-  tmp@0.0.33:
-    resolution: {integrity: sha512-jRCJlojKnZ3addtTOjdIqoRuPEKBvNXcGYqzO6zWZX8KfKEpnGY5jfggJQ3EjKuu8D4bJRr0y+cYJFmYbImXGw==}
-    engines: {node: '>=0.6.0'}
+  tmp@0.2.7:
+    resolution: {integrity: sha512-e0votIpp4Uo2AJYSzVHV6xCcawuiez3DzqDAbrTc3YxBkplN6e+dM13ZeIcZnDg/QpSuU2zfZ3rzwY8ukEnaXw==}
+    engines: {node: '>=14.14'}
 
   tr46@0.0.3:
     resolution: {integrity: sha512-N3WMsuqV66lT30CrXNbEjx4GEwlow3v6rr4mCcv6prnfwhS01rkgyFdjPNBYd9br7LpXV1+Emh01fHnq2Gdgrw==}
@@ -698,18 +696,6 @@ packages:
     peerDependencies:
       bufferutil: ^4.0.1
       utf-8-validate: ^5.0.2
-    peerDependenciesMeta:
-      bufferutil:
-        optional: true
-      utf-8-validate:
-        optional: true
-
-  ws@8.13.0:
-    resolution: {integrity: sha512-x9vcZYTrFPC7aSIbj7sRCYo7L/Xb8Iy+pW0ng0wt2vCJv7M9HOMy0UoN3rr+IFC7hb7vXoqS+P9ktyLLLhO+LA==}
-    engines: {node: '>=10.0.0'}
-    peerDependencies:
-      bufferutil: ^4.0.1
-      utf-8-validate: '>=5.0.2'
     peerDependenciesMeta:
       bufferutil:
         optional: true
@@ -885,7 +871,7 @@ snapshots:
 
   '@trufflesuite/uws-js-unofficial@20.30.0-unofficial.0':
     dependencies:
-      ws: 8.13.0(bufferutil@4.0.7)(utf-8-validate@6.0.3)
+      ws: 8.21.0(bufferutil@4.0.7)(utf-8-validate@6.0.3)
     optionalDependencies:
       bufferutil: 4.0.7
       utf-8-validate: 6.0.3
@@ -1203,8 +1189,6 @@ snapshots:
   node-gyp-build@4.8.4:
     optional: true
 
-  os-tmpdir@1.0.2: {}
-
   playwright-core@1.62.1: {}
 
   playwright@1.62.1:
@@ -1240,7 +1224,7 @@ snapshots:
       js-sha3: 0.8.0
       memorystream: 0.3.1
       semver: 5.7.2
-      tmp: 0.0.33
+      tmp: 0.2.7
     transitivePeerDependencies:
       - debug
 
@@ -1254,9 +1238,7 @@ snapshots:
 
   text-encoding-utf-8@1.0.2: {}
 
-  tmp@0.0.33:
-    dependencies:
-      os-tmpdir: 1.0.2
+  tmp@0.2.7: {}
 
   tr46@0.0.3: {}
 
@@ -1322,7 +1304,7 @@ snapshots:
       bufferutil: 4.1.0
       utf-8-validate: 6.0.6
 
-  ws@8.13.0(bufferutil@4.0.7)(utf-8-validate@6.0.3):
+  ws@8.21.0(bufferutil@4.0.7)(utf-8-validate@6.0.3):
     optionalDependencies:
       bufferutil: 4.0.7
       utf-8-validate: 6.0.3

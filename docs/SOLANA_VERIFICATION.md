@@ -1,5 +1,9 @@
 # Solana build and runtime verification
 
+**Historical baseline:** current Anchor 1.0.2 results, 24 runtime tests and the System Program
+security fix are recorded in [READINESS_FOLLOWUP.md](READINESS_FOLLOWUP.md). The original
+1.0.0 artifact and counts below are historical evidence, not the release candidate.
+
 Verified on 2026-09-21 in `C:\GitHub\pumplite`. The 17 recovered uncommitted source/configuration
 changes were reviewed and preserved. This report and the security-document update bring the
 combined unfinished/completed Solana work to 19 changed source/configuration/documentation files.

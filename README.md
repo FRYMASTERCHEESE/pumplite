@@ -74,7 +74,7 @@ in the publishing branch. Running these build/test commands alone does not updat
 
 `programs/pumplite/src/lib.rs` is the Anchor program; `math.rs` contains pure checked arithmetic and unit tests.
 The root Cargo workspace and Anchor configuration replace the previous misplaced root source file.
-The verification toolchain is pinned to Rust 1.94.0, Anchor 1.0.0, Agave 3.1.10 and
+The verification toolchain is pinned to Rust 1.94.0, Anchor 1.0.2, Agave 3.1.10 and
 SBF platform-tools v1.52 (bundled Rust 1.89.0-dev). Cargo.lock pins the resolved dependencies,
 including the Anchor macro crates. The Anchor SPL interface/extension features are required by
 Anchor's generated initialization code; the program still accepts only the legacy SPL Token program.
@@ -94,7 +94,7 @@ validator, RPC endpoint, deployment, or secrets. Downloads are versioned and che
 The build wrapper prevents Agave from automatically generating a deployment keypair.
 Anchor's required provider configuration names a deliberately nonexistent wallet path; verification never reads it.
 
-Local Windows verification passed the SBF build, IDL generation/schema check, 4 host tests and 21 compiled-program
+Local Windows verification passed the SBF build, IDL generation/schema check, 4 host tests and 24 compiled-program
 SVM integration tests. The GitHub-hosted workflow has not been run. A passing build is not Mainnet approval.
 See [test instructions](tests/solana/README.md) and the [exact verification report](docs/SOLANA_VERIFICATION.md).
 The program identity remains build configuration only; transactions are still disabled.
@@ -145,3 +145,5 @@ Mobile support currently means an injected-wallet browser, not WalletConnect or 
 See [architecture](docs/ARCHITECTURE.md), [security and release gates](docs/SECURITY.md),
 and [implementation/verification report](docs/IMPLEMENTATION_REPORT.md).
 The inherited root LICENSE is still a placeholder; project-wide licensing must be resolved before publication.
+
+See [the readiness follow-up](docs/READINESS_FOLLOWUP.md) for the Anchor security patch, expanded client/runtime coverage and current advisory results.

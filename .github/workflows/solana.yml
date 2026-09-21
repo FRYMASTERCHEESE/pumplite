@@ -1,9 +1,9 @@
 name: Solana program verification
 on:
   push:
-    paths: ["Cargo.toml", "Cargo.lock", "rust-toolchain.toml", ".cargo/**", "Anchor.toml", "programs/**", "tests/solana/**", "scripts/build-solana.mjs", "scripts/check-solana-idl.mjs", "config.json", ".github/workflows/solana.yml"]
+    paths: ["Cargo.toml", "Cargo.lock", "rust-toolchain.toml", ".cargo/**", "Anchor.toml", "programs/**", "tests/solana/**", "tests/solana-client-fixture.mjs", "web/**", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", ".npmrc", "scripts/audit-rust.mjs", "scripts/build-solana.mjs", "scripts/check-solana-idl.mjs", "config.json", ".github/workflows/solana.yml"]
   pull_request:
-    paths: ["Cargo.toml", "Cargo.lock", "rust-toolchain.toml", ".cargo/**", "Anchor.toml", "programs/**", "tests/solana/**", "scripts/build-solana.mjs", "scripts/check-solana-idl.mjs", "config.json", ".github/workflows/solana.yml"]
+    paths: ["Cargo.toml", "Cargo.lock", "rust-toolchain.toml", ".cargo/**", "Anchor.toml", "programs/**", "tests/solana/**", "tests/solana-client-fixture.mjs", "web/**", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", ".npmrc", "scripts/audit-rust.mjs", "scripts/build-solana.mjs", "scripts/check-solana-idl.mjs", "config.json", ".github/workflows/solana.yml"]
   workflow_dispatch:
 permissions:
   contents: read
@@ -33,8 +33,8 @@ jobs:
           curl --fail --location --retry 3 -o agave.tar.bz2 https://github.com/anza-xyz/agave/releases/download/v3.1.10/solana-release-x86_64-unknown-linux-gnu.tar.bz2
           echo "a7205ff29bcf0f7199740225ecae2b85a28ea9668892d5ec21bd9749882984a1  agave.tar.bz2" | sha256sum --check --strict
           tar -xjf agave.tar.bz2
-          curl --fail --location --retry 3 -o anchor https://github.com/otter-sec/anchor/releases/download/v1.0.0/anchor-1.0.0-x86_64-unknown-linux-gnu
-          echo "56c5a838ace02fcaa45d7d85920f228e476b2477803a24d80bc11d0040aa1d8d  anchor" | sha256sum --check --strict
+          curl --fail --location --retry 3 -o anchor https://github.com/otter-sec/anchor/releases/download/v1.0.2/anchor-1.0.2-x86_64-unknown-linux-gnu
+          echo "51c158a7b66db6d9802afe59cd73e6d78928791114b55567de5c0732e88770eb  anchor" | sha256sum --check --strict
           chmod +x anchor
           curl --fail --location --retry 3 -o platform.tar.bz2 https://github.com/anza-xyz/platform-tools/releases/download/v1.52/platform-tools-linux-x86_64.tar.bz2
           echo "8b3861e93daf085ec12b65c4fac374d9bec4587a3de16871da6b08ab0c1d907e  platform.tar.bz2" | sha256sum --check --strict
@@ -42,6 +42,15 @@ jobs:
           tar -xjf platform.tar.bz2 -C solana-release/bin/platform-tools-sdk/sbf/dependencies/platform-tools
           echo "$tools" >> "$GITHUB_PATH"
           echo "$tools/solana-release/bin" >> "$GITHUB_PATH"
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 10.11.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install client dependencies for unsigned instruction integration
+        run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Record tool versions
         run: |
           rustc --version
@@ -50,6 +59,8 @@ jobs:
           anchor --version
           cargo-build-sbf --version
           node --version
+      - name: Check locked Rust packages against RustSec
+        run: node scripts/audit-rust.mjs
       - name: Formatting and host arithmetic tests
         run: |
           cargo fmt --all -- --check

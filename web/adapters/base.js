@@ -1,8 +1,9 @@
 import { BrowserProvider, JsonRpcProvider, Contract, getAddress } from 'ethers';
-import abis from '../generated/base-abi.json';
+import abis from '../generated/base-abi.json' with { type: 'json' };
 import { BASE_SUPPLY, assertReceipt } from '../math.js';
 
 export function adapter(config, notify) {
+  if (config.chainId !== 8453) throw Error('Unsupported Base chain configuration');
   const provider = new JsonRpcProvider(config.rpcUrl, undefined, { batchMaxCount: 1 });
   let walletProvider, signer, connectedAddress;
   const factory = () => {
@@ -48,15 +49,24 @@ export function adapter(config, notify) {
   return {
     async connect() {
       if (!window.ethereum) throw Error('Install an EVM wallet');
-      await window.ethereum.request({ method: 'eth_requestAccounts' });
-      if (BigInt(await window.ethereum.request({ method: 'eth_chainId' })) !== 8453n) {
-        await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x2105' }] });
+      walletProvider?.destroy();
+      signer = undefined; connectedAddress = undefined;
+      try {
+        await network();
+        await window.ethereum.request({ method: 'eth_requestAccounts' });
+        if (BigInt(await window.ethereum.request({ method: 'eth_chainId' })) !== 8453n) {
+          await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x2105' }] });
+        }
+        walletProvider = new BrowserProvider(window.ethereum);
+        signer = await walletProvider.getSigner();
+        connectedAddress = await signer.getAddress();
+        await wallet();
+        return connectedAddress;
+      } catch (error) {
+        walletProvider?.destroy(); walletProvider = undefined;
+        signer = undefined; connectedAddress = undefined;
+        throw error;
       }
-      walletProvider = new BrowserProvider(window.ethereum);
-      signer = await walletProvider.getSigner();
-      connectedAddress = await signer.getAddress();
-      await wallet();
-      return connectedAddress;
     },
     async list(offset = 0) {
       await network();
@@ -83,20 +93,24 @@ export function adapter(config, notify) {
       throw Error('Confirmed transaction has no expected factory event; inspect receipt');
     },
     async trade(m, side, amount, min) {
+      if (!['buy', 'sell'].includes(side) || amount <= 0n || min <= 0n) throw Error('Invalid trade parameters');
       const s = await wallet();
       // Validate registry again immediately before interacting.
-      await market(m.id);
-      const curve = new Contract(m.id, abis.CurveMarket, s);
+      const verified = await market(m.id);
+      if (getAddress(verified.token) !== getAddress(m.token)) throw Error('Market token changed; reload');
+      const curve = new Contract(verified.id, abis.CurveMarket, s);
       if (side === 'sell') {
-        const token = new Contract(m.token, abis.LaunchToken, s);
+        const token = new Contract(verified.token, abis.LaunchToken, s);
         if (await token.allowance(connectedAddress, m.id) < amount) {
           notify('Approve only the exact token amount. A separate sell signature follows.');
-          await settle(await token.approve(m.id, amount));
+          await wallet();
+          await settle(await token.approve(verified.id, amount));
           await wallet();
         }
       }
       const block = await provider.getBlock('latest');
       const deadline = BigInt(block.timestamp + 180);
+      await wallet();
       return settle(side === 'buy' ? await curve.buy(min, deadline, { value: amount }) : await curve.sell(amount, min, deadline));
     }
   };

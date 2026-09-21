@@ -11,6 +11,7 @@ const trade = ['trader', 'market', 'mint', 'vault', 'trader_tokens', 'treasury',
 const create = ['creator', 'mint', 'market', 'vault', 'token_program', 'associated_token_program', 'system_program'];
 assert.deepEqual(idl.instructions.map(i => i.name).sort(), ['buy', 'create_market', 'sell']);
 for (const i of idl.instructions) {
+  assert.equal(i.accounts.find(a => a.name === 'system_program').address, '11111111111111111111111111111111');
   const creating = i.name === 'create_market';
   assert.deepEqual(i.discriminator, discriminator('global:' + i.name));
   assert.deepEqual(i.accounts.map(a => a.name), creating ? create : trade);

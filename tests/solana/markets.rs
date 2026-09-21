@@ -737,3 +737,218 @@ fn only_program_pda_can_authorize_vault_token_transfers() {
     );
     assert_eq!(f.snapshot(), before);
 }
+
+// Execute the same unsigned builders used by the browser, with public fixture addresses only.
+fn client_instructions(f: &TestMarket, action: &str, amount: u64) -> Vec<Instruction> {
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let output = std::process::Command::new("node")
+        .current_dir(root)
+        .args([
+            "tests/solana-client-fixture.mjs",
+            action,
+            &f.creator.pubkey().to_string(),
+            &f.trader.pubkey().to_string(),
+            &ID.to_string(),
+            &TREASURY.to_string(),
+            &amount.to_string(),
+        ])
+        .output()
+        .expect("Node and installed frontend dependencies are required");
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    String::from_utf8(output.stdout)
+        .unwrap()
+        .lines()
+        .map(|line| {
+            let fields: Vec<_> = line.split('|').collect();
+            assert_eq!(fields.len(), 3);
+            Instruction {
+                program_id: fields[0].parse().unwrap(),
+                data: fields[1]
+                    .as_bytes()
+                    .chunks_exact(2)
+                    .map(|pair| u8::from_str_radix(std::str::from_utf8(pair).unwrap(), 16).unwrap())
+                    .collect(),
+                accounts: fields[2]
+                    .split(';')
+                    .map(|entry| {
+                        let a: Vec<_> = entry.split(',').collect();
+                        assert_eq!(a.len(), 3);
+                        AccountMeta {
+                            pubkey: a[0].parse().unwrap(),
+                            is_writable: a[1] == "1",
+                            is_signer: a[2] == "1",
+                        }
+                    })
+                    .collect(),
+            }
+        })
+        .collect()
+}
+
+#[test]
+fn frontend_instructions_execute_max_metadata_create_buy_and_sell_within_compute_budget() {
+    let mut f = TestMarket::uncreated();
+    let instructions = client_instructions(&f, "create", 0);
+    let created = f.send(instructions, true).unwrap();
+    assert!(created.compute_units_consumed < 200_000);
+    assert_eq!(f.state().name.len(), 32);
+    assert_eq!(f.state().symbol.len(), 10);
+    assert_eq!(f.state().uri.len(), 200);
+    let instructions = client_instructions(&f, "buy", SOL);
+    let bought = f.send(instructions, false).unwrap();
+    assert!(bought.compute_units_consumed < 200_000);
+    f.backing();
+    let held = f.tokens(f.trader_tokens);
+    let instructions = client_instructions(&f, "sell", held);
+    let sold = f.send(instructions, false).unwrap();
+    assert!(sold.compute_units_consumed < 200_000);
+    assert_eq!(f.tokens(f.trader_tokens), 0);
+    f.backing();
+    println!(
+        "client compute units: create={}, buy+ATA={}, sell={}",
+        created.compute_units_consumed, bought.compute_units_consumed, sold.compute_units_consumed
+    );
+}
+
+#[test]
+fn seeded_multi_user_sequences_conserve_reserves_fees_and_supply() {
+    for seed in [7u64, 42, 2026] {
+        let mut f = TestMarket::new();
+        let mut others = Vec::new();
+        for _ in 0..3 {
+            let user = Keypair::new();
+            f.svm.airdrop(&user.pubkey(), 100 * SOL).unwrap();
+            let tokens = ata(f.mint, user.pubkey());
+            let ix = Instruction {
+                program_id: vm(anchor_spl::associated_token::ID),
+                data: vec![1],
+                accounts: vec![
+                    AccountMeta::new(f.payer.pubkey(), true),
+                    AccountMeta::new(tokens, false),
+                    AccountMeta::new_readonly(user.pubkey(), false),
+                    AccountMeta::new_readonly(f.mint, false),
+                    AccountMeta::new_readonly(vm(anchor_lang::system_program::ID), false),
+                    AccountMeta::new_readonly(token_id(), false),
+                ],
+            };
+            f.send(vec![ix], false).unwrap();
+            others.push(user);
+        }
+        let mut rng = seed;
+        let treasury_start = f.native(vm(TREASURY));
+        let mut fees = 0u64;
+        let mut volume = 0u128;
+        for step in 0..128 {
+            rng ^= rng << 13;
+            rng ^= rng >> 7;
+            rng ^= rng << 17;
+            let index = (rng % 4) as usize;
+            if index != 0 {
+                std::mem::swap(&mut f.trader, &mut others[index - 1]);
+            }
+            f.trader_tokens = ata(f.mint, f.trader.pubkey());
+            let s = f.state();
+            let held = f.tokens(f.trader_tokens);
+            let old_k =
+                (math::VIRTUAL_NATIVE as u128 + s.native_reserve as u128) * s.token_reserve as u128;
+            let native_before = f.native(f.trader.pubkey());
+            let selling = held > 1_000_000_000 && rng & 0x100 == 0;
+            // Independent integer reference calculations, not the program's quote helper.
+            let (ix, fee, gross) = if selling {
+                let input = (held / 2).max(1);
+                let gross = (((math::VIRTUAL_NATIVE + s.native_reserve) as u128 * input as u128)
+                    / (s.token_reserve + input) as u128) as u64;
+                let fee = gross / 400;
+                let ix = f.sell_ix(input, gross - fee);
+                (ix, fee, gross)
+            } else {
+                let input = 10_000 + rng % (SOL / 10);
+                let fee = input / 400;
+                let output = ((s.token_reserve as u128 * (input - fee) as u128)
+                    / (math::VIRTUAL_NATIVE + s.native_reserve + input - fee) as u128)
+                    as u64;
+                let ix = f.buy_ix(input, output);
+                (ix, fee, input)
+            };
+            // Stale/impossible slippage limits must atomically roll back during a mixed sequence.
+            if step % 17 == 0 {
+                let mut rejected = ix.clone();
+                rejected.data[16..24].copy_from_slice(&u64::MAX.to_le_bytes());
+                let before = f.snapshot();
+                assert!(f.send(vec![rejected], false).is_err());
+                assert_eq!(f.snapshot(), before);
+            }
+            f.send(vec![ix], false).unwrap();
+            fees += fee;
+            volume += gross as u128;
+            assert_eq!(
+                f.native(f.trader.pubkey()),
+                if selling {
+                    native_before + gross - fee
+                } else {
+                    native_before - gross
+                }
+            );
+            let state = f.state();
+            assert_eq!(
+                state.native_reserve,
+                if selling {
+                    s.native_reserve - gross
+                } else {
+                    s.native_reserve + gross - fee
+                }
+            );
+            assert_eq!(state.volume, volume);
+            assert_eq!(f.native(vm(TREASURY)), treasury_start + fees);
+            assert_eq!(f.tokens(f.vault), state.token_reserve);
+            let rent = f.svm.minimum_balance_for_rent_exemption(368);
+            assert_eq!(f.native(f.market), rent + state.native_reserve);
+            let all_held = f.tokens(f.trader_tokens)
+                + others
+                    .iter()
+                    .map(|user| f.tokens(ata(f.mint, user.pubkey())))
+                    .sum::<u64>();
+            assert_eq!(all_held + state.token_reserve, math::SUPPLY);
+            assert_eq!(f.supply().supply, math::SUPPLY);
+            assert!(
+                (math::VIRTUAL_NATIVE as u128 + state.native_reserve as u128)
+                    * state.token_reserve as u128
+                    >= old_k
+            );
+            if index != 0 {
+                std::mem::swap(&mut f.trader, &mut others[index - 1]);
+            }
+            f.trader_tokens = ata(f.mint, f.trader.pubkey());
+        }
+    }
+}
+
+#[test]
+fn substituted_executable_system_program_is_rejected_for_create_buy_and_sell() {
+    let mut uncreated = TestMarket::uncreated();
+    let mut create = uncreated.create_ix("Valid");
+    create.accounts[6].pubkey = token_id();
+    assert!(uncreated.send(vec![create], true).is_err());
+    for address in [uncreated.market, uncreated.mint, uncreated.vault] {
+        assert!(uncreated.svm.get_account(&address).is_none());
+    }
+    let mut f = TestMarket::new();
+    let buy = f.buy_ix(SOL, 1);
+    f.send(vec![buy], false).unwrap();
+    for mut instruction in [
+        f.buy_ix(SOL, 1),
+        f.sell_ix(f.tokens(f.trader_tokens) / 2, 1),
+    ] {
+        instruction.accounts[7].pubkey = token_id();
+        let before = f.snapshot();
+        assert!(
+            f.send(vec![instruction], false).is_err(),
+            "Substituted System Program must fail"
+        );
+        assert_eq!(f.snapshot(), before);
+    }
+}

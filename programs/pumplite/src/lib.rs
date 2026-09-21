@@ -272,6 +272,7 @@ pub struct CreateMarket<'info> {
     pub vault: Account<'info, TokenAccount>,
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
+    #[account(address = system_program::ID)]
     pub system_program: Program<'info, System>,
 }
 #[derive(Accounts)]
@@ -289,6 +290,7 @@ pub struct Trade<'info> {
     #[account(mut, address = TREASURY)]
     pub treasury: UncheckedAccount<'info>,
     pub token_program: Program<'info, Token>,
+    #[account(address = system_program::ID)]
     pub system_program: Program<'info, System>,
 }
 #[account]

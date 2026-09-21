@@ -25,7 +25,7 @@
     <div class="hero">
       <div><p class="eyebrow">SMALL FOOTPRINT. ON-CHAIN MARKETS.</p><h1>A simple start.<br>A transparent market.</h1>
       <p class="intro">Launch a fixed-supply token. Trade against a public bonding curve. Keep control of your wallet.</p></div>
-      <div class="principles"><span><i>01</i><b>Fixed supply</b><small>No future minting</small></span><span><i>02</i><b>0.25% platform fee</b><small>Paid on every trade</small></span><span><i>03</i><b>Wallet-signed</b><small>No custodial account</small></span></div>
+      <div class="principles"><span><i>01</i><b>Fixed supply</b><small>No future minting</small></span><span><i>02</i><b>0.25% platform fee</b><small>Rounded down per trade</small></span><span><i>03</i><b>Wallet-signed</b><small>No custodial account</small></span></div>
     </div>
     <div class="workspace">
       <section class="panel discovery">
@@ -58,7 +58,7 @@
         <dl class="stats"><div><dt>Real native reserve</dt><dd id="native-reserve">—</dd></div><div><dt>Tokens in vault accounting</dt><dd id="token-reserve">—</dd></div><div><dt>Cumulative trade volume</dt><dd id="volume">—</dd></div><div><dt>Virtual pricing offset</dt><dd id="virtual">—</dd></div></dl>
         <label for="distribution">Supply distributed from vault</label><progress id="distribution" max="100" value="0"></progress><p id="distribution-label" class="fine"></p>
         <h3>How the curve works</h3><p class="muted">Buys add native currency and remove tokens. Sells return tokens and withdraw native currency. Quotes round down. The virtual offset sets starting pricing; it is not money available to withdraw.</p>
-        <p class="fine">No scheduled graduation, liquidity migration, owner withdrawal, or price guarantee. Direct donations are excluded from quotes and cannot be recovered.</p>
+        <p class="fine">No scheduled graduation, liquidity migration, owner withdrawal, or price guarantee. Direct donations are excluded from quotes and cannot be recovered. Rounding can leave locked dust. Other traders may move the price within your slippage limit.</p>
         <div class="links"><a id="market-link" target="_blank" rel="noopener noreferrer">Market ↗</a><a id="token-link" target="_blank" rel="noopener noreferrer">Token ↗</a></div>
       </section>
       <section class="panel">

@@ -18,13 +18,14 @@ No wallet credentials are required by CI.
 
 ## Verified local foundation
 
-The pinned Windows build in the recovered checkout passed host compilation (4 tests), actual SBF
-compilation, generated IDL/schema verification and 21 LiteSVM runtime tests. See
-[SOLANA_VERIFICATION.md](SOLANA_VERIFICATION.md) for exact commands, coverage and limitations.
-At the original Solana verification, the Ubuntu job had only been statically validated.
-The user subsequently reported green Pages/web CI and Pages deployment; that does not by itself
-establish the separate Solana runtime workflow result.
-These results clear the initial local build/runtime gate, not the release gates below.
+The current local build uses Anchor 1.0.2 with explicit System Program address constraints.
+The user confirmed the preceding commit passed Solana verification #2, Local verification #5
+and Pages deployment #32. Those runs do not validate these newer uncommitted changes.
+Current evidence: 4 host tests, actual SBF compilation, IDL/schema verification and 24 runtime tests,
+including frontend-built instructions, maximum metadata/packet/compute checks, 384 seeded four-user
+trades and a System Program substitution regression. See
+[READINESS_FOLLOWUP.md](READINESS_FOLLOWUP.md) for exact results and limits.
+This is a local verification gate, not Mainnet approval.
 
 The frontend full genesis-hash blocker is now fixed and covered by seven loopback-only regression
 checks plus published-bundle validation at mobile/desktop widths. Both configuration and RPC
@@ -37,10 +38,8 @@ wallet interoperability; those release gates remain.
 
 1. Obtain explicit user approval for any eventual deployment; the current task authorizes local work only.
 2. Reproduce the pinned host/SBF/IDL/runtime checks in the clean Linux CI environment and review Cargo.lock.
-   The local schema check covers the reviewed ABI; complete actual client-constructed transaction tests
-   against a local harness; the full genesis-hash regression check is now covered.
-3. Extend the passing runtime suite with multi-user stateful fuzzing, worst-case metadata/compute/transaction
-   sizes, integer extremes and feature-set compatibility. Keep the signer, PDA, CPI, reserve, fee,
+   The reviewed ABI and actual client-built create/buy/sell instructions now execute in the local SBF harness.
+3. Extend the seeded multi-user suite into broader fuzz campaigns, integer-extreme and production feature-set testing; maximum metadata, packet and compute bounds now have local coverage. Keep the signer, PDA, CPI, reserve, fee,
    slippage, liquidity and atomic rollback regression tests passing.
 4. Independently audit both contracts and the client transaction construction. Extend fuzz/stateful testing,
    economic analysis, sandwich/MEV analysis, tiny-trade fee behavior, full-inventory round trips and long sequences.
@@ -67,7 +66,7 @@ wallet interoperability; those release gates remain.
 
 Runtime dependencies are pinned and browser-bundled. Dependency scans cover packages, not contract correctness.
 The local test VM has older native optional dependencies; it is not shipped in the website or exposed as an RPC service.
-Track exact audit results in IMPLEMENTATION_REPORT.md. Never silence an advisory merely to make CI green.
+Current scans are recorded in READINESS_FOLLOWUP.md; IMPLEMENTATION_REPORT.md retains historical observations. Never silence an advisory merely to make CI green.
 
 ## Product data
 

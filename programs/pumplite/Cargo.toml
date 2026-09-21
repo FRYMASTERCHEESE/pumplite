@@ -24,7 +24,7 @@ custom-panic = []
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("solana"))'] }
 
 [dependencies]
-anchor-lang = "=1.0.0"
+anchor-lang = "=1.0.2"
 # Anchor 1.0 mint init code references token-interface extension helpers even for legacy SPL mints.
 # Program<Token> still restricts all product operations to the legacy SPL Token program.
-anchor-spl = { version = "=1.0.0", default-features = false, features = ["token", "associated_token", "token_2022", "token_2022_extensions"] }
+anchor-spl = { version = "=1.0.2", default-features = false, features = ["token", "associated_token", "token_2022", "token_2022_extensions"] }

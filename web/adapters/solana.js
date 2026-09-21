@@ -1,24 +1,10 @@
-import { Connection, PublicKey, Transaction, TransactionInstruction, SystemProgram } from '@solana/web3.js';
+import { Connection, PublicKey, Transaction } from '@solana/web3.js';
 import { Buffer } from 'buffer';
+import { discriminator, ata, createInstructions, tradeInstructions } from '../solana-instructions.js';
 import { assertSolanaMainnet } from '../solana-network.js';
 import { SOL_SUPPLY, assertSolanaConfirmation } from '../math.js';
 
-const TOKEN = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
-const ATA = new PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
 const enc = new TextEncoder();
-async function discriminator(name) {
-  return Buffer.from(await crypto.subtle.digest('SHA-256', enc.encode(name))).subarray(0, 8);
-}
-function u64(value) {
-  if (value < 0n || value > 18_446_744_073_709_551_615n) throw Error('Amount exceeds Solana integer range');
-  const b = Buffer.alloc(8); b.writeBigUInt64LE(value); return b;
-}
-function str(text) {
-  const b = Buffer.from(text, 'utf8'), n = Buffer.alloc(4); n.writeUInt32LE(b.length);
-  return Buffer.concat([n, b]);
-}
-const key = (pubkey, isWritable = false, isSigner = false) => ({ pubkey, isWritable, isSigner });
-const ata = (mint, owner) => PublicKey.findProgramAddressSync([owner.toBuffer(), TOKEN.toBuffer(), mint.toBuffer()], ATA)[0];
 
 export function adapter(config, notify) {
   assertSolanaMainnet(config.genesisHash);
@@ -104,32 +90,17 @@ export function adapter(config, notify) {
     },
     async create({ name, symbol, uri }) {
       const owner = await wallet(), nonce = Buffer.from(crypto.getRandomValues(new Uint8Array(8)));
-      const [mint] = PublicKey.findProgramAddressSync([enc.encode('mint'), owner.toBuffer(), nonce], program());
-      const [id] = PublicKey.findProgramAddressSync([enc.encode('market'), mint.toBuffer()], program());
-      const data = Buffer.concat([await discriminator('global:create_market'), nonce, str(name), str(symbol), str(uri)]);
-      await send([new TransactionInstruction({ programId: program(), data, keys: [
-        key(owner, true, true), key(mint, true), key(id, true), key(ata(mint, id), true),
-        key(TOKEN), key(ATA), key(SystemProgram.programId)
-      ] })]);
-      return id.toBase58();
+      const built = await createInstructions({ owner, nonce, programId: program(), name, symbol, uri });
+      await send(built.instructions);
+      return built.market.toBase58();
     },
     async trade(m, side, amount, min) {
       const owner = await wallet(), mint = new PublicKey(m.token), id = new PublicKey(m.id);
       await market(m.id);
-      const traderTokens = ata(mint, owner);
-      const instructions = [];
-      if (side === 'buy') instructions.push(new TransactionInstruction({
-        programId: ATA, data: Buffer.from([1]), keys: [
-          key(owner, true, true), key(traderTokens, true), key(owner), key(mint), key(SystemProgram.programId), key(TOKEN)
-        ]
-      }));
       const slot = await connection.getSlot('confirmed'), timestamp = await connection.getBlockTime(slot);
       if (timestamp === null) throw Error('Unable to obtain chain time');
-      const data = Buffer.concat([await discriminator('global:' + side), u64(amount), u64(min), u64(BigInt(timestamp + 180))]);
-      instructions.push(new TransactionInstruction({ programId: program(), data, keys: [
-        key(owner, true, true), key(id, true), key(mint), key(ata(mint, id), true), key(traderTokens, true),
-        key(new PublicKey(config.treasury), true), key(TOKEN), key(SystemProgram.programId)
-      ] }));
+      const instructions = await tradeInstructions({ owner, mint, market: id, treasury: new PublicKey(config.treasury),
+        programId: program(), side, amount, min, deadline: BigInt(timestamp + 180) });
       return send(instructions);
     }
   };

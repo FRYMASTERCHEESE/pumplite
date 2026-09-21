@@ -5,11 +5,14 @@ It does not replace the program with a native mock, skip a missing artifact, sta
 connect a wallet, or deploy anything. Fixture balances and signers exist only in the process-local VM.
 These fixtures are never published as product activity.
 
-Pinned toolchain: host Rust 1.94.0, Anchor CLI/crates 1.0.0, Agave 3.1.10,
+Pinned toolchain: host Rust 1.94.0, Anchor CLI/crates 1.0.2, Agave 3.1.10,
 SBF platform-tools v1.52. The SBF compiler has its own bundled Rust version.
 Cargo.lock is shared by the host and SBF builds. CI uses Ubuntu 24.04 and verifies binary checksums.
 
-From the repository root after installing these versions:
+From the repository root after installing these versions and Node 22 / pnpm 10.11.0:
+
+Run `pnpm install --frozen-lockfile --ignore-scripts` first. The runtime suite invokes the actual
+frontend unsigned-instruction builders using public fixture addresses only. No wallet is connected.
 
 ```sh
 cargo fmt --all -- --check
@@ -31,7 +34,7 @@ The tests isolate transaction fees in a separate fixture payer. Atomic-failure a
 market data, mint supply, vault/trader tokens, market native funds, trader native funds and treasury
 funds; the runtime's legitimate transaction fee charged to the fixture payer is excluded.
 
-The suite currently has 21 runtime tests, including direct vault-authority attacks and mismatched
+The suite currently has 24 runtime tests, including direct vault-authority attacks and mismatched
 creation-nonce/PDA rejection. The program crate adds 4 host tests (three math cases and program identity).
 
 On Windows, the recovered checkout was verified with isolated tools under ignored build/tooling:
@@ -46,3 +49,5 @@ The wrapper also rejects an unexpected cargo-build-sbf version before setting up
 The deployment-output signing-file check excludes Cargo's unrelated dependency fingerprint JSON.
 
 Passing this suite is not an audit or proof of Mainnet readiness. See docs/SECURITY.md.
+
+See [the readiness follow-up](../../docs/READINESS_FOLLOWUP.md) for the Anchor security patch, expanded client/runtime coverage and current advisory results.
