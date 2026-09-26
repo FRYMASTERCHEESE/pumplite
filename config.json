@@ -5,6 +5,7 @@
   "solana": {
     "name": "Solana Mainnet",
     "rpcUrl": "https://api.mainnet-beta.solana.com",
+    "rpcFallbackUrls": ["https://solana-rpc.publicnode.com"],
     "genesisHash": "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d",
     "programId": null,
     "treasury": "BNpFPPuy2h12dryy4dayemjA4YS17ccVaF82jBDuiwct",

@@ -23,7 +23,7 @@ async function rpc(t, reply) {
   server.listen(0, '127.0.0.1');
   await once(server, 'listening');
   t.after(() => new Promise(resolve => { server.close(resolve); server.closeAllConnections(); }));
-  return { calls, client: adapter({ ...config.solana, rpcUrl: `http://127.0.0.1:${server.address().port}` }, () => {}) };
+  return { calls, client: adapter({ ...config.solana, rpcFallbackUrls: [], rpcUrl: `http://127.0.0.1:${server.address().port}` }, () => {}) };
 }
 
 test('configuration pins the full Mainnet hash and retains the deployment lock', () => {

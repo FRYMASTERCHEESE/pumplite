@@ -166,7 +166,11 @@ $('connect').addEventListener('click', () => action(async () => {
   }
   $('connect').textContent = 'Disconnect ' + state.wallet.slice(0, 5) + '…' + state.wallet.slice(-4);
   status('Wallet connected: ' + state.wallet);
-  if (state.chain === 'solana') diagnostic('Connected successfully. Trading remains disabled.');
+  if (state.chain === 'solana') {
+    diagnostic('Wallet connected. Checking Mainnet RPC; trading remains disabled.');
+    try { await state.adapter.verifyNetwork(); diagnostic('Wallet connected. Mainnet RPC verified. Trading remains disabled.'); }
+    catch (error) { diagnostic('Wallet connected for account access only. Mainnet RPC NOT verified: ' + error.message + '. On-chain operations remain blocked until verification succeeds.'); }
+  }
   if (state.market) await loadMarket(state.market.id);
 }));
 $('download-metadata').addEventListener('click', () => action(async () => {

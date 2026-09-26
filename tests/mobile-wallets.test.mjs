@@ -63,17 +63,38 @@ test('prepared Phantom approval calls provider synchronously on second tap and t
  const p=new EventEmitter();Object.assign(p,{publicKey:key,signTransaction(){},connect(){connects++;p.emit('accountChanged',key);return Promise.resolve({publicKey:key});}});
  scope(t,{phantom:{solana:p}});t.mock.method(Connection.prototype,'getGenesisHash',async()=>{calls++;return config.solana.genesisHash;});
  const notices=[];const c=solana(config.solana,m=>notices.push(m));
- await c.prepareConnect();assert.equal(connects,0);assert.equal(calls,1);
- const pending=c.connect(true);assert.equal(connects,1);assert.equal(await pending,key.toBase58());assert.equal(calls,2);
+ await c.prepareConnect();assert.equal(connects,0);assert.equal(calls,0);
+ const pending=c.connect(true);assert.equal(connects,1);assert.equal(await pending,key.toBase58());assert.equal(calls,0);
  assert.ok(notices.some(m=>m.includes('Tap Connect wallet again')));c.disconnect();
 });
 test('Phantom preparation exposes RPC failure without requesting wallet access',async t=>{
  const p={connect(){assert.fail('No wallet access');},signTransaction(){}};scope(t,{phantom:{solana:p}});
  t.mock.method(Connection.prototype,'getGenesisHash',async()=>{throw Error('HTTP 403');});
- await assert.rejects(solana(config.solana,()=>{}).prepareConnect(),/RPC check failed before Phantom.*HTTP 403/);
+ await solana(config.solana,()=>{}).prepareConnect();
 });
 test('Phantom rejection preserves provider error code in visible error',async t=>{
  const p={connect(){throw Object.assign(Error('User rejected'),{code:4001});},signTransaction(){}};scope(t,{phantom:{solana:p}});
  t.mock.method(Connection.prototype,'getGenesisHash',async()=>config.solana.genesisHash);
  const c=solana(config.solana,()=>{});await c.prepareConnect();await assert.rejects(c.connect(true),/code 4001.*User rejected/);
+});
+
+test('Solana RPC 403 uses only one configured fallback and verifies full genesis',async t=>{
+ const calls=[];t.mock.method(Connection.prototype,'getGenesisHash',async function(){calls.push(this.rpcEndpoint);if(this.rpcEndpoint===config.solana.rpcUrl)throw Error('HTTP 403');return config.solana.genesisHash;});
+ const c=solana(config.solana,()=>{});await c.verifyNetwork();assert.deepEqual(calls,[config.solana.rpcUrl,config.solana.rpcFallbackUrls[0]]);
+ await c.verifyNetwork();assert.equal(calls.length,3);assert.equal(calls[2],config.solana.rpcFallbackUrls[0]);
+});
+test('wrong Solana genesis fails closed without fallback',async t=>{
+ let calls=0;t.mock.method(Connection.prototype,'getGenesisHash',async()=>{calls++;return 'wrong-chain';});
+ await assert.rejects(solana(config.solana,()=>{}).verifyNetwork(),/not Solana Mainnet/);assert.equal(calls,1);
+});
+test('Phantom approval succeeds with all RPCs unavailable but chain operations fail closed',async t=>{
+ let requests=0;const p={publicKey:key,connect(){requests++;return Promise.resolve({publicKey:key});},signTransaction(){assert.fail('No signing');}};scope(t,{phantom:{solana:p}});
+ let calls=0;t.mock.method(Connection.prototype,'getGenesisHash',async()=>{calls++;throw Error('HTTP 403');});
+ const c=solana(config.solana,()=>{});await c.prepareConnect();assert.equal(await c.connect(true),key.toBase58());assert.equal(requests,1);assert.equal(calls,0);
+ await assert.rejects(c.verifyNetwork(),/403/);assert.equal(calls,2);
+ await assert.rejects(c.create({}),/403/);assert.equal(calls,4);c.disconnect();
+});
+test('fallback on wrong chain cannot authorize reads',async t=>{
+ t.mock.method(Connection.prototype,'getGenesisHash',async function(){if(this.rpcEndpoint===config.solana.rpcUrl)throw Error('HTTP 429');return 'wrong-chain';});
+ await assert.rejects(solana(config.solana,()=>{}).list(),/not Solana Mainnet/);
 });

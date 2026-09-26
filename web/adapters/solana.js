@@ -13,13 +13,30 @@ const TOKEN = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
 
 export function adapter(config, notify, changed = () => {}) {
   assertSolanaMainnet(config.genesisHash);
-  const connection = new Connection(config.rpcUrl, { commitment: 'confirmed', fetch: boundedFetch, disableRetryOnRateLimit: true });
+  const makeConnection = url => new Connection(url, { commitment: 'confirmed', fetch: boundedFetch, disableRetryOnRateLimit: true });
+  const urls = [config.rpcUrl, ...(config.rpcFallbackUrls || [])];
+  if (urls.length > 2) throw Error('At most one Solana RPC fallback is allowed');
+  for (const url of urls.slice(1)) { const u = new URL(url); if (u.protocol !== 'https:' || u.username || u.password || u.search || u.hash) throw Error('Invalid public Solana fallback URL'); }
+  let connection = makeConnection(urls[0]);
   let preparedAt = 0, preparedProvider;
   let connected, discoveryKeys, selected, revision = 0, unwatch = () => {};
   function disconnect() { revision++; connected = undefined; selected = undefined; unwatch(); unwatch = () => {}; changed(); }
   const program = () => { if (!config.programId) throw Error('Solana program has not been deployed'); return new PublicKey(config.programId); };
   async function network() {
-    assertSolanaMainnet(await connection.getGenesisHash());
+    let hash;
+    try { hash = await connection.getGenesisHash(); }
+    catch (error) {
+      if (urls.length < 2) throw error;
+      const other = urls.find(url => url !== connection.rpcEndpoint);
+      notify('Solana RPC unavailable: ' + error.message + '. Checking configured fallback ' + new URL(other).host + '. No transaction is retried.');
+      const fallback = makeConnection(other);
+      const fallbackHash = await fallback.getGenesisHash();
+      assertSolanaMainnet(fallbackHash);
+      connection = fallback;
+      return;
+    }
+    // An explicit wrong chain never triggers fallback.
+    assertSolanaMainnet(hash);
   }
   async function wallet() {
     if (!connected || !selected?.publicKey?.equals(connected)) throw Error('Wallet changed or disconnected; reconnect');
@@ -80,12 +97,13 @@ export function adapter(config, notify, changed = () => {}) {
   }
   return {
     disconnect,
+    verifyNetwork: network,
     async prepareConnect() {
       preparedAt = 0; preparedProvider = undefined;
       const candidate = solanaProvider();
       if (!candidate) throw Error('Provider detection: no compatible Solana provider. Reload inside Phantom’s browser.');
-      notify('Phantom preparation: checking Solana Mainnet RPC (15 second limit).');
-      try { await network(); } catch (error) { throw Error('Mainnet RPC check failed before Phantom was requested: ' + error.message); }
+      // Account-access permission does not read the chain or authorize a transaction.
+      // Keep public RPC availability out of the approval gesture.
       preparedProvider = candidate; preparedAt = Date.now();
       notify('Phantom ready. Tap Connect wallet again within 30 seconds to request account access. No signing is requested.');
     },
@@ -112,8 +130,8 @@ export function adapter(config, notify, changed = () => {}) {
         connected = result?.publicKey;
         if (!connected || !candidate.publicKey?.equals(connected)) throw Error('Phantom returned no matching public account. Reconnect.');
         unwatch(); unwatch = watchWallet(candidate, ['disconnect', 'accountChanged'], disconnect);
-        notify('Phantom approved. Rechecking account and Solana Mainnet RPC.');
-        await wallet();
+        notify('Phantom approved account access. On-chain operations still require Mainnet RPC verification.');
+        if (!prepared) await wallet();
         if (attempt !== revision) throw Error('Wallet changed; reconnect');
         return connected.toBase58();
       } catch (error) { if (attempt === revision) disconnect(); throw Error('Solana connection failed' + (error.code !== undefined ? ' (code ' + String(error.code).slice(0, 20) + ')' : '') + ': ' + (error.message || 'Unknown provider error')); }
