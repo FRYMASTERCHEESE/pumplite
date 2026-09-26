@@ -57,3 +57,23 @@ for(const mode of ['success','reject','switch-reject','wrong-chain','disconnect'
  assert.equal(calls.includes('eth_sendTransaction'),false); assert.equal(p.listenerCount('disconnect'),0);
 });
 test('unavailable wallets fail without connection or signing',async t=>{scope(t,{});await assert.rejects(solana(config.solana,()=>{}).connect(),/No Solana/);await assert.rejects(base(config.base,()=>{}).connect(),/No EVM/);});
+
+test('prepared Phantom approval calls provider synchronously on second tap and tolerates initial account announcement',async t=>{
+ let calls=0, connects=0;
+ const p=new EventEmitter();Object.assign(p,{publicKey:key,signTransaction(){},connect(){connects++;p.emit('accountChanged',key);return Promise.resolve({publicKey:key});}});
+ scope(t,{phantom:{solana:p}});t.mock.method(Connection.prototype,'getGenesisHash',async()=>{calls++;return config.solana.genesisHash;});
+ const notices=[];const c=solana(config.solana,m=>notices.push(m));
+ await c.prepareConnect();assert.equal(connects,0);assert.equal(calls,1);
+ const pending=c.connect(true);assert.equal(connects,1);assert.equal(await pending,key.toBase58());assert.equal(calls,2);
+ assert.ok(notices.some(m=>m.includes('Tap Connect wallet again')));c.disconnect();
+});
+test('Phantom preparation exposes RPC failure without requesting wallet access',async t=>{
+ const p={connect(){assert.fail('No wallet access');},signTransaction(){}};scope(t,{phantom:{solana:p}});
+ t.mock.method(Connection.prototype,'getGenesisHash',async()=>{throw Error('HTTP 403');});
+ await assert.rejects(solana(config.solana,()=>{}).prepareConnect(),/RPC check failed before Phantom.*HTTP 403/);
+});
+test('Phantom rejection preserves provider error code in visible error',async t=>{
+ const p={connect(){throw Object.assign(Error('User rejected'),{code:4001});},signTransaction(){}};scope(t,{phantom:{solana:p}});
+ t.mock.method(Connection.prototype,'getGenesisHash',async()=>config.solana.genesisHash);
+ const c=solana(config.solana,()=>{});await c.prepareConnect();await assert.rejects(c.connect(true),/code 4001.*User rejected/);
+});

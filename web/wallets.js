@@ -1,7 +1,6 @@
 // Provider discovery never requests accounts. Provider names are untrusted display text.
 export function solanaProvider(scope = globalThis.window) {
-  const p = scope?.phantom?.solana || scope?.solana;
-  return typeof p?.connect === 'function' && typeof p?.signTransaction === 'function' ? p : null;
+  return [scope?.phantom?.solana, scope?.solana].find(p => typeof p?.connect === 'function' && typeof p?.signTransaction === 'function') || null;
 }
 export function discoverEvm(scope = globalThis.window, changed = () => {}) {
   const entries = [];
@@ -23,4 +22,10 @@ export function discoverEvm(scope = globalThis.window, changed = () => {}) {
 export function watchWallet(provider, events, invalidated) {
   for (const event of events) provider.on?.(event, invalidated);
   return () => { for (const event of events) provider.removeListener?.(event, invalidated); };
+}
+
+export function solanaDiagnostics(scope = globalThis.window) {
+  const describe = p => !p ? 'absent' : 'present, connect=' + (typeof p.connect === 'function') + ', signTransaction=' + (typeof p.signTransaction === 'function');
+  return 'Phantom Android diagnostic v1 | secure=' + Boolean(scope?.isSecureContext) +
+    ' | phantom.solana: ' + describe(scope?.phantom?.solana) + ' | solana: ' + describe(scope?.solana);
 }

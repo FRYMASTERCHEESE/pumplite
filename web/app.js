@@ -1,4 +1,4 @@
-import { discoverEvm } from './wallets.js';
+import { discoverEvm, solanaDiagnostics } from './wallets.js';
 import { mobileBrowseLink } from './mobile.js';
 import { metadataDocument } from './metadata.js';
 import { parseUnits, formatUnits, quote, minimumOutput, validateMetadata } from './math.js';
@@ -19,7 +19,12 @@ function ready() {
   return Boolean(c && (state.chain === 'solana' ? c.programId : c.factory));
 }
 function writable() { return ready() && state.config.transactionsEnabled && state.wallet && !state.busy; }
+let phantomPrepared = false;
+function diagnostic(message = '') {
+  $('wallet-diagnostic').textContent = solanaDiagnostics(window) + (message ? ' | ' + message : '');
+}
 function controls() {
+  $('wallet-diagnostic').hidden = state.chain !== 'solana';
   const mobileLink = mobileBrowseLink(state.chain, location.href);
   $('mobile-open').hidden = !mobileLink || state.busy;
   if (mobileLink) { $('mobile-open').href = mobileLink; $('mobile-open').textContent = 'Open in ' + (state.chain === 'solana' ? 'Phantom' : 'MetaMask'); }
@@ -45,9 +50,10 @@ function invalidateQuote() {
 async function getAdapter() {
   if (state.adapter) return state.adapter;
   const chain = state.chain, epoch = state.epoch;
+  if (chain === 'solana') { diagnostic('Loading Solana SDK…'); status('Loading Solana wallet support…'); }
   const module = chain === 'solana' ? await import('./adapters/solana.js') : await import('./adapters/base.js');
   if (epoch !== state.epoch) throw Error('Network selection changed');
-  state.adapter = module.adapter(state.config[chain], status, walletChanged);
+  state.adapter = module.adapter(state.config[chain], (message, href) => { if (chain === 'solana') diagnostic(message); status(message, href); }, walletChanged);
   return state.adapter;
 }
 async function action(fn) {
@@ -141,11 +147,24 @@ function switchChain(chain) {
 $('chain').addEventListener('change', () => { switchChain($('chain').value); location.hash = ''; $('home').hidden = false; $('market-page').hidden = true; });
 $('connect').addEventListener('click', () => action(async () => {
   if (state.wallet) { state.adapter?.disconnect(); status('Wallet disconnected from this site.'); return; }
+  if (state.chain === 'solana') {
+    diagnostic('Connect tapped');
+    if (!phantomPrepared) {
+      try { await (await getAdapter()).prepareConnect(); phantomPrepared = true; }
+      catch (error) { diagnostic(error.message); throw error; }
+      return;
+    }
+    phantomPrepared = false;
+    try { state.wallet = await state.adapter.connect(true); }
+    catch (error) { diagnostic(error.message); throw error; }
+  } else {
   wallets.refresh();
   const selected = wallets.entries[Number($('wallet-choice').value)]?.provider;
-  state.wallet = await (await getAdapter()).connect(state.chain === 'base' ? selected : undefined);
+  state.wallet = await (await getAdapter()).connect(selected);
+  }
   $('connect').textContent = 'Disconnect ' + state.wallet.slice(0, 5) + '…' + state.wallet.slice(-4);
   status('Wallet connected: ' + state.wallet);
+  if (state.chain === 'solana') diagnostic('Connected successfully. Trading remains disabled.');
   if (state.market) await loadMarket(state.market.id);
 }));
 $('download-metadata').addEventListener('click', () => action(async () => {
@@ -199,6 +218,7 @@ window.addEventListener('hashchange', () => {
   if (!state.busy) action(route); else state.pendingRoute = true;
 });
 function walletChanged() {
+  phantomPrepared = false;
   state.wallet = null; $('connect').textContent = 'Connect wallet'; invalidateQuote();
   $('balance').textContent = 'Wallet changed. Reconnect to read balances.';
 }
@@ -213,7 +233,8 @@ function renderWalletChoices() {
   if (previous && wallets.entries[Number(previous)]) $('wallet-choice').value = previous;
 }
 renderWalletChoices();
-window.addEventListener('focus', () => wallets.refresh());
+window.addEventListener('focus', () => { wallets.refresh(); if (!state.busy) diagnostic('Page resumed; provider detection refreshed.'); });
+diagnostic('Ready; no wallet request sent.');
 try {
   const response = await fetch('./config.json', { cache: 'no-store' });
   if (!response.ok) throw Error('Unable to load public network configuration');

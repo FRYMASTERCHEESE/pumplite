@@ -14,6 +14,7 @@ const TOKEN = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
 export function adapter(config, notify, changed = () => {}) {
   assertSolanaMainnet(config.genesisHash);
   const connection = new Connection(config.rpcUrl, { commitment: 'confirmed', fetch: boundedFetch, disableRetryOnRateLimit: true });
+  let preparedAt = 0, preparedProvider;
   let connected, discoveryKeys, selected, revision = 0, unwatch = () => {};
   function disconnect() { revision++; connected = undefined; selected = undefined; unwatch(); unwatch = () => {}; changed(); }
   const program = () => { if (!config.programId) throw Error('Solana program has not been deployed'); return new PublicKey(config.programId); };
@@ -79,22 +80,43 @@ export function adapter(config, notify, changed = () => {}) {
   }
   return {
     disconnect,
-    async connect() {
+    async prepareConnect() {
+      preparedAt = 0; preparedProvider = undefined;
+      const candidate = solanaProvider();
+      if (!candidate) throw Error('Provider detection: no compatible Solana provider. Reload inside Phantom’s browser.');
+      notify('Phantom preparation: checking Solana Mainnet RPC (15 second limit).');
+      try { await network(); } catch (error) { throw Error('Mainnet RPC check failed before Phantom was requested: ' + error.message); }
+      preparedProvider = candidate; preparedAt = Date.now();
+      notify('Phantom ready. Tap Connect wallet again within 30 seconds to request account access. No signing is requested.');
+    },
+    async connect(prepared = false) {
       disconnect();
       const attempt = revision, candidate = solanaProvider();
       if (!candidate) throw Error('No Solana wallet detected. Open this page in Phantom, then connect.');
       selected = candidate;
-      unwatch = watchWallet(candidate, ['disconnect', 'accountChanged'], disconnect);
+      unwatch = watchWallet(candidate, ['disconnect'], disconnect);
       try {
-        await network();
+        if (prepared) {
+          if (preparedProvider !== candidate || !preparedAt || Date.now() - preparedAt > 30000) throw Error('Preparation expired or provider changed. Tap Connect wallet to prepare again.');
+        } else await network();
+        preparedAt = 0; preparedProvider = undefined;
         if (attempt !== revision) throw Error('Wallet changed; reconnect');
-        const result = await candidate.connect();
+        notify('Phantom request sent. Approve account access in Phantom, or reject it. No transaction is requested.');
+        let timer;
+        const waiting = setTimeout(() => notify('Still waiting for Phantom. Check its approval screen. If none appears, reload this page before retrying; no transaction was sent.'), 12000);
+        let result;
+        try {
+          result = await Promise.race([candidate.connect(), new Promise((_, reject) => { timer = setTimeout(() => reject(Error('Phantom connection timed out after 60 seconds. Reload before retrying.')), 60000); })]);
+        } finally { clearTimeout(timer); clearTimeout(waiting); }
         if (attempt !== revision) throw Error('Wallet changed; reconnect');
         connected = result?.publicKey;
+        if (!connected || !candidate.publicKey?.equals(connected)) throw Error('Phantom returned no matching public account. Reconnect.');
+        unwatch(); unwatch = watchWallet(candidate, ['disconnect', 'accountChanged'], disconnect);
+        notify('Phantom approved. Rechecking account and Solana Mainnet RPC.');
         await wallet();
         if (attempt !== revision) throw Error('Wallet changed; reconnect');
         return connected.toBase58();
-      } catch (error) { if (attempt === revision) disconnect(); throw error; }
+      } catch (error) { if (attempt === revision) disconnect(); throw Error('Solana connection failed' + (error.code !== undefined ? ' (code ' + String(error.code).slice(0, 20) + ')' : '') + ': ' + (error.message || 'Unknown provider error')); }
     },
     async list(offset = 0) {
       await network();
