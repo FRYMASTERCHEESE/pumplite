@@ -8,7 +8,8 @@
     "genesisHash": "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d",
     "programId": null,
     "treasury": "BNpFPPuy2h12dryy4dayemjA4YS17ccVaF82jBDuiwct",
-    "explorer": "https://solscan.io"
+    "explorer": "https://solscan.io",
+    "discoveryUrl": null
   },
   "base": {
     "name": "Base Mainnet",

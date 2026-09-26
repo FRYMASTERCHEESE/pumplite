@@ -6,7 +6,7 @@ permissions:
   contents: read
 jobs:
   web-and-base:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -35,6 +35,8 @@ jobs:
         run: |
           node scripts/serve.mjs > /tmp/pumplite-preview.log 2>&1 &
           pnpm test:browser
+      - name: Identify canonical Base candidate
+        run: node scripts/release-manifest.mjs --canonical
       - name: Retain source verification input and Base artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -44,6 +46,7 @@ jobs:
           path: |
             build/base/*.json
             build/dependency-audit.json
+            build/release-base.json
   # Linux freshness is checked above; also protect Windows-generated Pages assets.
   pages-windows:
     runs-on: windows-latest

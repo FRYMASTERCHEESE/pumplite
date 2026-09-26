@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
 <meta name="theme-color" content="#101b18">
 <meta name="description" content="PumpLite: a lightweight fixed-supply token launchpad for Solana and Base.">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://api.mainnet-beta.solana.com wss://api.mainnet-beta.solana.com https://mainnet.base.org; object-src 'none'; base-uri 'none'; form-action 'none'">
@@ -21,6 +22,7 @@
 </header>
 <main>
   <div class="notice" id="deployment" role="status">Local implementation. No contracts configured. Trading is disabled.</div>
+  <p class="fine" id="mobile-help"><a id="mobile-open" rel="noopener noreferrer" hidden>Open in wallet browser</a> Mobile: use a wallet’s in-app browser. Opening this page does not connect or sign.</p>
   <section id="home">
     <div class="hero">
       <div><p class="eyebrow">SMALL FOOTPRINT. ON-CHAIN MARKETS.</p><h1>A simple start.<br>A transparent market.</h1>
@@ -42,7 +44,12 @@
           <label for="name">Token name</label><input id="name" placeholder="Your token name" required maxlength="32" autocomplete="off">
           <label for="symbol">Symbol</label><input id="symbol" placeholder="TOKEN" required maxlength="10" pattern="[A-Z0-9]{1,10}" autocomplete="off">
           <label for="uri">Metadata URI <span class="muted">optional</span></label><input id="uri" placeholder="https://… or ipfs://…" maxlength="200" autocomplete="off">
-          <p class="fine">Use an existing public metadata document. Uploads are not provided. Network and account-creation costs apply.</p>
+          <p class="fine">Solana metadata is immutable. Publish your JSON and image to persistent storage before creation; IPFS pinning is recommended. Network, account-creation and metadata-program costs apply.</p>
+          <details><summary>Prepare metadata JSON locally</summary>
+          <label for="description">Description</label><textarea id="description" maxlength="2000" rows="3"></textarea>
+          <label for="image-uri">Image URI (optional)</label><input id="image-uri" placeholder="ipfs://… or https://…" maxlength="500">
+          <button id="download-metadata" type="button" class="outline full">Download metadata JSON</button>
+          <p class="fine">No upload, image fetch or wallet access. Pin the downloaded document, then put its public URI above.</p></details>
           <button id="create" class="primary" type="submit" disabled>Create token</button>
         </form>
       </section>

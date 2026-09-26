@@ -5,14 +5,17 @@ const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright')
 const options = { headless: true };
 if (process.env.BROWSER_EXECUTABLE) options.executablePath = process.env.BROWSER_EXECUTABLE;
 const browser = await chromium.launch(options);
+const preview = process.env.PREVIEW_URL || 'http://127.0.0.1:4173/';
 try {
   await mkdir('build/screenshots', { recursive: true });
   for (const width of [390, 1440]) {
     const page = await browser.newPage({ viewport: { width, height: 900 } });
     const errors = [], external = [];
     page.on('pageerror', e => errors.push(e.message));
-    page.on('request', req => { if (!req.url().startsWith('http://127.0.0.1:4173/')) external.push(req.url()); });
-    await page.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle' });
+    page.on('request', req => { if (!req.url().startsWith(preview)) external.push(req.url()); });
+    const response = await page.goto(preview, { waitUntil: 'networkidle' });
+    assert.equal(response.headers()['x-frame-options'], 'DENY');
+    assert.match(response.headers()['content-security-policy'], /frame-ancestors 'none'/);
     await page.waitForFunction(() => document.querySelector('#deployment').textContent.includes('Solana Mainnet'));
     assert.equal(await page.locator('#create').isDisabled(), true);
     assert.equal(await page.locator('#refresh').isDisabled(), true);

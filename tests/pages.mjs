@@ -79,6 +79,13 @@ try {
       } catch (error) { return error.message === 'RPC is not Solana Mainnet'; }
     }, { url: base + 'assets/chunks/' + chunks.find(chunk => chunk.startsWith('solana-')), configUrl: base + 'config.json' });
     assert.equal(chainGuard, true, 'Published Solana adapter rejects truncated chain configuration');
+    await page.locator('#name').fill('Local document');
+    await page.locator('#symbol').fill('DOC');
+    await page.locator('details').click();
+    const downloading = page.waitForEvent('download');
+    await page.locator('#download-metadata').click();
+    const download = await downloading;
+    assert.equal(JSON.parse(await readFile(await download.path(),'utf8')).name,'Local document');
     await page.selectOption('#chain', 'base');
     assert.match(await page.locator('#deployment').textContent(), /Base Mainnet/);
     assert.equal(await page.locator('#create').isDisabled(), true);
@@ -97,7 +104,11 @@ try {
     assert.equal(await page.locator('body').evaluate(el => el.scrollWidth <= innerWidth), true);
     assert.deepEqual(await page.evaluate(() => window.__walletCalls), []);
     assert.ok(requests.every(url => url === origin + '/pumplite' || url.startsWith(base)), 'All assets stay beneath /pumplite/');
-    assert.deepEqual(errors, []);
+    // Pages cannot set frame-ancestors headers; verify the app's fail-closed fallback too.
+    await page.evaluate(url => { const frame=document.createElement('iframe');frame.id='frame-check';frame.src=url;document.body.append(frame); },base);
+    await page.waitForFunction(()=>document.querySelector('#frame-check')?.contentDocument?.body?.textContent.includes('Embedded wallet interactions are disabled'));
+    assert.deepEqual(errors.filter(e=>e!=='Embedded PumpLite is disabled'), []);
+    assert.ok(errors.includes('Embedded PumpLite is disabled'));
     assert.deepEqual(failed, []);
     console.log('PASS Pages export ' + width + 'px: /pumplite/, both production SDK imports, lazy loading, config/CSS, hash reload, no errors/404s/external requests/wallet calls');
     await context.close();

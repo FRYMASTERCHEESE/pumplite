@@ -5,6 +5,8 @@ import { validateMetadata } from './math.js';
 const TOKEN = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
 const ATA = new PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
 const enc = new TextEncoder();
+export const METADATA_PROGRAM = new PublicKey('metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s');
+export const metadataAddress = mint => PublicKey.findProgramAddressSync([enc.encode('metadata'), METADATA_PROGRAM.toBuffer(), mint.toBuffer()], METADATA_PROGRAM)[0];
 export async function discriminator(name) {
   return Buffer.from(await crypto.subtle.digest('SHA-256', enc.encode(name))).subarray(0, 8);
 }
@@ -27,7 +29,7 @@ export async function createInstructions({ owner, nonce, programId, name, symbol
   const data = Buffer.concat([await discriminator('global:create_market'), nonce, str(name), str(symbol), str(uri)]);
   return { mint, market, instructions: [new TransactionInstruction({ programId, data, keys: [
     key(owner, true, true), key(mint, true), key(market, true), key(ata(mint, market), true),
-    key(TOKEN), key(ATA), key(SystemProgram.programId)
+    key(TOKEN), key(ATA), key(SystemProgram.programId), key(metadataAddress(mint), true), key(METADATA_PROGRAM)
   ] })] };
 }
 export async function tradeInstructions({ owner, mint, market, treasury, programId, side, amount, min, deadline }) {

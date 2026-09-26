@@ -1,4 +1,10 @@
+import { mobileBrowseLink } from './mobile.js';
+import { metadataDocument } from './metadata.js';
 import { parseUnits, formatUnits, quote, minimumOutput, validateMetadata } from './math.js';
+if (window.top !== window.self) {
+  document.body.replaceChildren(document.createTextNode('Open PumpLite directly in your browser. Embedded wallet interactions are disabled.'));
+  throw Error('Embedded PumpLite is disabled');
+}
 const $ = id => document.getElementById(id);
 const state = { config: null, chain: 'solana', adapter: null, wallet: null, market: null, quote: null, busy: false, epoch: 0, next: null };
 function status(message, href) {
@@ -13,12 +19,16 @@ function ready() {
 }
 function writable() { return ready() && state.config.transactionsEnabled && state.wallet && !state.busy; }
 function controls() {
+  const mobileLink = mobileBrowseLink(state.chain, location.href);
+  $('mobile-open').hidden = !mobileLink || state.busy;
+  if (mobileLink) { $('mobile-open').href = mobileLink; $('mobile-open').textContent = 'Open in ' + (state.chain === 'solana' ? 'Phantom' : 'MetaMask'); }
+  $('download-metadata').disabled = state.busy;
   $('chain').disabled = state.busy; $('connect').disabled = state.busy;
   $('create').disabled = !writable(); $('trade').disabled = !writable() || !state.quote;
   $('get-quote').disabled = !ready() || !state.market || state.busy;
   $('refresh').disabled = !ready() || state.busy; $('refresh-market').disabled = !ready() || state.busy;
   $('more').disabled = state.busy;
-  for (const id of ['name','symbol','uri','side','amount','slippage','market-address']) $(id).disabled = state.busy;
+  for (const id of ['description','image-uri','name','symbol','uri','side','amount','slippage','market-address']) $(id).disabled = state.busy;
 }
 function invalidateQuote() {
   state.quote = null;
@@ -127,6 +137,13 @@ $('connect').addEventListener('click', () => action(async () => {
   $('connect').textContent = state.wallet.slice(0, 5) + '…' + state.wallet.slice(-4);
   status('Wallet connected: ' + state.wallet);
   if (state.market) await loadMarket(state.market.id);
+}));
+$('download-metadata').addEventListener('click', () => action(async () => {
+  const text = metadataDocument($('name').value.trim(), $('symbol').value.trim(), $('description').value, $('image-uri').value.trim());
+  const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+  const link = document.createElement('a'); link.href = url; link.download = 'token-metadata.json'; link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  status('Metadata JSON downloaded locally. Publish it to persistent storage before creating the token.');
 }));
 $('refresh').addEventListener('click', () => action(() => discover()));
 $('more').addEventListener('click', () => action(() => discover(true)));

@@ -149,3 +149,5 @@ The root LICENSE is proprietary, Copyright © 2026 Corey Vibe, All Rights Reserv
 See [the readiness follow-up](docs/READINESS_FOLLOWUP.md) for the Anchor security patch, expanded client/runtime coverage and current advisory results.
 
 See [the current release-candidate verification](docs/RELEASE_CANDIDATE.md) for the final local gates, scoped dependency review, deployment prerequisites and full test/file inventories.
+
+Latest readiness evidence and remaining operational gates: [Local readiness closure](docs/LOCAL_READINESS_CLOSURE.md).

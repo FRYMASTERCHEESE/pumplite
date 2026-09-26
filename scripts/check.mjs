@@ -14,6 +14,7 @@ const config = JSON.parse(await readFile('config.json', 'utf8'));
 assertSolanaMainnet(config.solana.genesisHash);
 assert.equal(config.transactionsEnabled, false, 'This local stage must remain write-disabled');
 assert.equal(config.solana.programId, null);
+assert.equal(config.solana.discoveryUrl, null);
 assert.equal(config.base.factory, null);
 for (const chain of [config.solana, config.base]) {
   const rpc = new URL(chain.rpcUrl);
@@ -38,3 +39,6 @@ for (const [name, abi] of Object.entries(abis)) {
   }
 }
 console.log('PASS syntax, fixed deployment lock, treasury configuration, safe DOM, mainnet-only UI, absent admin and privileged Base functions');
+
+const headerCheck = spawnSync(process.execPath, ['scripts/build-security-headers.mjs','--check'], {encoding:'utf8'});
+assert.equal(headerCheck.status,0,headerCheck.stderr);

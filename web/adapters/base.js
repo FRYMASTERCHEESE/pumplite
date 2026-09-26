@@ -1,4 +1,6 @@
-import { BrowserProvider, JsonRpcProvider, Contract, getAddress } from 'ethers';
+import { BrowserProvider, JsonRpcProvider, Contract, getAddress, FetchRequest } from 'ethers';
+import { gasBudget } from '../gas.js';
+import { boundedFetch } from '../rpc-fetch.js';
 import abis from '../generated/base-abi.json' with { type: 'json' };
 import { BASE_SUPPLY, assertReceipt } from '../math.js';
 
@@ -14,7 +16,15 @@ export async function settleBase(tx, notify, explorer) {
 
 export function adapter(config, notify) {
   if (config.chainId !== 8453) throw Error('Unsupported Base chain configuration');
-  const provider = new JsonRpcProvider(config.rpcUrl, undefined, { batchMaxCount: 1 });
+  const request = new FetchRequest(config.rpcUrl);
+  request.timeout = 15000; request.setThrottleParams({ maxAttempts: 1 });
+  request.getUrlFunc = async (req, signal) => {
+    const controller = new AbortController();
+    signal?.addListener(() => controller.abort()); if (signal?.cancelled) controller.abort();
+    const response = await boundedFetch(req.url, { method: req.method, headers: req.headers, body: req.body, signal: controller.signal });
+    return { statusCode: response.status, statusMessage: response.statusText, headers: { 'content-type': 'application/json' }, body: new Uint8Array(await response.arrayBuffer()) };
+  };
+  const provider = new JsonRpcProvider(request, undefined, { batchMaxCount: 1 });
   let walletProvider, signer, connectedAddress;
   const factory = () => {
     if (!config.factory) throw Error('Base contracts have not been deployed');
@@ -88,7 +98,11 @@ export function adapter(config, notify) {
     },
     async create({ name, symbol, uri }) {
       const f = factory().connect(await wallet());
-      const receipt = await settle(await f.createMarket(name, symbol, uri));
+      const gas = await f.createMarket.estimateGas(name, symbol, uri);
+      const gasLimit = gasBudget(gas, 3_000_000n);
+      notify('Estimated execution gas: ' + gas + '. Wallet fee estimates also include current network/data fees.');
+      await wallet();
+      const receipt = await settle(await f.createMarket(name, symbol, uri, { gasLimit }));
       for (const log of receipt.logs) {
         if (getAddress(log.address) !== getAddress(config.factory)) continue;
         try { const parsed = f.interface.parseLog(log); if (parsed?.name === 'MarketCreated') return parsed.args.market; } catch {}
@@ -114,7 +128,14 @@ export function adapter(config, notify) {
       const block = await provider.getBlock('latest');
       const deadline = BigInt(block.timestamp + 180);
       await wallet();
-      return settle(side === 'buy' ? await curve.buy(min, deadline, { value: amount }) : await curve.sell(amount, min, deadline));
+      const method = side === 'buy' ? curve.buy : curve.sell;
+      const args = side === 'buy' ? [min, deadline] : [amount, min, deadline];
+      const overrides = side === 'buy' ? { value: amount } : {};
+      const gas = await method.estimateGas(...args, overrides);
+      const gasLimit = gasBudget(gas, 250_000n);
+      notify('Estimated execution gas: ' + gas + '. Wallet fee estimates also include current network/data fees.');
+      await wallet();
+      return settle(await method(...args, { ...overrides, gasLimit }));
     }
   };
 }

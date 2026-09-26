@@ -1,0 +1,11 @@
+{
+  "program": "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s",
+  "programData": "PwDiXFxQsGra4sFFTT8r1QWRMd4vfumiWC1jfWNfdYT",
+  "deploymentSlot": "380725176",
+  "sha256": "31f0a627dba051a938de650464e55cc5397a4be0fd496929c1f9cf02fe5e9011",
+  "bytes": 793991,
+  "obtained": "2026-09-22",
+  "origin": "Read-only finalized getAccountInfo from https://api.mainnet-beta.solana.com",
+  "license": "https://github.com/metaplex-foundation/mpl-token-metadata/blob/main/LICENSE",
+  "purpose": "Pinned public executable for isolated CPI compatibility tests only; not a deployment artifact"
+}

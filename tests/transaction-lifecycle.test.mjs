@@ -6,6 +6,8 @@ import { adapter } from '../web/adapters/solana.js';
 import { settleBase } from '../web/adapters/base.js';
 const config = JSON.parse(await readFile('config.json'));
 const owner = new PublicKey('11111111111111111111111111111112');
+const signature = new Uint8Array(64); signature[63] = 1;
+const signatureString = '1'.repeat(63) + '2';
 const programId = '7yCAWc9Tk8F5eTjn731ZZKxNypoBrbaXvFEm6c9z8ybY';
 async function fixture(t, fault) {
   const events = [], calls = [];
@@ -16,7 +18,7 @@ async function fixture(t, fault) {
       if (fault === 'disconnect') solana.publicKey = null;
       if (fault === 'mutate') tx.feePayer = new PublicKey(programId);
       // Synthetic unsigned return object, no signature or signing material is produced.
-      return { serializeMessage: () => tx.serializeMessage(), serialize: () => Buffer.from([0]) };
+      return { signature, serializeMessage: () => tx.serializeMessage(), serialize: () => Buffer.from([0]) };
     }
   };
   const old = Object.getOwnPropertyDescriptor(globalThis, 'window');
@@ -25,7 +27,7 @@ async function fixture(t, fault) {
   t.mock.method(Connection.prototype, 'getGenesisHash', async () => config.solana.genesisHash);
   t.mock.method(Connection.prototype, 'getLatestBlockhash', async () => ({ blockhash: owner.toBase58(), lastValidBlockHeight: 99 }));
   t.mock.method(Connection.prototype, 'sendRawTransaction', async () => {
-    calls.push('send'); if (fault === 'broadcast') throw Error('RPC rate limited'); return 'synthetic-signature';
+    calls.push('send'); if (fault === 'broadcast') throw Error('RPC rate limited'); return fault === 'wrong-signature' ? 'different-signature' : signatureString;
   });
   t.mock.method(Connection.prototype, 'confirmTransaction', async () => {
     calls.push('confirm');
@@ -36,14 +38,14 @@ async function fixture(t, fault) {
   await client.connect();
   return { client, solana, events, calls };
 }
-for (const fault of ['reject', 'disconnect', 'mutate', 'broadcast', 'expired', 'dropped', 'malformed', 'reverted', 'success']) {
+for (const fault of ['reject', 'disconnect', 'mutate', 'broadcast', 'expired', 'dropped', 'malformed', 'reverted', 'wrong-signature', 'success']) {
   test('Solana synthetic submission: ' + fault, async t => {
     const { client, events, calls } = await fixture(t, fault);
     const operation = client.create({ name: 'Fixture', symbol: 'FIX', uri: 'ipfs://fixture' });
     if (fault === 'success') await operation; else await assert.rejects(operation);
     assert.equal(events.some(([message]) => message.startsWith('Confirmed')), fault === 'success');
     assert.equal(calls.filter(c => c === 'send').length, ['reject','disconnect','mutate'].includes(fault) ? 0 : 1);
-    if (calls.includes('confirm')) assert.ok(events.some(([,url]) => url === config.solana.explorer + '/tx/synthetic-signature'));
+    if (calls.includes('confirm')) assert.ok(events.some(([,url]) => url === config.solana.explorer + '/tx/' + signatureString));
   });
 }
 test('Solana failed reconnect discards the preceding account', async t => {

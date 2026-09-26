@@ -13,7 +13,7 @@ const config = JSON.parse(await readFile('config.json', 'utf8'));
 const discriminator = name => [...createHash('sha256').update(name).digest().subarray(0, 8)];
 const fields = entries => entries.map(([name, type]) => ({ name, type }));
 const trade = ['trader', 'market', 'mint', 'vault', 'trader_tokens', 'treasury', 'token_program', 'system_program'];
-const create = ['creator', 'mint', 'market', 'vault', 'token_program', 'associated_token_program', 'system_program'];
+const create = ['creator', 'mint', 'market', 'vault', 'token_program', 'associated_token_program', 'system_program', 'metadata', 'metadata_program'];
 assert.deepEqual(idl.instructions.map(i => i.name).sort(), ['buy', 'create_market', 'sell']);
 for (const i of idl.instructions) {
   assert.equal(i.accounts.find(a => a.name === 'system_program').address, '11111111111111111111111111111111');
@@ -21,16 +21,17 @@ for (const i of idl.instructions) {
   assert.deepEqual(i.discriminator, discriminator('global:' + i.name));
   assert.deepEqual(i.accounts.map(a => a.name), creating ? create : trade);
   assert.deepEqual(i.accounts.map(a => Boolean(a.signer)), creating
-    ? [true, false, false, false, false, false, false]
+    ? [true, false, false, false, false, false, false, false, false]
     : [true, false, false, false, false, false, false, false]);
   assert.deepEqual(i.accounts.map(a => Boolean(a.writable)), creating
-    ? [true, true, true, true, false, false, false]
+    ? [true, true, true, true, false, false, false, true, false]
     : [true, true, false, true, true, true, false, false]);
   assert.deepEqual(i.args, fields(creating
     ? [['nonce', 'u64'], ['name', 'string'], ['symbol', 'string'], ['uri', 'string']]
     : [['input', 'u64'], ['minimum_output', 'u64'], ['deadline', 'i64']]));
   assert.equal(i.accounts.find(a => a.name === 'token_program').address, 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
   assert.equal(i.accounts.find(a => a.name === 'system_program').address, '11111111111111111111111111111111');
+  if (creating) assert.equal(i.accounts.find(a => a.name === 'metadata_program').address, 'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s');
   if (!creating) {
     assert.equal(i.accounts.find(a => a.name === 'treasury').address, config.solana.treasury);
     assert.equal(config.solana.treasury, 'BNpFPPuy2h12dryy4dayemjA4YS17ccVaF82jBDuiwct');

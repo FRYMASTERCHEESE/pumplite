@@ -98,6 +98,13 @@ impl TestMarket {
         let mut svm = LiteSVM::new();
         svm.add_program(vm(ID), &bytes)
             .expect("SBF program must load");
+        let metadata_bytes = std::fs::read(
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("../../target/fixtures/token-metadata.so"),
+        )
+        .expect("Run scripts/prepare-runtime-fixtures.mjs first");
+        svm.add_program(vm(pumplite::metadata::ID), &metadata_bytes)
+            .expect("Metaplex fixture must load");
         let payer = Keypair::new();
         let creator = Keypair::new();
         let trader = Keypair::new();
@@ -132,6 +139,17 @@ impl TestMarket {
             nonce,
         }
     }
+    fn metadata(&self) -> Address {
+        vm(Pubkey::find_program_address(
+            &[
+                b"metadata",
+                pumplite::metadata::ID.as_ref(),
+                self.mint.as_ref(),
+            ],
+            &pumplite::metadata::ID,
+        )
+        .0)
+    }
     fn create_ix(&self, name: &str) -> Instruction {
         anchor_ix(
             pumplite::accounts::CreateMarket {
@@ -141,6 +159,8 @@ impl TestMarket {
                 vault: pk(self.vault),
                 token_program: spl_token::ID,
                 associated_token_program: anchor_spl::associated_token::ID,
+                metadata: pk(self.metadata()),
+                metadata_program: pumplite::metadata::ID,
                 system_program: anchor_lang::system_program::ID,
             },
             pumplite::instruction::CreateMarket {
@@ -993,5 +1013,81 @@ fn incorrect_market_bump_and_readonly_reserves_cannot_authorize_transfers() {
         let before = f.snapshot();
         assert!(f.send(vec![ix], false).is_err());
         assert_eq!(f.snapshot(), before);
+    }
+}
+
+#[test]
+fn metadata_is_fungible_immutable_and_bound_to_market_authority() {
+    let mut f = TestMarket::new();
+    let account = f.svm.get_account(&f.metadata()).unwrap();
+    assert_eq!(account.owner, vm(pumplite::metadata::ID));
+    let data = &account.data;
+    assert_eq!(data[0], 4); // Metaplex MetadataV1.
+    assert_eq!(&data[1..33], f.market.as_ref());
+    assert_eq!(&data[33..65], f.mint.as_ref());
+    let mut offset = 65;
+    for expected in ["Test token", "TEST", "ipfs://test"] {
+        let length = u32::from_le_bytes(data[offset..offset + 4].try_into().unwrap()) as usize;
+        offset += 4;
+        assert_eq!(
+            std::str::from_utf8(&data[offset..offset + length])
+                .unwrap()
+                .trim_end_matches('\0'),
+            expected
+        );
+        offset += length;
+    }
+    assert_eq!(&data[offset..offset + 3], &[0, 0, 0]); // Zero royalty and no creator array.
+    offset += 3;
+    assert_eq!(data[offset + 1], 0); // is_mutable = false.
+    offset += 2;
+    if data[offset] == 1 {
+        offset += 2;
+    } else {
+        offset += 1;
+    }
+    assert_eq!(&data[offset..offset + 2], &[1, 2]); // Some(TokenStandard::Fungible).
+    let ix = Instruction {
+        program_id: vm(pumplite::metadata::ID),
+        accounts: vec![
+            AccountMeta::new(f.metadata(), false),
+            AccountMeta::new_readonly(f.creator.pubkey(), true),
+        ],
+        data: vec![15, 0, 0, 0, 1, 1],
+    }; // UpdateMetadataAccountV2 trying to restore mutability.
+    assert!(f.send(vec![ix], true).is_err());
+    assert_eq!(f.svm.get_account(&f.metadata()).unwrap().data, account.data);
+    assert!(f.supply().mint_authority.is_none());
+    assert!(f.supply().freeze_authority.is_none());
+}
+#[test]
+fn substituted_metadata_program_or_address_rolls_back_creation() {
+    for index in [7, 8] {
+        let mut f = TestMarket::uncreated();
+        let before = f.native(f.creator.pubkey());
+        let mut ix = f.create_ix("Substitution");
+        ix.accounts[index].pubkey = token_id();
+        assert!(f.send(vec![ix], true).is_err());
+        assert_eq!(f.native(f.creator.pubkey()), before);
+        for key in [f.market, f.mint, f.vault, f.metadata()] {
+            assert!(f.svm.get_account(&key).is_none());
+        }
+    }
+}
+#[test]
+fn metadata_cpi_failure_rolls_back_supply_accounts_and_creator_funds() {
+    let mut f = TestMarket::uncreated();
+    // Public VM fixture mutation only: an existing foreign metadata account cannot be overwritten.
+    let mut account = f.svm.get_account(&f.creator.pubkey()).unwrap();
+    account.data = vec![1; 32];
+    account.owner = token_id();
+    f.svm.set_account(f.metadata(), account.clone()).unwrap();
+    let balance = f.native(f.creator.pubkey());
+    let ix = f.create_ix("Atomic CPI");
+    assert!(f.send(vec![ix], true).is_err());
+    assert_eq!(f.native(f.creator.pubkey()), balance);
+    assert_eq!(f.svm.get_account(&f.metadata()).unwrap().data, account.data);
+    for key in [f.market, f.mint, f.vault] {
+        assert!(f.svm.get_account(&key).is_none());
     }
 }

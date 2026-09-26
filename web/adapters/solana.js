@@ -1,5 +1,8 @@
 import { Connection, PublicKey, Transaction } from '@solana/web3.js';
 import { Buffer } from 'buffer';
+import { signatureText } from '../solana-signature.js';
+import { validateIndexPage } from '../discovery.js';
+import { boundedFetch } from '../rpc-fetch.js';
 import { discriminator, ata, createInstructions, tradeInstructions } from '../solana-instructions.js';
 import { assertSolanaMainnet } from '../solana-network.js';
 import { SOL_SUPPLY, assertSolanaConfirmation } from '../math.js';
@@ -9,8 +12,8 @@ const TOKEN = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
 
 export function adapter(config, notify) {
   assertSolanaMainnet(config.genesisHash);
-  const connection = new Connection(config.rpcUrl, 'confirmed');
-  let connected;
+  const connection = new Connection(config.rpcUrl, { commitment: 'confirmed', fetch: boundedFetch, disableRetryOnRateLimit: true });
+  let connected, discoveryKeys;
   const program = () => { if (!config.programId) throw Error('Solana program has not been deployed'); return new PublicKey(config.programId); };
   async function network() {
     assertSolanaMainnet(await connection.getGenesisHash());
@@ -60,7 +63,10 @@ export function adapter(config, notify) {
     const signed = await window.solana.signTransaction(tx);
     if (!signed?.serializeMessage || !message.equals(Buffer.from(signed.serializeMessage()))) throw Error('Wallet changed the transaction');
     await wallet();
+    const expectedSignature = signatureText(signed.signature);
+    notify('Submitting to Solana. If the response is interrupted, inspect this transaction before retrying.', config.explorer + '/tx/' + expectedSignature);
     const signature = await connection.sendRawTransaction(signed.serialize());
+    if (signature !== expectedSignature) throw Error('RPC returned an unexpected transaction signature');
     notify('Submitted. Waiting for Solana confirmation.', config.explorer + '/tx/' + signature);
     const confirmation = await connection.confirmTransaction({ signature, ...latest }, 'confirmed');
     assertSolanaConfirmation(confirmation);
@@ -80,8 +86,22 @@ export function adapter(config, notify) {
     },
     async list(offset = 0) {
       await network();
+      if (!Number.isSafeInteger(offset) || offset < 0 || offset % 8) throw Error('Invalid discovery page');
+      if (config.discoveryUrl) {
+        const base = new URL(config.discoveryUrl, globalThis.location?.href || 'https://invalid.example/');
+        if (base.protocol !== 'https:' || base.username || base.password || base.search || base.hash) throw Error('Invalid discovery endpoint');
+        if (!base.pathname.endsWith('/')) base.pathname += '/';
+        const page = validateIndexPage(await (await boundedFetch(new URL(offset + '.json', base), {}, {maxBytes:8192})).json(), config, offset);
+        const keys = page.markets.map(k => new PublicKey(k));
+        if (!keys.length) return { markets: [], next: null };
+        const { value, context } = await connection.getMultipleAccountsInfoAndContext(keys);
+        return { markets: await Promise.all(value.map((a,i) => decode(keys[i].toBase58(),a,context.slot))), next:page.next };
+      }
       // RPC has no native pagination. Fetch only keys, then at most 8 account bodies.
-      const keys = await connection.getProgramAccounts(program(), { dataSlice: { offset: 0, length: 0 }, filters: [{ dataSize: 368 }] });
+      if (!Number.isSafeInteger(offset) || offset < 0 || offset % 8) throw Error('Invalid discovery page');
+      const keys = offset > 0 && discoveryKeys ? discoveryKeys : await connection.getProgramAccounts(program(), { dataSlice: { offset: 0, length: 0 }, filters: [{ dataSize: 368 }] });
+      if (keys.length > 4096) throw Error('Discovery requires the bounded production index. Open a market address directly.');
+      discoveryKeys = keys;
       keys.sort((a, b) => a.pubkey.toBase58().localeCompare(b.pubkey.toBase58()));
       const page = keys.slice(offset, offset + 8);
       if (!page.length) return { markets: [], next: null };

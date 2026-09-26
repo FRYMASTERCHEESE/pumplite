@@ -5,6 +5,7 @@ use anchor_spl::{
     token::{self, Mint, MintTo, SetAuthority, Token, TokenAccount, TransferChecked},
 };
 pub mod math;
+pub mod metadata;
 
 // Build identity only. The website deliberately has no configured deployed program.
 declare_id!("7yCAWc9Tk8F5eTjn731ZZKxNypoBrbaXvFEm6c9z8ybY");
@@ -66,6 +67,18 @@ pub mod pumplite {
             )
             .with_signer(signer),
             math::SUPPLY,
+        )?;
+        metadata::create(
+            ctx.accounts.metadata.to_account_info(),
+            ctx.accounts.mint.to_account_info(),
+            market.to_account_info(),
+            ctx.accounts.creator.to_account_info(),
+            ctx.accounts.system_program.to_account_info(),
+            ctx.accounts.metadata_program.to_account_info(),
+            &market.name,
+            &market.symbol,
+            &market.uri,
+            seeds,
         )?;
         token::set_authority(
             CpiContext::new(
@@ -274,6 +287,12 @@ pub struct CreateMarket<'info> {
     pub associated_token_program: Program<'info, AssociatedToken>,
     #[account(address = system_program::ID)]
     pub system_program: Program<'info, System>,
+    /// CHECK: PDA belongs to the fixed Metaplex program, which initializes and validates its data.
+    #[account(mut, seeds = [b"metadata", metadata::ID.as_ref(), mint.key().as_ref()], bump, seeds::program = metadata::ID)]
+    pub metadata: UncheckedAccount<'info>,
+    /// CHECK: only the fixed executable metadata program is invoked.
+    #[account(address = metadata::ID, executable)]
+    pub metadata_program: UncheckedAccount<'info>,
 }
 #[derive(Accounts)]
 pub struct Trade<'info> {
