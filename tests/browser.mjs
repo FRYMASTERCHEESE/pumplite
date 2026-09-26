@@ -22,11 +22,11 @@ try {
     assert.equal(await page.locator('body').evaluate(el => el.scrollWidth <= innerWidth), true);
     assert.equal(await page.locator('#chain option').count(), 2);
     await page.locator('#connect').click();
-    await page.waitForFunction(() => document.querySelector('#status-text').textContent.includes('Install a compatible Solana wallet'));
+    await page.waitForFunction(() => document.querySelector('#status-text').textContent.includes('No Solana wallet detected'));
     await page.selectOption('#chain', 'base');
     assert.match(await page.locator('#deployment').textContent(), /Base Mainnet.*no deployment/);
     await page.locator('#connect').click();
-    await page.waitForFunction(() => document.querySelector('#status-text').textContent.includes('Install an EVM wallet'));
+    await page.waitForFunction(() => document.querySelector('#status-text').textContent.includes('No EVM wallet detected'));
     assert.equal(await page.locator('#create').isDisabled(), true);
     await page.locator('#market-address').fill('not-a-market');
     await page.locator('#open-form button').click();

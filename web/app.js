@@ -1,3 +1,4 @@
+import { discoverEvm } from './wallets.js';
 import { mobileBrowseLink } from './mobile.js';
 import { metadataDocument } from './metadata.js';
 import { parseUnits, formatUnits, quote, minimumOutput, validateMetadata } from './math.js';
@@ -22,6 +23,11 @@ function controls() {
   const mobileLink = mobileBrowseLink(state.chain, location.href);
   $('mobile-open').hidden = !mobileLink || state.busy;
   if (mobileLink) { $('mobile-open').href = mobileLink; $('mobile-open').textContent = 'Open in ' + (state.chain === 'solana' ? 'Phantom' : 'MetaMask'); }
+  const cbLink = state.chain === 'base' ? mobileBrowseLink('base', location.href, 'coinbase') : null;
+  $('mobile-coinbase').hidden = !cbLink || state.busy;
+  if (cbLink) $('mobile-coinbase').href = cbLink;
+  $('wallet-choice-label').hidden = state.chain !== 'base';
+  $('wallet-choice').disabled = state.busy || Boolean(state.wallet);
   $('download-metadata').disabled = state.busy;
   $('chain').disabled = state.busy; $('connect').disabled = state.busy;
   $('create').disabled = !writable(); $('trade').disabled = !writable() || !state.quote;
@@ -41,7 +47,7 @@ async function getAdapter() {
   const chain = state.chain, epoch = state.epoch;
   const module = chain === 'solana' ? await import('./adapters/solana.js') : await import('./adapters/base.js');
   if (epoch !== state.epoch) throw Error('Network selection changed');
-  state.adapter = module.adapter(state.config[chain], status);
+  state.adapter = module.adapter(state.config[chain], status, walletChanged);
   return state.adapter;
 }
 async function action(fn) {
@@ -120,6 +126,7 @@ async function route() {
   }
 }
 function switchChain(chain) {
+  state.adapter?.disconnect();
   state.chain = chain; state.epoch++; state.adapter = null; state.wallet = null; state.market = null; state.next = null;
   $('chain').value = chain; $('connect').textContent = 'Connect wallet';
   $('deployment').textContent = ready() ?
@@ -133,8 +140,11 @@ function switchChain(chain) {
 }
 $('chain').addEventListener('change', () => { switchChain($('chain').value); location.hash = ''; $('home').hidden = false; $('market-page').hidden = true; });
 $('connect').addEventListener('click', () => action(async () => {
-  state.wallet = await (await getAdapter()).connect();
-  $('connect').textContent = state.wallet.slice(0, 5) + '…' + state.wallet.slice(-4);
+  if (state.wallet) { state.adapter?.disconnect(); status('Wallet disconnected from this site.'); return; }
+  wallets.refresh();
+  const selected = wallets.entries[Number($('wallet-choice').value)]?.provider;
+  state.wallet = await (await getAdapter()).connect(state.chain === 'base' ? selected : undefined);
+  $('connect').textContent = 'Disconnect ' + state.wallet.slice(0, 5) + '…' + state.wallet.slice(-4);
   status('Wallet connected: ' + state.wallet);
   if (state.market) await loadMarket(state.market.id);
 }));
@@ -192,10 +202,18 @@ function walletChanged() {
   state.wallet = null; $('connect').textContent = 'Connect wallet'; invalidateQuote();
   $('balance').textContent = 'Wallet changed. Reconnect to read balances.';
 }
-window.ethereum?.on?.('accountsChanged', walletChanged);
-window.ethereum?.on?.('chainChanged', walletChanged);
-window.solana?.on?.('accountChanged', walletChanged);
-window.solana?.on?.('disconnect', walletChanged);
+const wallets = discoverEvm(window, () => queueMicrotask(renderWalletChoices));
+function renderWalletChoices() {
+  const previous = $('wallet-choice').value;
+  $('wallet-choice').replaceChildren();
+  for (const [i, entry] of wallets.entries.entries()) {
+    const option = document.createElement('option'); option.value = String(i); option.textContent = entry.name;
+    $('wallet-choice').append(option);
+  }
+  if (previous && wallets.entries[Number(previous)]) $('wallet-choice').value = previous;
+}
+renderWalletChoices();
+window.addEventListener('focus', () => wallets.refresh());
 try {
   const response = await fetch('./config.json', { cache: 'no-store' });
   if (!response.ok) throw Error('Unable to load public network configuration');

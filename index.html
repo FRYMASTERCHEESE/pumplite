@@ -17,12 +17,13 @@
   <div class="header-controls">
     <label class="sr-only" for="chain">Network</label>
     <select id="chain"><option value="solana">Solana Mainnet</option><option value="base">Base Mainnet</option></select>
+    <label id="wallet-choice-label" hidden>Wallet <select id="wallet-choice" aria-label="EVM wallet"></select></label>
     <button id="connect" class="outline">Connect wallet</button>
   </div>
 </header>
 <main>
   <div class="notice" id="deployment" role="status">Local implementation. No contracts configured. Trading is disabled.</div>
-  <p class="fine" id="mobile-help"><a id="mobile-open" rel="noopener noreferrer" hidden>Open in wallet browser</a> Mobile: use a wallet’s in-app browser. Opening this page does not connect or sign.</p>
+  <p class="fine" id="mobile-help"><a id="mobile-coinbase" rel="noopener noreferrer" hidden>Open in Coinbase Wallet</a> <a id="mobile-open" rel="noopener noreferrer" hidden>Open in wallet browser</a> Mobile: choose a wallet browser above, then tap Connect wallet there. If handoff fails, open this site from the wallet’s browser. Disconnect clears this site’s session; revoke permissions in your wallet to remove access. Opening this page does not connect or sign.</p>
   <section id="home">
     <div class="hero">
       <div><p class="eyebrow">SMALL FOOTPRINT. ON-CHAIN MARKETS.</p><h1>A simple start.<br>A transparent market.</h1>

@@ -53,7 +53,8 @@ test('wrong-chain RPC blocks discovery, market reads and wallet access', async t
   const { client, calls } = await rpc(t, () => ({ result: truncated }));
   const original = Object.getOwnPropertyDescriptor(globalThis, 'window');
   Object.defineProperty(globalThis, 'window', { configurable: true, value: { solana: {
-    connect() { assert.fail('Wrong-chain RPC must not reach a wallet'); }
+    connect() { assert.fail('Wrong-chain RPC must not reach a wallet'); },
+    signTransaction() { assert.fail('Must not sign'); }
   } } });
   t.after(() => { if (original) Object.defineProperty(globalThis, 'window', original); else delete globalThis.window; });
   await assert.rejects(client.list(), /not Solana Mainnet/);

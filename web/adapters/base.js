@@ -1,3 +1,4 @@
+import { discoverEvm, watchWallet } from '../wallets.js';
 import { BrowserProvider, JsonRpcProvider, Contract, getAddress, FetchRequest } from 'ethers';
 import { gasBudget } from '../gas.js';
 import { boundedFetch } from '../rpc-fetch.js';
@@ -14,7 +15,7 @@ export async function settleBase(tx, notify, explorer) {
   return receipt;
 }
 
-export function adapter(config, notify) {
+export function adapter(config, notify, changed = () => {}) {
   if (config.chainId !== 8453) throw Error('Unsupported Base chain configuration');
   const request = new FetchRequest(config.rpcUrl);
   request.timeout = 15000; request.setThrottleParams({ maxAttempts: 1 });
@@ -25,7 +26,11 @@ export function adapter(config, notify) {
     return { statusCode: response.status, statusMessage: response.statusText, headers: { 'content-type': 'application/json' }, body: new Uint8Array(await response.arrayBuffer()) };
   };
   const provider = new JsonRpcProvider(request, undefined, { batchMaxCount: 1 });
-  let walletProvider, signer, connectedAddress;
+  let walletProvider, signer, connectedAddress, selected, revision = 0, unwatch = () => {};
+  function disconnect() {
+    revision++; unwatch(); unwatch = () => {}; walletProvider?.destroy();
+    walletProvider = undefined; signer = undefined; connectedAddress = undefined; selected = undefined; changed();
+  }
   const factory = () => {
     if (!config.factory) throw Error('Base contracts have not been deployed');
     return new Contract(config.factory, abis.LaunchFactory, provider);
@@ -35,11 +40,13 @@ export function adapter(config, notify) {
     if (id !== 8453n) throw Error('RPC is not Base Mainnet');
   }
   async function wallet() {
+    const attempt = revision;
     if (!signer) throw Error('Connect your wallet first');
-    if (BigInt(await window.ethereum.request({ method: 'eth_chainId' })) !== 8453n) throw Error('Wallet must be on Base Mainnet');
-    const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+    if (BigInt(await selected.request({ method: 'eth_chainId' })) !== 8453n) throw Error('Wallet must be on Base Mainnet');
+    const accounts = await selected.request({ method: 'eth_accounts' });
     if (!accounts[0] || getAddress(accounts[0]) !== connectedAddress) throw Error('Wallet changed; reconnect');
     await network();
+    if (attempt !== revision || !signer) throw Error('Wallet changed; reconnect');
     return signer;
   }
   const settle = tx => settleBase(tx, notify, config.explorer);
@@ -60,26 +67,39 @@ export function adapter(config, notify) {
       source: 'Base block ' + blockTag, observedAt: Date.now() };
   }
   return {
-    async connect() {
-      if (!window.ethereum) throw Error('Install an EVM wallet');
-      walletProvider?.destroy();
-      signer = undefined; connectedAddress = undefined;
+    disconnect,
+    async connect(candidate) {
+      disconnect();
+      if (!candidate) {
+        const discovery = discoverEvm();
+        const choices = discovery.refresh(); discovery.dispose();
+        if (choices.length > 1) throw Error('Choose an EVM wallet before connecting');
+        candidate = choices[0]?.provider;
+      }
+      if (typeof candidate?.request !== 'function') throw Error('No EVM wallet detected. Open this page in Coinbase Wallet or another wallet browser.');
+      selected = candidate;
+      const attempt = revision;
+      unwatch = watchWallet(candidate, ['disconnect'], disconnect);
       try {
         await network();
-        await window.ethereum.request({ method: 'eth_requestAccounts' });
-        if (BigInt(await window.ethereum.request({ method: 'eth_chainId' })) !== 8453n) {
-          await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x2105' }] });
+        if (attempt !== revision) throw Error('Wallet changed; reconnect');
+        await candidate.request({ method: 'eth_requestAccounts' });
+        if (attempt !== revision) throw Error('Wallet changed; reconnect');
+        if (BigInt(await candidate.request({ method: 'eth_chainId' })) !== 8453n) {
+          await candidate.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x2105' }] });
         }
-        walletProvider = new BrowserProvider(window.ethereum);
-        signer = await walletProvider.getSigner();
-        connectedAddress = await signer.getAddress();
+        if (attempt !== revision) throw Error('Wallet changed; reconnect');
+        if (BigInt(await candidate.request({ method: 'eth_chainId' })) !== 8453n) throw Error('Wallet must be on Base Mainnet');
+        unwatch(); unwatch = watchWallet(candidate, ['disconnect', 'accountsChanged', 'chainChanged'], disconnect);
+        walletProvider = new BrowserProvider(candidate);
+        const nextSigner = await walletProvider.getSigner();
+        const address = await nextSigner.getAddress();
+        if (attempt !== revision) throw Error('Wallet changed; reconnect');
+        signer = nextSigner; connectedAddress = address;
         await wallet();
+        if (attempt !== revision) throw Error('Wallet changed; reconnect');
         return connectedAddress;
-      } catch (error) {
-        walletProvider?.destroy(); walletProvider = undefined;
-        signer = undefined; connectedAddress = undefined;
-        throw error;
-      }
+      } catch (error) { if (attempt === revision) disconnect(); throw error; }
     },
     async list(offset = 0) {
       await network();

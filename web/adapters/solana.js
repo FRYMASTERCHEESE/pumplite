@@ -1,3 +1,4 @@
+import { solanaProvider, watchWallet } from '../wallets.js';
 import { Connection, PublicKey, Transaction } from '@solana/web3.js';
 import { Buffer } from 'buffer';
 import { signatureText } from '../solana-signature.js';
@@ -10,17 +11,20 @@ import { SOL_SUPPLY, assertSolanaConfirmation } from '../math.js';
 const enc = new TextEncoder();
 const TOKEN = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
 
-export function adapter(config, notify) {
+export function adapter(config, notify, changed = () => {}) {
   assertSolanaMainnet(config.genesisHash);
   const connection = new Connection(config.rpcUrl, { commitment: 'confirmed', fetch: boundedFetch, disableRetryOnRateLimit: true });
-  let connected, discoveryKeys;
+  let connected, discoveryKeys, selected, revision = 0, unwatch = () => {};
+  function disconnect() { revision++; connected = undefined; selected = undefined; unwatch(); unwatch = () => {}; changed(); }
   const program = () => { if (!config.programId) throw Error('Solana program has not been deployed'); return new PublicKey(config.programId); };
   async function network() {
     assertSolanaMainnet(await connection.getGenesisHash());
   }
   async function wallet() {
-    if (!connected || !window.solana?.publicKey?.equals(connected)) throw Error('Wallet changed or disconnected; reconnect');
+    if (!connected || !selected?.publicKey?.equals(connected)) throw Error('Wallet changed or disconnected; reconnect');
+    const attempt = revision;
     await network();
+    if (attempt !== revision || !selected?.publicKey?.equals(connected)) throw Error('Wallet changed or disconnected; reconnect');
     return connected;
   }
   async function decode(id, account, slot) {
@@ -60,7 +64,7 @@ export function adapter(config, notify) {
     const tx = new Transaction({ feePayer: owner, ...latest }).add(...instructions);
     notify('Review and approve the transaction in your wallet.');
     const message = Buffer.from(tx.serializeMessage());
-    const signed = await window.solana.signTransaction(tx);
+    const signed = await selected.signTransaction(tx);
     if (!signed?.serializeMessage || !message.equals(Buffer.from(signed.serializeMessage()))) throw Error('Wallet changed the transaction');
     await wallet();
     const expectedSignature = signatureText(signed.signature);
@@ -74,15 +78,23 @@ export function adapter(config, notify) {
     return signature;
   }
   return {
+    disconnect,
     async connect() {
-      if (!window.solana?.connect) throw Error('Install a compatible Solana wallet');
-      connected = undefined;
+      disconnect();
+      const attempt = revision, candidate = solanaProvider();
+      if (!candidate) throw Error('No Solana wallet detected. Open this page in Phantom, then connect.');
+      selected = candidate;
+      unwatch = watchWallet(candidate, ['disconnect', 'accountChanged'], disconnect);
       try {
         await network();
-        connected = (await window.solana.connect()).publicKey;
+        if (attempt !== revision) throw Error('Wallet changed; reconnect');
+        const result = await candidate.connect();
+        if (attempt !== revision) throw Error('Wallet changed; reconnect');
+        connected = result?.publicKey;
         await wallet();
+        if (attempt !== revision) throw Error('Wallet changed; reconnect');
         return connected.toBase58();
-      } catch (error) { connected = undefined; throw error; }
+      } catch (error) { if (attempt === revision) disconnect(); throw error; }
     },
     async list(offset = 0) {
       await network();
