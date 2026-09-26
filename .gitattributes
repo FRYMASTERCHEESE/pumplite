@@ -1,3 +1,5 @@
 # Keep generated Pages assets reproducible on Windows and Linux.
 assets/** text eol=lf
 web/styles.css text eol=lf
+
+web/phantom-diagnostic.js text eol=lf

@@ -35,6 +35,36 @@ try {
   const chunks = (await readdir('assets/chunks')).filter(name => /^(solana|base)-.*\.js$/.test(name));
   assert.equal(chunks.length, 2, 'Both chain bundles must exist');
   browser = await chromium.launch({ headless: true, ...(process.env.BROWSER_EXECUTABLE ? { executablePath: process.env.BROWSER_EXECUTABLE } : {}) });
+  const broken = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  await broken.route('**/assets/app.js', route => route.abort());
+  await broken.goto(base);
+  await broken.locator('#connect').click();
+  assert.match(await broken.locator('#phantom-tap').textContent(), /Tap received.*not ready/);
+  const box = await broken.locator('#phantom-diagnostics').boundingBox();
+  assert.ok(box && box.y < 400 && box.y + box.height < 844, 'Diagnostic visible near Connect without scrolling');
+  await broken.close();
+  const phantom = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  await phantom.addInitScript(() => {
+    const key = { toBase58: () => '11111111111111111111111111111112', equals: other => other?.toBase58() === '11111111111111111111111111111112' };
+    window.phantom = { solana: { publicKey: key, signTransaction() { throw Error('No signing allowed'); },
+      connect() { window.syntheticApprovalActive = navigator.userActivation.isActive; return Promise.resolve({ publicKey: key }); } } };
+  });
+  await phantom.route('https://api.mainnet-beta.solana.com/**', async route => {
+    const request = route.request().postDataJSON();
+    assert.equal(request.method, 'getGenesisHash');
+    await route.fulfill({ json: { jsonrpc: '2.0', id: request.id, result: '5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d' } });
+  });
+  await phantom.goto(base);
+  await phantom.waitForFunction(() => document.documentElement.dataset.walletAppReady === 'ready');
+  await phantom.locator('#connect').click();
+  await phantom.waitForFunction(() => document.querySelector('#connect').textContent === 'Approve in Phantom');
+  assert.match(await phantom.locator('#wallet-diagnostic').textContent(), /Phantom ready/);
+  await phantom.locator('#connect').click();
+  await phantom.waitForFunction(() => document.querySelector('#connect').textContent.startsWith('Disconnect'));
+  assert.equal(await phantom.evaluate(() => window.syntheticApprovalActive), true);
+  assert.equal(await phantom.locator('#create').isDisabled(), true);
+  await phantom.close();
+
   for (const width of [390, 1440]) {
     const context = await browser.newContext({ viewport: { width, height: 900 } });
     const page = await context.newPage(), errors = [], failed = [], requests = [];

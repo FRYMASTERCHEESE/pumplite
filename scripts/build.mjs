@@ -37,6 +37,7 @@ for (const output of Object.values(result.metafile.outputs)) {
   }
 }
 const files = new Map(result.outputFiles.map(file => [file.path, file.contents]));
+files.set(resolve(assets, 'phantom-diagnostic.js'), await readFile('web/phantom-diagnostic.js'));
 files.set(resolve(assets, 'styles.css'), await readFile('web/styles.css'));
 const initialPaths = new Set();
 function visit(path) {
@@ -47,7 +48,7 @@ function visit(path) {
   }
 }
 visit('assets/app.js');
-let initial = 0, total = 0;
+let initial = gzipSync(await readFile('web/phantom-diagnostic.js')).length, total = initial;
 for (const path of Object.keys(result.metafile.outputs)) {
   const bytes = files.get(resolve(path)), gzip = gzipSync(bytes).length;
   total += gzip;

@@ -3,3 +3,5 @@
 #market-metadata{overflow-wrap:anywhere}
 
 textarea{font:inherit;width:100%;max-width:100%;background:#111e17;color:#fff;border:1px solid var(--line);border-radius:7px;padding:10px}details{margin-top:16px}summary{cursor:pointer;min-height:44px;padding:10px 0}
+
+#phantom-diagnostics{overflow-wrap:anywhere}#phantom-diagnostics p{margin:6px 0;font-size:12px;line-height:1.4}

@@ -24,7 +24,9 @@ function diagnostic(message = '') {
   $('wallet-diagnostic').textContent = solanaDiagnostics(window) + (message ? ' | ' + message : '');
 }
 function controls() {
+  $('phantom-diagnostics').hidden = state.chain !== 'solana';
   $('wallet-diagnostic').hidden = state.chain !== 'solana';
+  if (state.chain === 'solana' && !state.wallet) $('connect').textContent = state.busy ? 'Preparing / waiting…' : phantomPrepared ? 'Approve in Phantom' : 'Connect wallet';
   const mobileLink = mobileBrowseLink(state.chain, location.href);
   $('mobile-open').hidden = !mobileLink || state.busy;
   if (mobileLink) { $('mobile-open').href = mobileLink; $('mobile-open').textContent = 'Open in ' + (state.chain === 'solana' ? 'Phantom' : 'MetaMask'); }
@@ -241,4 +243,5 @@ try {
   state.config = await response.json();
   if (state.config.schemaVersion !== 1 || state.config.feeBps !== 25 || state.config.base.chainId !== 8453) throw Error('Unsupported configuration');
   switchChain('solana'); await action(route);
+  document.documentElement.dataset.walletAppReady = 'ready';
 } catch (error) { status(error.message); controls(); }
