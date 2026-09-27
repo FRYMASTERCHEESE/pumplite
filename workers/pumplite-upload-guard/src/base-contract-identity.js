@@ -39,7 +39,10 @@ async function readResult(response, id, signal) {
 
 // Only a trusted server-side service binding can replace the fixed Base endpoint.
 // Never accept an endpoint, block, chain ID or RPC method from the proof body.
-export async function verifyBaseContractSignature(subject, digest, signature, rpcBinding) {
+export async function verifyBaseContractSignature(subject, digest, signature, rpcBinding, allowPublicFallback = false) {
+  // A present but malformed/unavailable binding must never be bypassed.
+  if (rpcBinding != null && typeof rpcBinding.fetch !== "function") return false;
+  if (rpcBinding == null && allowPublicFallback !== true) return false;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 10000);
   let id = 0;

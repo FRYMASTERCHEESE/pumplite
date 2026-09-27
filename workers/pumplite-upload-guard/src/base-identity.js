@@ -52,7 +52,7 @@ export async function verifyBaseIssueSignature({
   issuedAt,
   nonce,
   signature
-}, rpcBinding) {
+}, rpcBinding, allowPublicFallback = false) {
   const normalized = normalizeBaseAddress(subject);
 
   if (
@@ -79,7 +79,7 @@ export async function verifyBaseIssueSignature({
         if (normalizeBaseAddress(recovered) === normalized) return true;
       } catch { /* A contract signature need not be an ECDSA signature. */ }
     }
-    return await verifyBaseContractSignature(normalized, hashMessage(message), signature, rpcBinding);
+    return await verifyBaseContractSignature(normalized, hashMessage(message), signature, rpcBinding, allowPublicFallback);
   } catch {
     return false;
   }

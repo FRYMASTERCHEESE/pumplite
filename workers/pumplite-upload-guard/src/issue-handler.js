@@ -52,7 +52,7 @@ export async function handleIssue(ctx, request, now = Date.now(), env = {}) {
     if (value.chain === "solana") {
       signatureValid = await verifySolanaIssueSignature(args);
     } else if (value.chain === "base") {
-      signatureValid = await verifyBaseIssueSignature(args, env.BASE_SIGNATURE_RPC);
+      signatureValid = await verifyBaseIssueSignature(args, env.BASE_SIGNATURE_RPC, env.ALLOW_PUBLIC_BASE_RPC === "true");
     }
   } catch {
     signatureValid = false;

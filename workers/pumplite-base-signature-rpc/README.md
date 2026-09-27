@@ -1,12 +1,12 @@
 # Private Base signature RPC — local candidate, not deployed
 
-This Worker is intended solely as `BASE_SIGNATURE_RPC`, an HTTP service binding from `pumplite-upload-guard`. No existing Worker or production binding is changed by this directory.
+This Worker is intended solely as `BASE_SIGNATURE_RPC`, an HTTP service binding from `pumplite-upload-guard`. The upload guard production configuration now declares the BASE_SIGNATURE_RPC service binding to this Worker. This is a source configuration only: neither Worker nor the binding has been deployed or activated.
 
 ## Private ingress
 
 `workers_dev: false`, `preview_urls: false`, and `routes: []` are explicit. Do not add a custom domain, route, preview or public endpoint. Browser Origin headers are rejected; no CORS permission is returned. Cloudflare binding/routing configuration is the access boundary: an Origin header or incoming hostname is NOT an authentication mechanism. Account operators must authorize only the upload guard to bind to this service. Anyone permitted to change Cloudflare account configuration is outside this application boundary.
 
-After separately approved deployment, the guard would use this service entry (NOT added or activated by this task):
+The guard declares this service entry; activation requires separately approved deployment:
 
     { "binding": "BASE_SIGNATURE_RPC", "service": "pumplite-base-signature-rpc" }
 
@@ -18,7 +18,7 @@ Do not set ISSUE_ENABLED or any metadata-upload flag as part of RPC provisioning
 
 With no configured URL, this candidate returns 503 by default. An operator can separately opt in with the literal string `ALLOW_PUBLIC_BASE_RPC=true` to use the fixed public https://mainnet.base.org endpoint. Checked-in config explicitly keeps this false. Invalid configured URLs never fall back. There is no automatic failover on HTTP failure, timeout, malformed response or wrong chain; there are no retries.
 
-The upload guard's pre-existing direct public Base endpoint remains unchanged when it has no service binding. Once a binding exists, the guard uses that binding and does not bypass it on failure. This candidate additionally verifies Base chain ID 8453 before each individual method, with no cached chain approval. The existing guard also verifies chain ID before contract verification. Both checks fail closed. Chain ID is a trusted-RPC identity check, not cryptographic proof of honest chain data. Public endpoint capacity is not guaranteed and production quotas/monitoring remain an operator responsibility.
+The upload guard now rejects contract verification when its binding is absent unless the exact ALLOW_PUBLIC_BASE_RPC="true" operator setting permits its direct public Base endpoint. The guard's production setting is false. Once a binding exists, it is always used and never bypassed on failure, even if fallback is opted in. EOA verification remains independent of RPC. The proxy's own public-upstream opt-in is a separate setting and also defaults false. This candidate additionally verifies Base chain ID 8453 before each individual method, with no cached chain approval. The existing guard also verifies chain ID before contract verification. Both checks fail closed. Chain ID is a trusted-RPC identity check, not cryptographic proof of honest chain data. Public endpoint capacity is not guaranteed and production quotas/monitoring remain an operator responsibility.
 
 ## Request and response policy
 
