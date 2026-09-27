@@ -6,6 +6,7 @@ import {
 } from "./policy.js";
 
 import { decodeBase58 } from "./solana-identity.js";
+import { normalizeBaseAddress } from "./base-identity.js";
 
 const ALLOWED_KEYS = new Set([
   "chain",
@@ -26,16 +27,33 @@ export function validateChallengeRequest(body) {
   }
 
   for (const key of Object.keys(body)) {
-    if (!ALLOWED_KEYS.has(key)) return reject("unexpected_field");
+    if (!ALLOWED_KEYS.has(key)) {
+      return reject("unexpected_field");
+    }
   }
 
-  if (body.chain !== "solana") {
+  if (body.chain !== "solana" && body.chain !== "base") {
     return reject("unsupported_chain");
   }
 
-  const publicKey = decodeBase58(body.subject);
-  if (!publicKey || publicKey.length !== 32) {
-    return reject("invalid_subject");
+  let subject;
+
+  if (body.chain === "solana") {
+    const publicKey = decodeBase58(body.subject);
+
+    if (!publicKey || publicKey.length !== 32) {
+      return reject("invalid_subject");
+    }
+
+    subject = body.subject;
+  } else {
+    const normalized = normalizeBaseAddress(body.subject);
+
+    if (!normalized) {
+      return reject("invalid_subject");
+    }
+
+    subject = normalized;
   }
 
   if (!validUploadPath(body.path)) {
@@ -71,8 +89,8 @@ export function validateChallengeRequest(body) {
   return {
     ok: true,
     value: {
-      chain: "solana",
-      subject: body.subject,
+      chain: body.chain,
+      subject,
       path: body.path,
       bytes: body.bytes,
       sha256: body.sha256.toLowerCase(),

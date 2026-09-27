@@ -2,6 +2,7 @@ import { POLICY } from "./policy.js";
 import { readJson } from "./request.js";
 import { validateIssueProof } from "./issue-proof.js";
 import { verifySolanaIssueSignature } from "./solana-identity.js";
+import { verifyBaseIssueSignature } from "./base-identity.js";
 import {
   newGrantToken,
   hashGrantToken
@@ -26,7 +27,10 @@ export async function handleIssue(ctx, request, now = Date.now()) {
   const checked = validateIssueProof(body);
 
   if (!checked.ok) {
-    return json({ error: "Grant issuance rejected" }, checked.status || 400);
+    return json(
+      { error: "Grant issuance rejected" },
+      checked.status || 400
+    );
   }
 
   const value = checked.value;
@@ -34,7 +38,7 @@ export async function handleIssue(ctx, request, now = Date.now()) {
   let signatureValid = false;
 
   try {
-    signatureValid = await verifySolanaIssueSignature({
+    const args = {
       subject: value.subject,
       path: value.path,
       bytes: value.bytes,
@@ -43,7 +47,13 @@ export async function handleIssue(ctx, request, now = Date.now()) {
       issuedAt: value.issuedAt,
       nonce: value.nonce,
       signature: value.signature
-    });
+    };
+
+    if (value.chain === "solana") {
+      signatureValid = await verifySolanaIssueSignature(args);
+    } else if (value.chain === "base") {
+      signatureValid = await verifyBaseIssueSignature(args);
+    }
   } catch {
     signatureValid = false;
   }
@@ -87,6 +97,7 @@ export async function handleIssue(ctx, request, now = Date.now()) {
   return json({
     token: grantToken,
     expiresAt: grantExpiresAt,
+    chain: value.chain,
     path: value.path,
     bytes: value.bytes,
     sha256: value.sha256,

@@ -7,6 +7,7 @@ import {
 } from "./policy.js";
 
 import { decodeBase58 } from "./solana-identity.js";
+import { normalizeBaseAddress } from "./base-identity.js";
 
 const ALLOWED_KEYS = new Set([
   "chain",
@@ -35,13 +36,28 @@ export function validateIssueProof(body) {
     }
   }
 
-  if (body.chain !== "solana") {
+  if (body.chain !== "solana" && body.chain !== "base") {
     return reject("unsupported_chain");
   }
 
-  const publicKey = decodeBase58(body.subject);
-  if (!publicKey || publicKey.length !== 32) {
-    return reject("invalid_subject");
+  let subject;
+
+  if (body.chain === "solana") {
+    const publicKey = decodeBase58(body.subject);
+
+    if (!publicKey || publicKey.length !== 32) {
+      return reject("invalid_subject");
+    }
+
+    subject = body.subject;
+  } else {
+    const normalized = normalizeBaseAddress(body.subject);
+
+    if (!normalized) {
+      return reject("invalid_subject");
+    }
+
+    subject = normalized;
   }
 
   if (!validUploadPath(body.path)) {
@@ -76,10 +92,7 @@ export function validateIssueProof(body) {
     imageCid = body.imageCid;
   }
 
-  if (
-    !Number.isSafeInteger(body.issuedAt) ||
-    body.issuedAt <= 0
-  ) {
+  if (!Number.isSafeInteger(body.issuedAt) || body.issuedAt <= 0) {
     return reject("invalid_issued_at");
   }
 
@@ -87,18 +100,27 @@ export function validateIssueProof(body) {
     return reject("invalid_nonce");
   }
 
-  if (
-    typeof body.signature !== "string" ||
-    !/^[A-Za-z0-9+/]{86}==$/.test(body.signature)
-  ) {
-    return reject("invalid_signature");
+  if (body.chain === "solana") {
+    if (
+      typeof body.signature !== "string" ||
+      !/^[A-Za-z0-9+/]{86}==$/.test(body.signature)
+    ) {
+      return reject("invalid_signature");
+    }
+  } else {
+    if (
+      typeof body.signature !== "string" ||
+      !/^0x[0-9a-fA-F]{130}$/.test(body.signature)
+    ) {
+      return reject("invalid_signature");
+    }
   }
 
   return {
     ok: true,
     value: {
-      chain: "solana",
-      subject: body.subject,
+      chain: body.chain,
+      subject,
       path: body.path,
       bytes: body.bytes,
       sha256: body.sha256.toLowerCase(),

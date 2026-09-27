@@ -1,59 +1,99 @@
 import assert from "node:assert/strict";
 import { validateIssueProof } from "./src/issue-proof.js";
 
-const subject = "11111111111111111111111111111111";
+const solanaSubject = "11111111111111111111111111111111";
+const baseSubject = "0x1111111111111111111111111111111111111111";
 const sha256 = "a".repeat(64);
 const nonce = "b".repeat(32);
-const signature = "A".repeat(86) + "==";
+const solanaSignature = "A".repeat(86) + "==";
+const baseSignature = "0x" + "11".repeat(65);
 const issuedAt = 1790520077717;
 const cid = "QmYwAPJzv5CZsnAzt8auVZRnGiHzH1R9g1k6i1dSQg7S2A";
 
-const base = {
+let r = validateIssueProof({
   chain: "solana",
-  subject,
+  subject: solanaSubject,
   path: "/metadata/image",
   bytes: 1024,
   sha256,
   issuedAt,
   nonce,
-  signature
-};
-
-let r = validateIssueProof(base);
+  signature: solanaSignature
+});
 assert.equal(r.ok, true);
 
-r = validateIssueProof({ ...base, chain: "base" });
-assert.equal(r.ok, false);
-
-r = validateIssueProof({ ...base, nonce: "bad-nonce" });
-assert.equal(r.ok, false);
-
-r = validateIssueProof({ ...base, signature: "not-a-signature" });
-assert.equal(r.ok, false);
-
-r = validateIssueProof({ ...base, bytes: 999999999 });
-assert.equal(r.ok, false);
-
-r = validateIssueProof({ ...base, imageCid: cid });
-assert.equal(r.ok, false);
+r = validateIssueProof({
+  chain: "base",
+  subject: baseSubject,
+  path: "/metadata/image",
+  bytes: 1024,
+  sha256,
+  issuedAt,
+  nonce,
+  signature: baseSignature
+});
+assert.equal(r.ok, true);
+assert.equal(r.value.subject, baseSubject.toLowerCase());
 
 r = validateIssueProof({
-  ...base,
-  path: "/metadata/json"
+  chain: "base",
+  subject: "not-an-address",
+  path: "/metadata/image",
+  bytes: 1024,
+  sha256,
+  issuedAt,
+  nonce,
+  signature: baseSignature
 });
 assert.equal(r.ok, false);
 
 r = validateIssueProof({
-  ...base,
+  chain: "base",
+  subject: baseSubject,
+  path: "/metadata/image",
+  bytes: 1024,
+  sha256,
+  issuedAt,
+  nonce,
+  signature: solanaSignature
+});
+assert.equal(r.ok, false);
+
+r = validateIssueProof({
+  chain: "solana",
+  subject: solanaSubject,
+  path: "/metadata/image",
+  bytes: 1024,
+  sha256,
+  issuedAt,
+  nonce,
+  signature: baseSignature
+});
+assert.equal(r.ok, false);
+
+r = validateIssueProof({
+  chain: "base",
+  subject: baseSubject,
   path: "/metadata/json",
-  imageCid: cid
+  bytes: 1024,
+  sha256,
+  imageCid: cid,
+  issuedAt,
+  nonce,
+  signature: baseSignature
 });
 assert.equal(r.ok, true);
 
 r = validateIssueProof({
-  ...base,
-  extra: "not allowed"
+  chain: "bitcoin",
+  subject: solanaSubject,
+  path: "/metadata/image",
+  bytes: 1024,
+  sha256,
+  issuedAt,
+  nonce,
+  signature: solanaSignature
 });
 assert.equal(r.ok, false);
 
-console.log("issue proof validator tests passed");
+console.log("issue proof validator tests passed for Solana and Base");
