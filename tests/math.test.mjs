@@ -52,3 +52,12 @@ test('failed receipts cannot be shown as successful', () => {
   for (const value of [null, {}, { status: 0 }]) assert.throws(() => assertReceipt(value));
   for (const value of [null, {}, { value: { err: 'failed' } }, { value: {} }]) assert.throws(() => assertSolanaConfirmation(value));
 });
+
+test('metadata content URIs reject credentials, missing hosts, whitespace and fragments',()=>{
+ for(const uri of ['https://','ipfs://','https://user:pass@example.com/a','https://example.com/a#secret','https://example.com/a b','https://example.com/\n']) assert.throws(()=>validateMetadata('Token','T',uri));
+ for(const uri of ['','https://example.com/metadata.json','ipfs://bafyexample/metadata.json'])validateMetadata('Token','T',uri);
+});
+test('oversized amount input is rejected before integer parsing',()=>{
+ assert.throws(()=>parseUnits('9'.repeat(100000),18),/supported integer size/);
+ assert.equal(parseUnits('1'.repeat(78),0),BigInt('1'.repeat(78)));
+});

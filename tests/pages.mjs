@@ -109,6 +109,10 @@ try {
       } catch (error) { return error.message === 'RPC is not Solana Mainnet'; }
     }, { url: base + 'assets/chunks/' + chunks.find(chunk => chunk.startsWith('solana-')), configUrl: base + 'config.json' });
     assert.equal(chainGuard, true, 'Published Solana adapter rejects truncated chain configuration');
+    await page.locator('#skip-content').focus();
+    await page.keyboard.press('Enter');
+    assert.equal(await page.evaluate(() => document.activeElement.id), 'main-content');
+    assert.equal(await page.locator('#amount').getAttribute('maxlength'), '96');
     await page.locator('#name').fill('Local document');
     await page.locator('#symbol').fill('DOC');
     await page.locator('details').click();

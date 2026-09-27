@@ -13,6 +13,7 @@
 <script type="module" src="./assets/app.js"></script>
 </head>
 <body>
+<a class="skip-link" id="skip-content" href="#main-content">Skip to main content</a>
 <header>
   <a class="brand" href="#" aria-label="PumpLite home"><span class="mark" aria-hidden="true">↗</span> PumpLite<span class="beta">LOCAL BUILD</span></a>
   <div class="header-controls">
@@ -22,7 +23,7 @@
     <button id="connect" class="outline">Connect wallet</button>
   </div>
 </header>
-<main>
+<main id="main-content" tabindex="-1">
   <div id="phantom-diagnostics" class="notice" role="status" aria-live="polite">
     <b>Phantom connection diagnostic v2</b>
     <p id="phantom-tap">Waiting for the page to start. If this remains, the diagnostic script did not load.</p>
@@ -81,7 +82,7 @@
         <p id="balance" class="fine">Connect a wallet to read balances.</p>
         <form id="trade-form">
           <label for="side">Direction</label><select id="side"><option value="buy">Buy tokens</option><option value="sell">Sell tokens</option></select>
-          <label for="amount" id="amount-label">Amount</label><input id="amount" inputmode="decimal" placeholder="0.00" required autocomplete="off">
+          <label for="amount" id="amount-label">Amount</label><input id="amount" maxlength="96" inputmode="decimal" placeholder="0.00" required autocomplete="off">
           <label for="slippage">Slippage tolerance (%)</label><input id="slippage" type="number" min="0.01" max="5" step="0.01" value="1" required>
           <button id="get-quote" type="button" class="outline full">Get current quote</button>
           <dl class="quote"><div><dt>Expected output</dt><dd id="quote-output">—</dd></div><div><dt>Minimum received</dt><dd id="quote-min">—</dd></div><div><dt>Platform fee</dt><dd id="quote-fee">—</dd></div></dl>

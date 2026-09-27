@@ -3,6 +3,7 @@ export const FEE = 25n;
 export const SOL_SUPPLY = 1_000_000_000_000_000n;
 export const BASE_SUPPLY = 1_000_000_000_000_000_000_000_000_000n;
 export function parseUnits(text, decimals) {
+  if (typeof text !== 'string' || text.length > 96) throw Error('Amount text exceeds supported integer size');
   if (!Number.isInteger(decimals) || decimals < 0 || decimals > 18) throw Error('Invalid decimals');
   if (!/^(0|[1-9][0-9]*)(\.[0-9]+)?$/.test(text)) throw Error('Enter a plain positive decimal amount');
   const [whole, fraction = ''] = text.split('.');
@@ -41,12 +42,20 @@ export function minimumOutput(output, slippageBps) {
   if (minimum <= 0n) throw Error('Minimum output rounds to zero');
   return minimum;
 }
+export function validateContentUri(uri, maxBytes = 200) {
+  if (typeof uri !== 'string' || new TextEncoder().encode(uri).length > maxBytes) throw Error('Content URI exceeds its UTF-8 byte limit');
+  if (!uri) return;
+  if (/[\s\\]/u.test(uri) || /[\u0000-\u001f\u007f]/u.test(uri)) throw Error('Content URI contains whitespace or invalid characters');
+  const url = new URL(uri);
+  if (!['https:', 'ipfs:'].includes(url.protocol) || !url.hostname || url.username || url.password || url.hash ||
+      !(uri.startsWith('https://') || uri.startsWith('ipfs://'))) throw Error('Use a public HTTPS or IPFS content URI without credentials or fragments');
+}
 export function validateMetadata(name, symbol, uri) {
+  if (typeof name !== 'string' || typeof symbol !== 'string') throw Error('Metadata name and symbol must be text');
   const bytes = text => new TextEncoder().encode(text).length;
   if (!name.trim() || bytes(name) > 32) throw Error('Name must be 1–32 UTF-8 bytes');
   if (!/^[A-Z0-9]{1,10}$/.test(symbol)) throw Error('Symbol must be 1–10 uppercase letters or digits');
-  if (bytes(uri) > 200) throw Error('Metadata URI is limited to 200 bytes');
-  if (uri && !uri.startsWith('https://') && !uri.startsWith('ipfs://')) throw Error('Use an HTTPS or IPFS metadata URI');
+  validateContentUri(uri);
 }
 export function assertReceipt(receipt) {
   if (!receipt || Number(receipt.status) !== 1) throw Error('Transaction failed on chain');

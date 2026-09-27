@@ -7,6 +7,7 @@ if (window.top !== window.self) {
   throw Error('Embedded PumpLite is disabled');
 }
 const $ = id => document.getElementById(id);
+$('skip-content').addEventListener('click', event => { event.preventDefault(); $('main-content').focus(); });
 const state = { config: null, chain: 'solana', adapter: null, wallet: null, market: null, quote: null, busy: false, epoch: 0, next: null };
 function status(message, href) {
   $('status-text').textContent = message;

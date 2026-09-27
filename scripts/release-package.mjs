@@ -31,6 +31,9 @@ export async function verifyPackage(root, kind, expectedCommit, canonical = true
   if (kind === 'solana') {
     const idl = JSON.parse(await bytes('target/idl/pumplite.json'));
     if (!manifest.programId || idl.address !== manifest.programId) throw Error('IDL and program identity differ');
+    const report = JSON.parse(await bytes('build/sbf-reproducibility.json'));
+    const digest = manifest.files.find(file => file.path === 'target/deploy/pumplite.so').sha256;
+    if (report.identical !== true || report.first !== digest || report.second !== digest) throw Error('Reproducibility evidence does not match packaged program');
     const program = await bytes('target/deploy/pumplite.so');
     if (!program.subarray(0,4).equals(Buffer.from([127,69,76,70]))) throw Error('Program is not ELF');
   }
