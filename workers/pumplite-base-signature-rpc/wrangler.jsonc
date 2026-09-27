@@ -1,0 +1,9 @@
+{
+  "name": "pumplite-base-signature-rpc",
+  "main": "worker.js",
+  "compatibility_date": "2026-09-28",
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [],
+  "vars": { "ALLOW_PUBLIC_BASE_RPC": "false" }
+}

@@ -1,0 +1,4 @@
+.wrangler/
+dry-run/
+.dev.vars
+.dev.vars.*
