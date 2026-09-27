@@ -49,7 +49,7 @@ try {
     window.phantom = { solana: { publicKey: key, signTransaction() { throw Error('No signing allowed'); },
       connect() { window.syntheticApprovalActive = navigator.userActivation.isActive; return Promise.resolve({ publicKey: key }); } } };
   });
-  await phantom.route('https://api.mainnet-beta.solana.com/**', async route => {
+  await phantom.route('https://pumplite-rpc.coreyedge123.workers.dev/rpc', async route => {
     const request = route.request().postDataJSON();
     assert.equal(request.method, 'getGenesisHash');
     await route.fulfill({ json: { jsonrpc: '2.0', id: request.id, result: '5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d' } });

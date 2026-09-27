@@ -4,7 +4,7 @@
   "feeBps": 25,
   "solana": {
     "name": "Solana Mainnet",
-    "rpcUrl": "https://api.mainnet-beta.solana.com",
+    "rpcUrl": "https://pumplite-rpc.coreyedge123.workers.dev/rpc",
     "rpcFallbackUrls": ["https://solana-rpc.publicnode.com"],
     "genesisHash": "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d",
     "programId": null,
