@@ -1,0 +1,1 @@
+{"name":"pumplite-upload-guard","main":"src/worker.js","compatibility_date":"2026-09-27","workers_dev":false,"durable_objects":{"bindings":[{"name":"GUARD_STATE","class_name":"UploadGuard"}]},"migrations":[{"tag":"v1","new_sqlite_classes":["UploadGuard"]}]}
