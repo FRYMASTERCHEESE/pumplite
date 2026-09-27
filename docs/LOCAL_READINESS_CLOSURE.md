@@ -36,3 +36,10 @@ _headers and ops/security-headers.conf provide HTTP policies for compatible stat
 Both implementations are candidates for independent review and owner deployment planning, not Mainnet-ready products. No real-device, deployed-code, treasury-receipt or independent-review checks are claimed passed.
 
 Corrected independent-directory Windows SBF reproduction passed: SHA-256 9d7d1ded63b31cbbe35ba698e5533832788d9766764f2d5d196ae71ab8fdcf87. The Windows post-processing syscall warning persists; the actual binary passed all 29 SVM runtime tests. Canonical Linux evidence is produced by the pushed-commit workflow.
+
+
+## Latest owner acceptance and artifact update
+
+The owner subsequently reported successful Android Phantom connection with Mainnet RPC verification and successful Base wallet connection. Those connection-only checks are accepted as owner-reported results; they do not establish transaction, treasury receipt, other-device or deployed-code acceptance. The current work leaves wallet implementation unchanged.
+
+Release archives now preserve exact manifest-relative paths, include all referenced files plus hashed verification evidence, and are checked offline before CI upload. See RELEASE_HANDOFF.md. Previous archives predate this packaging fix and should not be described as self-contained.

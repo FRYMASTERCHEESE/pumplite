@@ -8,7 +8,7 @@ if(canonical&&!profile)throw Error('Canonical release requires Ubuntu 24.04 x86_
 const commit=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
 const dirty=execFileSync('git',['status','--porcelain','--untracked-files=no'],{encoding:'utf8'}).trim().length>0;
 if(canonical&&dirty)throw Error('Canonical release requires a clean tracked source tree');
-const paths=solana?['target/deploy/pumplite.so','target/idl/pumplite.json','Cargo.lock','tests/fixtures/metaplex/provenance.json']:['build/base/standard-input.json','build/base/build-manifest.json','build/base/LaunchFactory.json','build/base/CurveMarket.json','build/base/LaunchToken.json'];
+const paths=solana?['target/deploy/pumplite.so','target/idl/pumplite.json','Cargo.lock','tests/fixtures/metaplex/provenance.json','build/sbf-reproducibility.json','build/rustsec-audit.json']:['build/base/standard-input.json','build/base/build-manifest.json','build/base/LaunchFactory.json','build/base/CurveMarket.json','build/base/LaunchToken.json','build/dependency-audit.json'];
 const files=[];
 for(const path of paths){const bytes=await readFile(path);files.push({path,bytes:bytes.length,sha256:createHash('sha256').update(bytes).digest('hex')});}
 const config=JSON.parse(await readFile('config.json','utf8'));

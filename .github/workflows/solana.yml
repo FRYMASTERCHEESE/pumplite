@@ -1,9 +1,9 @@
 name: Solana program verification
 on:
   push:
-    paths: ["Cargo.toml", "Cargo.lock", "rust-toolchain.toml", ".cargo/**", "Anchor.toml", "programs/**", "tests/solana/**", "tests/fixtures/metaplex/**", "scripts/prepare-runtime-fixtures.mjs", "scripts/release-manifest.mjs", "tests/solana-client-fixture.mjs", "web/**", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", ".npmrc", "scripts/audit-rust.mjs", "scripts/dependency-policy.mjs", "docs/dependency-review.json", "scripts/build-solana.mjs", "scripts/check-sbf-reproducibility.mjs", "scripts/check-solana-idl.mjs", "config.json", ".github/workflows/solana.yml"]
+    paths: ["Cargo.toml", "Cargo.lock", "rust-toolchain.toml", ".cargo/**", "Anchor.toml", "programs/**", "tests/solana/**", "tests/fixtures/metaplex/**", "scripts/prepare-runtime-fixtures.mjs", "scripts/release-manifest.mjs", "scripts/release-package.mjs", "tests/solana-client-fixture.mjs", "web/**", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", ".npmrc", "scripts/audit-rust.mjs", "scripts/dependency-policy.mjs", "docs/dependency-review.json", "scripts/build-solana.mjs", "scripts/check-sbf-reproducibility.mjs", "scripts/check-solana-idl.mjs", "config.json", ".github/workflows/solana.yml"]
   pull_request:
-    paths: ["Cargo.toml", "Cargo.lock", "rust-toolchain.toml", ".cargo/**", "Anchor.toml", "programs/**", "tests/solana/**", "tests/fixtures/metaplex/**", "scripts/prepare-runtime-fixtures.mjs", "scripts/release-manifest.mjs", "tests/solana-client-fixture.mjs", "web/**", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", ".npmrc", "scripts/audit-rust.mjs", "scripts/dependency-policy.mjs", "docs/dependency-review.json", "scripts/build-solana.mjs", "scripts/check-sbf-reproducibility.mjs", "scripts/check-solana-idl.mjs", "config.json", ".github/workflows/solana.yml"]
+    paths: ["Cargo.toml", "Cargo.lock", "rust-toolchain.toml", ".cargo/**", "Anchor.toml", "programs/**", "tests/solana/**", "tests/fixtures/metaplex/**", "scripts/prepare-runtime-fixtures.mjs", "scripts/release-manifest.mjs", "scripts/release-package.mjs", "tests/solana-client-fixture.mjs", "web/**", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", ".npmrc", "scripts/audit-rust.mjs", "scripts/dependency-policy.mjs", "docs/dependency-review.json", "scripts/build-solana.mjs", "scripts/check-sbf-reproducibility.mjs", "scripts/check-solana-idl.mjs", "config.json", ".github/workflows/solana.yml"]
   workflow_dispatch:
 permissions:
   contents: read
@@ -81,6 +81,8 @@ jobs:
         run: cargo test --locked -p pumplite-svm-tests --features sbf-tests --test markets
       - name: Identify canonical release candidate
         run: node scripts/release-manifest.mjs --solana --canonical
+      - name: Package and verify offline Solana release
+        run: node scripts/release-package.mjs pack solana
       - name: Retain compiled program and verification evidence
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -88,11 +90,7 @@ jobs:
           retention-days: 30
           if-no-files-found: error
           path: |
-            target/deploy/pumplite.so
-            target/idl/pumplite.json
-            build/sbf-reproducibility.json
-            build/rustsec-audit.json
-            build/release-solana.json
+            build/release-packages/solana/
       - name: Verify no deployment signing files were created
         if: always()
         shell: bash

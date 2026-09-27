@@ -37,6 +37,8 @@ jobs:
           pnpm test:browser
       - name: Identify canonical Base candidate
         run: node scripts/release-manifest.mjs --canonical
+      - name: Package and verify offline Base release
+        run: node scripts/release-package.mjs pack base
       - name: Retain source verification input and Base artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -44,9 +46,7 @@ jobs:
           retention-days: 30
           if-no-files-found: error
           path: |
-            build/base/*.json
-            build/dependency-audit.json
-            build/release-base.json
+            build/release-packages/base/
   # Linux freshness is checked above; also protect Windows-generated Pages assets.
   pages-windows:
     runs-on: windows-latest
