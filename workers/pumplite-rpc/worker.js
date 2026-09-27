@@ -1,4 +1,5 @@
 import { metadataRoute } from './metadata.js';
+import { metadataAuthRoute } from './metadata-auth.js';
 const ALLOWED_ORIGIN = "https://frymastercheese.github.io";
 
 const ALLOWED_METHODS = new Set([
@@ -76,6 +77,9 @@ export default {
       return metadataRoute(request, env, url.pathname, corsHeaders(origin));
     }
 
+    if (url.pathname === '/metadata/challenge' || url.pathname === '/metadata/issue') {
+      return metadataAuthRoute(request, env, url.pathname, corsHeaders(origin));
+    }
     // CORS preflight.
     if (request.method === "OPTIONS") {
       return new Response(null, {

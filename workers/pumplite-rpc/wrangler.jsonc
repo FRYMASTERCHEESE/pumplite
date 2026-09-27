@@ -10,5 +10,8 @@
       "service": "pumplite-upload-guard"
     }
   ],
-  "vars": { "METADATA_UPLOADS_ENABLED": "false" }
+  "vars": {
+    "METADATA_UPLOADS_ENABLED": "false",
+    "METADATA_AUTH_ENABLED": "false"
+  }
 }
