@@ -6,7 +6,7 @@ async function files(dir) {
   const entries = await readdir(dir, { withFileTypes: true });
   return (await Promise.all(entries.map(e => e.isDirectory() ? files(dir + '/' + e.name) : dir + '/' + e.name))).flat();
 }
-for (const path of [...await files('web'), ...await files('scripts'), ...await files('tests')].filter(p => /\.(m?js)$/.test(p))) {
+for (const path of [...await files('web'), ...await files('scripts'), ...await files('tests'), ...await files('workers')].filter(p => /\.(m?js)$/.test(p))) {
   const result = spawnSync(process.execPath, ['--check', path], { encoding: 'utf8' });
   assert.equal(result.status, 0, result.stderr);
 }

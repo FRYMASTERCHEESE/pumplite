@@ -18,3 +18,8 @@ coverage/
 Thumbs.db
 test-results/
 playwright-report/
+
+# Cloudflare local secrets and generated deployment output
+.dev.vars
+.dev.vars.*
+.wrangler/

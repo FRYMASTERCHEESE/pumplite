@@ -1,0 +1,7 @@
+// No secrets in this file. Deployment is manual and separately approved.
+{
+  "name": "pumplite-rpc",
+  "main": "worker.js",
+  "compatibility_date": "2026-09-27",
+  "vars": { "METADATA_UPLOADS_ENABLED": "false" }
+}
