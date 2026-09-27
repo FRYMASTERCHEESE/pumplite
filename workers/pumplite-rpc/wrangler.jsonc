@@ -3,5 +3,11 @@
   "name": "pumplite-rpc",
   "main": "worker.js",
   "compatibility_date": "2026-09-27",
+  "services": [
+    {
+      "binding": "UPLOAD_GUARD",
+      "service": "pumplite-upload-guard"
+    }
+  ],
   "vars": { "METADATA_UPLOADS_ENABLED": "false" }
 }

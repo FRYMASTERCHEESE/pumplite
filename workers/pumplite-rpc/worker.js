@@ -205,23 +205,20 @@ export default {
       );
     }
 
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 10000);
     try {
       const upstream = await fetch(env.HELIUS_RPC_URL, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: raw, signal: controller.signal, redirect: 'error'
+        body: raw
       });
-      if (upstream.status !== 200) {
-        controller.abort();
+      if (!upstream.ok) {
         return jsonResponse({ error: 'RPC service temporarily unavailable' }, 502, origin);
       }
-      const body = await upstream.arrayBuffer();
-      return new Response(body, { status: 200, headers: {
+      const responseText = await upstream.text();
+      return new Response(responseText, { status: 200, headers: {
         'Content-Type': 'application/json', ...corsHeaders(origin)
       } });
     } catch {
       return jsonResponse({ error: 'RPC service temporarily unavailable' }, 502, origin);
-    } finally { clearTimeout(timer); }
+    }
   }
 };
