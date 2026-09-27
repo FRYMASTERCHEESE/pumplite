@@ -1,4 +1,5 @@
-import { getAddress, verifyMessage } from "ethers";
+import { validBaseSignature, verifyBaseContractSignature } from './base-contract-identity.js';
+import { getAddress, verifyMessage, hashMessage } from "ethers";
 
 const AUDIENCE = "https://frymastercheese.github.io";
 
@@ -51,13 +52,12 @@ export async function verifyBaseIssueSignature({
   issuedAt,
   nonce,
   signature
-}) {
+}, rpcBinding) {
   const normalized = normalizeBaseAddress(subject);
 
   if (
     !normalized ||
-    typeof signature !== "string" ||
-    !/^0x[0-9a-fA-F]{130}$/.test(signature)
+    !validBaseSignature(signature)
   ) {
     return false;
   }
@@ -73,9 +73,13 @@ export async function verifyBaseIssueSignature({
       nonce
     });
 
-    const recovered = verifyMessage(message, signature);
-
-    return normalizeBaseAddress(recovered) === normalized;
+    if (/^0x[0-9a-fA-F]{130}$/.test(signature)) {
+      try {
+        const recovered = verifyMessage(message, signature);
+        if (normalizeBaseAddress(recovered) === normalized) return true;
+      } catch { /* A contract signature need not be an ECDSA signature. */ }
+    }
+    return await verifyBaseContractSignature(normalized, hashMessage(message), signature, rpcBinding);
   } catch {
     return false;
   }

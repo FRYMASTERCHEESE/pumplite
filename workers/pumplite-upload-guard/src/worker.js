@@ -89,7 +89,7 @@ export class UploadGuard extends DurableObject {
       }
 
       try {
-        return await handleIssue(this.ctx, request);
+        return await handleIssue(this.ctx, request, Date.now(), this.env);
       } catch (error) {
         const status = Number.isInteger(error?.status) ? error.status : 500;
         return json(

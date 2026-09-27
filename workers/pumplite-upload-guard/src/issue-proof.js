@@ -1,3 +1,4 @@
+import { validBaseSignature } from './base-contract-identity.js';
 import {
   validUploadPath,
   maxBytesForPath,
@@ -109,8 +110,7 @@ export function validateIssueProof(body) {
     }
   } else {
     if (
-      typeof body.signature !== "string" ||
-      !/^0x[0-9a-fA-F]{130}$/.test(body.signature)
+      !validBaseSignature(body.signature)
     ) {
       return reject("invalid_signature");
     }

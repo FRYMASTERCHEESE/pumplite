@@ -21,7 +21,7 @@ function json(data, status = 200) {
   });
 }
 
-export async function handleIssue(ctx, request, now = Date.now()) {
+export async function handleIssue(ctx, request, now = Date.now(), env = {}) {
   const body = await readJson(request, POLICY.maxControlBodyBytes);
 
   const checked = validateIssueProof(body);
@@ -52,7 +52,7 @@ export async function handleIssue(ctx, request, now = Date.now()) {
     if (value.chain === "solana") {
       signatureValid = await verifySolanaIssueSignature(args);
     } else if (value.chain === "base") {
-      signatureValid = await verifyBaseIssueSignature(args);
+      signatureValid = await verifyBaseIssueSignature(args, env.BASE_SIGNATURE_RPC);
     }
   } catch {
     signatureValid = false;

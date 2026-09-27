@@ -1,0 +1,1 @@
+{"name":"guard-local-test","main":"../src/worker.js","compatibility_date":"2026-09-27","workers_dev":false,"vars":{"ISSUE_ENABLED":"true"},"services":[{"binding":"BASE_SIGNATURE_RPC","service":"guard-local-rpc"}],"durable_objects":{"bindings":[{"name":"GUARD_STATE","class_name":"UploadGuard"}]},"migrations":[{"tag":"v1","new_sqlite_classes":["UploadGuard"]}]}
