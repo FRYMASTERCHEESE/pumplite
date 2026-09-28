@@ -5,7 +5,9 @@
   "solana": {
     "name": "Solana Mainnet",
     "rpcUrl": "https://pumplite-rpc.coreyedge123.workers.dev/rpc",
-    "rpcFallbackUrls": ["https://solana-rpc.publicnode.com"],
+    "rpcFallbackUrls": [
+      "https://solana-rpc.publicnode.com"
+    ],
     "genesisHash": "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d",
     "programId": null,
     "treasury": "BNpFPPuy2h12dryy4dayemjA4YS17ccVaF82jBDuiwct",
@@ -19,5 +21,8 @@
     "factory": null,
     "treasury": "0x0de7fdcc798f7fac6b03b366c529133a9c60794d",
     "explorer": "https://basescan.org"
+  },
+  "metadataUploads": {
+    "enabled": false
   }
 }
