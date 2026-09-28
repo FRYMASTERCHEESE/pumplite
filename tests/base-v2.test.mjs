@@ -2,6 +2,7 @@ import { before, after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import ganache from 'ganache';
+import solc from 'solc';
 import {
     BrowserProvider,
     ContractFactory,
@@ -1202,3 +1203,150 @@ test('Market support increases backing without minting any tokens', async () => 
         support
     );
 });
+
+let adversarialArtifactsCache;
+
+function adversarialArtifacts() {
+    if (adversarialArtifactsCache) {
+        return adversarialArtifactsCache;
+    }
+
+    const source = `
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.30;
+
+interface ICurveMarketV2Test {
+    function buy(
+        uint256 minOutput,
+        uint256 deadline
+    ) external payable returns (uint256);
+
+    function sell(
+        uint256 input,
+        uint256 minOutput,
+        uint256 deadline
+    ) external returns (uint256);
+
+    function token() external view returns (address);
+}
+
+interface IERC20Test {
+    function approve(
+        address spender,
+        uint256 amount
+    ) external returns (bool);
+}
+
+contract RejectingTreasuryV2 {
+    receive() external payable {
+        revert("reject ETH");
+    }
+}
+
+contract ReentrantSellerV2 {
+    ICurveMarketV2Test public immutable market;
+    IERC20Test public immutable token;
+
+    bool public reentryAttempted;
+    bool public reentryBlocked;
+    uint256 public attackDeadline;
+
+    constructor(address market_) {
+        market = ICurveMarketV2Test(market_);
+        token = IERC20Test(
+            ICurveMarketV2Test(market_).token()
+        );
+    }
+
+    function buyForAttack(
+        uint256 minOutput,
+        uint256 deadline
+    ) external payable {
+        market.buy{value: msg.value}(
+            minOutput,
+            deadline
+        );
+
+        token.approve(
+            address(market),
+            type(uint256).max
+        );
+    }
+
+    function attackSell(
+        uint256 amount,
+        uint256 minOutput,
+        uint256 deadline
+    ) external {
+        attackDeadline = deadline;
+
+        market.sell(
+            amount,
+            minOutput,
+            deadline
+        );
+    }
+
+    receive() external payable {
+        if (!reentryAttempted) {
+            reentryAttempted = true;
+
+            try market.sell(
+                1,
+                1,
+                attackDeadline
+            ) returns (uint256) {
+                reentryBlocked = false;
+            } catch {
+                reentryBlocked = true;
+            }
+        }
+    }
+}
+`;
+
+    const input = {
+        language: 'Solidity',
+        sources: {
+            'V2Adversarial.sol': {
+                content: source
+            }
+        },
+        settings: {
+            optimizer: {
+                enabled: true,
+                runs: 200
+            },
+            outputSelection: {
+                '*': {
+                    '*': [
+                        'abi',
+                        'evm.bytecode.object'
+                    ]
+                }
+            }
+        }
+    };
+
+    const output = JSON.parse(
+        solc.compile(JSON.stringify(input))
+    );
+
+    const errors = (output.errors ?? [])
+        .filter(error =>
+            error.severity === 'error'
+        );
+
+    assert.equal(
+        errors.length,
+        0,
+        errors
+            .map(error => error.formattedMessage)
+            .join('\n')
+    );
+
+    adversarialArtifactsCache =
+        output.contracts['V2Adversarial.sol'];
+
+    return adversarialArtifactsCache;
+}
