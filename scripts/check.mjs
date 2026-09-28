@@ -2,6 +2,7 @@ import { readFile, readdir, access } from 'node:fs/promises';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { assertSolanaMainnet } from '../web/solana-network.js';
+import { validatePublicConfig, transactionConfigEnabled } from '../web/release-config.js';
 async function files(dir) {
   const entries = await readdir(dir, { withFileTypes: true });
   return (await Promise.all(entries.map(e => e.isDirectory() ? files(dir + '/' + e.name) : dir + '/' + e.name))).flat();
@@ -11,12 +12,17 @@ for (const path of [...await files('web'), ...await files('scripts'), ...await f
   assert.equal(result.status, 0, result.stderr);
 }
 const config = JSON.parse(await readFile('config.json', 'utf8'));
+validatePublicConfig(config);
 assertSolanaMainnet(config.solana.genesisHash);
-assert.equal(config.transactionsEnabled, false, 'Token creation and trading must remain disabled');
+assert.equal('transactionsEnabled' in config, false, 'Global transaction switch must not exist');
+assert.equal(config.solana.transactionsEnabled, false, 'Solana must remain locked for the Base-first release');
+assert.equal(transactionConfigEnabled(config, 'solana'), false, 'Solana writes must remain fail-closed');
 assert.equal(config.metadataUploads?.enabled, true, 'Metadata publishing must remain enabled');
 assert.equal(config.solana.programId, null);
 assert.equal(config.solana.discoveryUrl, null);
-assert.equal(config.base.factory, null);
+if (config.base.transactionsEnabled) {
+  assert.equal(transactionConfigEnabled(config, 'base'), true, 'Enabled Base writes require a valid factory');
+}
 for (const chain of [config.solana, config.base]) {
   const rpc = new URL(chain.rpcUrl);
   assert.equal(rpc.protocol, 'https:', 'Production RPC requires HTTPS');
@@ -39,7 +45,7 @@ for (const [name, abi] of Object.entries(abis)) {
     assert.ok(!functions.includes(forbidden), name + ' has prohibited privileged function ' + forbidden);
   }
 }
-console.log('PASS syntax, fixed deployment lock, treasury configuration, safe DOM, mainnet-only UI, absent admin and privileged Base functions');
+console.log('PASS syntax, per-chain fail-closed deployment locks, treasury configuration, safe DOM, mainnet-only UI, absent admin and privileged Base functions');
 
 const headerCheck = spawnSync(process.execPath, ['scripts/build-security-headers.mjs','--check'], {encoding:'utf8'});
 assert.equal(headerCheck.status,0,headerCheck.stderr);

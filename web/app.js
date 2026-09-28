@@ -2,6 +2,7 @@ import { discoverEvm, solanaDiagnostics } from './wallets.js';
 import { mobileBrowseLink } from './mobile.js';
 import { metadataDocument } from './metadata.js';
 import { parseUnits, formatUnits, quote, minimumOutput, validateMetadata } from './math.js';
+import { validatePublicConfig, deploymentConfigured, transactionConfigEnabled } from './release-config.js';
 if (window.top !== window.self) {
   document.body.replaceChildren(document.createTextNode('Open PumpLite directly in your browser. Embedded wallet interactions are disabled.'));
   throw Error('Embedded PumpLite is disabled');
@@ -16,10 +17,13 @@ function status(message, href) {
   else $('status-link').removeAttribute('href');
 }
 function ready() {
-  const c = state.config?.[state.chain];
-  return Boolean(c && (state.chain === 'solana' ? c.programId : c.factory));
+  return deploymentConfigured(state.config, state.chain);
 }
-function writable() { return ready() && state.config.transactionsEnabled && state.wallet && !state.busy; }
+function writable() {
+  return transactionConfigEnabled(state.config, state.chain) &&
+    state.wallet &&
+    !state.busy;
+}
 let phantomPrepared = false;
 function diagnostic(message = '') {
   $('wallet-diagnostic').textContent = solanaDiagnostics(window) + (message ? ' | ' + message : '');
@@ -76,7 +80,9 @@ async function action(fn) {
 function requireDeployment() { if (!ready()) throw Error('No reviewed deployment configured for ' + state.config[state.chain].name); }
 function requireWrite() {
   requireDeployment();
-  if (!state.config.transactionsEnabled) throw Error('Transactions are disabled in this local build');
+  if (!transactionConfigEnabled(state.config, state.chain)) {
+    throw Error('Transactions are disabled for ' + state.config[state.chain].name);
+  }
   if (!state.wallet) throw Error('Connect a wallet first');
 }
 function row(m) {
@@ -146,9 +152,15 @@ function switchChain(chain) {
   state.adapter?.disconnect();
   state.chain = chain; state.epoch++; state.adapter = null; state.wallet = null; state.market = null; state.next = null;
   $('chain').value = chain; $('connect').textContent = 'Connect wallet';
-  $('deployment').textContent = ready() ?
-    (state.config.transactionsEnabled ? state.config[chain].name + ' · wallet approval spends real funds.' : 'Reviewed address configured; transactions remain disabled.') :
-    state.config[chain].name + ' · no deployment configured. Token creation and trading are disabled.';
+  const configured = ready();
+  const writes = transactionConfigEnabled(state.config, chain);
+  $('deployment').textContent = configured ?
+    (writes ?
+      state.config[chain].name + ' · live configuration. Wallet approval spends real funds.' :
+      state.config[chain].name + ' · deployment configured; transactions remain disabled.') :
+    (chain === 'solana' ?
+      state.config[chain].name + ' · no deployment configured (coming soon / deployment pending). Token creation and trading are disabled.' :
+      state.config[chain].name + ' · no deployment configured (available after deployment). Token creation and trading are disabled.');
   $('markets').replaceChildren();
   const empty = document.createElement('p'); empty.className = 'empty';
   empty.textContent = ready() ? 'Press Refresh to read markets from the chain.' : 'No verified deployment configured. No market data is displayed.';
@@ -176,8 +188,16 @@ $('connect').addEventListener('click', () => action(async () => {
   $('connect').textContent = 'Disconnect ' + state.wallet.slice(0, 5) + '…' + state.wallet.slice(-4);
   status('Wallet connected: ' + state.wallet);
   if (state.chain === 'solana') {
-    diagnostic('Wallet connected. Checking Mainnet RPC; trading remains disabled.');
-    try { await state.adapter.verifyNetwork(); diagnostic('Wallet connected. Mainnet RPC verified. Trading remains disabled.'); }
+    const solanaWrites = transactionConfigEnabled(state.config, 'solana');
+    diagnostic(solanaWrites ?
+      'Wallet connected. Checking Mainnet RPC.' :
+      'Wallet connected. Checking Mainnet RPC; Solana transactions remain disabled.');
+    try {
+      await state.adapter.verifyNetwork();
+      diagnostic(solanaWrites ?
+        'Wallet connected. Mainnet RPC verified.' :
+        'Wallet connected. Mainnet RPC verified. Solana transactions remain disabled.');
+    }
     catch (error) { diagnostic('Wallet connected for account access only. Mainnet RPC NOT verified: ' + error.message + '. On-chain operations remain blocked until verification succeeds.'); }
   }
   if (state.market) await loadMarket(state.market.id);
@@ -286,8 +306,7 @@ diagnostic('Ready; no wallet request sent.');
 try {
   const response = await fetch('./config.json', { cache: 'no-store' });
   if (!response.ok) throw Error('Unable to load public network configuration');
-  state.config = await response.json();
-  if (state.config.schemaVersion !== 1 || state.config.feeBps !== 25 || state.config.base.chainId !== 8453 || typeof state.config.metadataUploads?.enabled !== 'boolean') throw Error('Unsupported configuration');
+  state.config = validatePublicConfig(await response.json());
   switchChain('solana'); await action(route);
   document.documentElement.dataset.walletAppReady = 'ready';
 } catch (error) { status(error.message); controls(); }
