@@ -1,6 +1,6 @@
 # Security boundaries and release gates
 
-This is an unaudited local implementation, not an approval to deploy.
+PumpLite remains unaudited. Base Mainnet is deployed and enabled for real transactions at `0xf722BeD94c4A41B2C71cDCDEB5EEA062352aEe44`; Solana Mainnet remains undeployed and transaction-locked.
 
 ## No privileged fund controls
 
@@ -9,7 +9,7 @@ market editing, reserve withdrawal, or donation-rescue function exists.
 The Solana loader's deployment authority is separate from program instructions:
 a future deployment must use an explicitly reviewed immutable deployment/finalization policy.
 Do not leave a retained upgrade authority able to replace the fund-handling program.
-No deployment or authority-change transaction has been prepared or submitted.
+The Base LaunchFactory has been deployed at `0xf722BeD94c4A41B2C71cDCDEB5EEA062352aEe44`. No Solana deployment or Solana authority-change transaction has been submitted.
 
 Never request, export, log, store, or commit wallet seed phrases or private keys.
 Public treasury addresses are intentionally present. Test signing material stays inside the ephemeral test VM.

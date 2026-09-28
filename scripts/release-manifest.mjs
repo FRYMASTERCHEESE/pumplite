@@ -12,7 +12,9 @@ const paths=solana?['target/deploy/pumplite.so','target/idl/pumplite.json','Carg
 const files=[];
 for(const path of paths){const bytes=await readFile(path);files.push({path,bytes:bytes.length,sha256:createHash('sha256').update(bytes).digest('hex')});}
 const config=JSON.parse(await readFile('config.json','utf8'));
-if(config.transactionsEnabled||config.solana.programId!==null||config.base.factory!==null)throw Error('This preparation stage must retain the deployment lock');
+if('transactionsEnabled' in config)throw Error('Legacy global transaction switch is not permitted');
+if(config.solana.programId!==null||config.solana.transactionsEnabled!==false)throw Error('Solana must remain deployment-locked');
+if(config.base.chainId!==8453||config.base.factory!=='0xf722BeD94c4A41B2C71cDCDEB5EEA062352aEe44'||config.base.transactionsEnabled!==true)throw Error('Base Mainnet release configuration mismatch');
 const source=await readFile('programs/pumplite/src/lib.rs','utf8');
 const manifest={schemaVersion:1,commit,dirty,profile:profile?'ubuntu-24.04-x86_64':process.platform+'-'+process.arch,canonical:canonical&&profile,programId:source.match(/declare_id!\("([^"]+)"\)/)[1],treasuries:{solana:config.solana.treasury,base:config.base.treasury},tools:{rust:'1.94.0',agave:'3.1.10',anchor:'1.0.2',platformTools:'1.52',solc:'0.8.30'},files};
 await writeFile('build/release-'+(solana?'solana':'base')+'.json',JSON.stringify(manifest,null,2)+'\n');

@@ -1,7 +1,7 @@
 # PumpLite — local implementation
 
 A lightweight fixed-supply token launchpad targeting **Solana Mainnet and Base Mainnet**.
-This checkout is **not deployed, audited, or enabled for real transactions**.
+**Base Mainnet is deployed and enabled for real transactions** through LaunchFactory `0xf722BeD94c4A41B2C71cDCDEB5EEA062352aEe44`. **Solana Mainnet remains undeployed and transaction-locked.** The Base deployment is still awaiting independent security/economic audit.
 No admin panel, owner withdrawals, mutable fees, proxies, or market-edit controls are provided.
 
 ## Run locally
@@ -18,7 +18,7 @@ pnpm preview
 
 Open http://127.0.0.1:4173. The preview binds only to loopback.
 The initial page makes no blockchain requests; libraries are loaded only when needed.
-Both deployment addresses are null and `transactionsEnabled` is false in `config.json`.
+Production configuration enables Base Mainnet at `0xf722BeD94c4A41B2C71cDCDEB5EEA062352aEe44` with `transactionsEnabled=true`. Solana remains locked with `programId=null` and `transactionsEnabled=false`.
 There are deliberately no deployment scripts. Do not enable writes merely because tests pass.
 
 Browser checks, with the preview running:
