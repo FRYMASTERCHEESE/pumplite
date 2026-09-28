@@ -73,6 +73,11 @@ export default {
       );
     }
 
+    // Version negotiation only; does not authorize an upload or contact upstream services.
+    if (url.pathname === '/metadata/capabilities' && request.method === 'GET') {
+      return jsonResponse({ version: 2, fields: ['links', 'banner'] }, 200, origin);
+    }
+
     if (url.pathname === '/metadata/image' || url.pathname === '/metadata/json') {
       return metadataRoute(request, env, url.pathname, corsHeaders(origin));
     }

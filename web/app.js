@@ -1,3 +1,6 @@
+import { metadataExtras, LINK_FIELDS } from './metadata-fields.js';
+import { tokenTrust } from './verification.js';
+import { loadReviewedRegistry, badges, verificationPanel } from './verification-ui.js';
 import { discoverEvm, solanaDiagnostics } from './wallets.js';
 import { mobileBrowseLink } from './mobile.js';
 import { metadataDocument } from './metadata.js';
@@ -9,7 +12,7 @@ if (window.top !== window.self) {
 }
 const $ = id => document.getElementById(id);
 $('skip-content').addEventListener('click', event => { event.preventDefault(); $('main-content').focus(); });
-const state = { config: null, chain: 'solana', adapter: null, wallet: null, market: null, quote: null, busy: false, epoch: 0, next: null };
+const state = { config: null, chain: 'base', adapter: null, wallet: null, market: null, quote: null, busy: false, epoch: 0, next: null, markets: [], registry: null };
 function status(message, href) {
   $('status-text').textContent = message;
   $('status-link').hidden = !href;
@@ -53,8 +56,9 @@ function controls() {
   $('create').disabled = !writable(); $('trade').disabled = !writable() || !state.quote;
   $('get-quote').disabled = !ready() || !state.market || state.busy;
   $('refresh').disabled = !ready() || state.busy; $('refresh-market').disabled = !ready() || state.busy;
-  $('more').disabled = state.busy;
-  for (const id of ['description','image-uri','name','symbol','uri','side','amount','slippage','market-address']) $(id).disabled = state.busy;
+  $('more').disabled = state.busy; $('verified-only').disabled = state.busy;
+  $('show-create').disabled=state.busy; $('show-explore').disabled=state.busy;
+  for (const id of ['description','image-uri','banner-uri','website','twitter','telegram','discord','name','symbol','uri','side','amount','slippage','market-address']) $(id).disabled = state.busy;
 }
 function invalidateQuote() {
   state.quote = null;
@@ -91,21 +95,33 @@ function row(m) {
   const title = document.createElement('b'); title.textContent = m.name + ' · ' + m.symbol;
   const detail = document.createElement('small');
   detail.textContent = formatUnits(m.nativeReserve, m.nativeDecimals) + ' ' + m.unit + ' reserve · ' + m.source;
-  link.append(title, detail); return link;
+  link.append(title, badges(state.chain,state.config?.[state.chain],m,state.registry), detail); return link;
+}
+async function refreshRegistry() {
+  state.registry=null;
+  try { state.registry=await loadReviewedRegistry(); $('verification-list-status').textContent='Verified is an owner identity/provenance review, not a safety or investment endorsement.'; }
+  catch { $('verification-list-status').textContent='Reviewed list unavailable. Verified badges are hidden; factory provenance is separate.'; }
+}
+function renderDiscovery() {
+  $('markets').replaceChildren();
+  const visible=state.markets.filter(m=>!$('verified-only').checked || tokenTrust(state.chain,state.config[state.chain],m,state.registry).verified);
+  for(const m of visible)$('markets').append(row(m));
+  if(!visible.length){const empty=document.createElement('p');empty.className='empty';empty.textContent=$('verified-only').checked?'No verified markets in the loaded results. Load more or refresh to check additional markets.':'No markets loaded. Refresh to read the chain.';$('markets').append(empty);}
 }
 async function discover(append = false) {
   requireDeployment();
+  if(!append)state.markets=[];
+  // Remove old labels before any fresh read; failures cannot leave a stale Verified badge.
+  state.registry=null; renderDiscovery();
   const result = await (await getAdapter()).list(append ? state.next : 0);
-  if (!append) $('markets').replaceChildren();
-  for (const market of result.markets) $('markets').append(row(market));
-  if (!result.markets.length && !append) {
-    const empty = document.createElement('p'); empty.className = 'empty'; empty.textContent = 'No markets found on chain.';
-    $('markets').append(empty);
-  }
+  await refreshRegistry();
+  state.markets=append?[...state.markets,...result.markets]:result.markets;
+  renderDiscovery();
   state.next = result.next; $('more').hidden = result.next === null;
-  status('Read ' + result.markets.length + ' markets from ' + state.config[state.chain].name + '. Refresh to update.');
+  status('Read ' + result.markets.length + ' markets from ' + state.config[state.chain].name + '. Filters apply to loaded results.');
 }
 function renderMarket(m) {
+  verificationPanel(state.chain,state.config[state.chain],m,state.registry);
   $('market-metadata').textContent = m.uri ? 'Creator metadata URI (not fetched or verified): ' + m.uri : 'No creator metadata URI supplied.';
   $('market-name').textContent = m.name; $('market-symbol').textContent = m.symbol + ' / ' + m.unit;
   $('market-source').textContent = m.source + ' · fetched ' + new Date(m.observedAt).toLocaleTimeString() + ' · refresh on demand';
@@ -124,8 +140,11 @@ function renderMarket(m) {
 async function loadMarket(id) {
   requireDeployment(); invalidateQuote();
   state.market = null;
+  $('market-badges').replaceChildren(); $('verification-details').replaceChildren();
+  $('verification-state').textContent='Checking live factory provenance and the owner review list…';
   $('balance').textContent = 'Connect a wallet to read balances.';
   const m = await (await getAdapter()).market(id);
+  await refreshRegistry();
   state.market = m; renderMarket(m);
   if (state.wallet) {
     const balances = await state.adapter.balances(m);
@@ -135,6 +154,8 @@ async function loadMarket(id) {
 }
 async function route() {
   state.market = null; invalidateQuote();
+  $('market-badges').replaceChildren(); $('verification-details').replaceChildren();
+  $('verification-state').textContent='Identity has not been checked.';
   const parts = location.hash.slice(1).split('/');
   if (parts[0] && !['solana','base'].includes(parts[0])) throw Error('Unknown network in market link');
   if (parts[0] && state.chain !== parts[0]) switchChain(parts[0]);
@@ -150,7 +171,9 @@ async function route() {
 }
 function switchChain(chain) {
   state.adapter?.disconnect();
-  state.chain = chain; state.epoch++; state.adapter = null; state.wallet = null; state.market = null; state.next = null;
+  state.chain = chain; state.epoch++; state.adapter = null; state.wallet = null; state.market = null; state.next = null; state.markets=[]; state.registry=null;
+  $('create-network').textContent=chain==='base'?'Base Mainnet · ETH pair':'Solana Mainnet · deployment pending';
+  $('create-pair').textContent=chain==='base'?'Base ETH':'Solana locked';
   $('chain').value = chain; $('connect').textContent = 'Connect wallet';
   const configured = ready();
   const writes = transactionConfigEnabled(state.config, chain);
@@ -203,13 +226,34 @@ $('connect').addEventListener('click', () => action(async () => {
   if (state.market) await loadMarket(state.market.id);
 }));
 $('download-metadata').addEventListener('click', () => action(async () => {
-  const text = metadataDocument($('name').value.trim(), $('symbol').value.trim(), $('description').value, $('image-uri').value.trim());
+  const text = metadataDocument($('name').value.trim(), $('symbol').value.trim(), $('description').value, $('image-uri').value.trim(), projectLinks(), $('banner-uri').value.trim());
   const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
   const link = document.createElement('a'); link.href = url; link.download = 'token-metadata.json'; link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
   status('Metadata JSON downloaded locally. Publish it to persistent storage before creating the token.');
 }));
-$('metadata-image').addEventListener('change', () => controls());
+let mediaSequence=0, publishedDraft=null;
+function projectLinks(){return Object.fromEntries(LINK_FIELDS.map(key=>[key,$(key).value.trim()]));}
+function draftIdentity(){return JSON.stringify([$ ('name').value,$('symbol').value,$('description').value,projectLinks(),$('banner-uri').value,$('metadata-image').files?.[0]?.name]);}
+function invalidatePublished(){if(publishedDraft && publishedDraft!==draftIdentity()){$('uri').value='';publishedDraft=null;status('Token details changed. Publish fresh metadata or enter a matching URI before creation.');}}
+for(const id of ['name','symbol','description','banner-uri',...LINK_FIELDS])$(id).addEventListener('input',invalidatePublished);
+$('uri').addEventListener('input',()=>{publishedDraft=null;});
+$('metadata-image').addEventListener('change', async () => {
+  const sequence=++mediaSequence; controls();
+  if(publishedDraft){$('uri').value='';publishedDraft=null;}
+  $('image-preview').hidden=true; $('image-preview').removeAttribute('src');
+  const file=$('metadata-image').files?.[0];
+  if(!file){$('media-status').textContent='No image selected.';return;}
+  $('media-status').textContent='Preparing a safe local preview…';
+  try {
+    const {normalizeImage}=await import('./metadata-auth-client.js');
+    const png=await normalizeImage(file);
+    const data=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=()=>reject(Error('Preview could not be read'));r.readAsDataURL(png);});
+    if(sequence!==mediaSequence)return;
+    $('image-preview').src=data; $('image-preview').hidden=false;
+    $('media-status').textContent='Local preview ready · '+Math.ceil(png.size/1024)+' KiB prepared PNG. Nothing uploaded.';
+  } catch(error){if(sequence===mediaSequence){$('media-status').textContent=error.message;$('metadata-image').value='';controls();}}
+});
 
 $('publish-metadata').addEventListener('click', () => action(async () => {
   if (state.config?.metadataUploads?.enabled !== true) throw Error('Metadata uploads are not enabled');
@@ -232,15 +276,21 @@ $('publish-metadata').addEventListener('click', () => action(async () => {
     name: $('name').value.trim(),
     symbol: $('symbol').value.trim(),
     description: $('description').value,
+    links: projectLinks(), banner: $('banner-uri').value.trim(),
     onProgress: message => status(message)
   });
 
   $('image-uri').value = result.image.uri;
   $('uri').value = result.metadata.uri;
+  publishedDraft=draftIdentity();
 
   status('Metadata published to IPFS. Metadata URI is ready.');
   controls();
 }));
+
+$('show-create').addEventListener('click',()=>{$('create-section').scrollIntoView({block:'start'});$('name').focus();});
+$('show-explore').addEventListener('click',()=>{$('explore-section').scrollIntoView({block:'start'});$('explore-section').focus();});
+$('verified-only').addEventListener('change',()=>action(async()=>{state.registry=null;renderDiscovery();await refreshRegistry();renderDiscovery();}));
 
 $('refresh').addEventListener('click', () => action(() => discover()));
 $('more').addEventListener('click', () => action(() => discover(true)));
@@ -250,6 +300,8 @@ $('create-form').addEventListener('submit', e => { e.preventDefault(); action(as
   requireWrite();
   const data = { name: $('name').value.trim(), symbol: $('symbol').value.trim(), uri: $('uri').value.trim() };
   validateMetadata(data.name, data.symbol, data.uri);
+  const extras=metadataExtras(projectLinks(),$('banner-uri').value.trim());
+  if(!data.uri && ($('description').value || $('metadata-image').files?.length || Object.keys(extras).length || $('image-uri').value)) throw Error('Publish or pin your metadata first and enter its URI. Token details must not be silently omitted.');
   const id = await (await getAdapter()).create(data);
   location.hash = state.chain + '/' + encodeURIComponent(id);
 }); });
@@ -307,6 +359,6 @@ try {
   const response = await fetch('./config.json', { cache: 'no-store' });
   if (!response.ok) throw Error('Unable to load public network configuration');
   state.config = validatePublicConfig(await response.json());
-  switchChain('solana'); await action(route);
+  switchChain('base'); await action(route);
   document.documentElement.dataset.walletAppReady = 'ready';
 } catch (error) { status(error.message); controls(); }

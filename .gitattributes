@@ -3,3 +3,4 @@ assets/** text eol=lf
 web/styles.css text eol=lf
 
 web/phantom-diagnostic.js text eol=lf
+web/verified-tokens.json text eol=lf

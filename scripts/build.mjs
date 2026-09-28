@@ -1,3 +1,4 @@
+import { validateRegistry } from '../web/verification.js';
 import { build } from 'esbuild';
 import { mkdir, copyFile, readFile, writeFile, rm, lstat, readdir, cp, access } from 'node:fs/promises';
 import { resolve, dirname, relative, sep } from 'node:path';
@@ -39,6 +40,9 @@ for (const output of Object.values(result.metafile.outputs)) {
 const files = new Map(result.outputFiles.map(file => [file.path, file.contents]));
 files.set(resolve(assets, 'phantom-diagnostic.js'), await readFile('web/phantom-diagnostic.js'));
 files.set(resolve(assets, 'styles.css'), await readFile('web/styles.css'));
+const registry=await readFile('web/verified-tokens.json');
+validateRegistry(JSON.parse(registry));
+files.set(resolve(assets,'verified-tokens.json'),registry);
 const initialPaths = new Set();
 function visit(path) {
   if (initialPaths.has(path)) return;

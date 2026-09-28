@@ -63,11 +63,13 @@ export function adapter(config, notify, changed = () => {}) {
     const token = new Contract(tokenAddress, abis.LaunchToken, provider);
     const [name, symbol] = await Promise.all([token.name({ blockTag }), token.symbol({ blockTag })]);
     return { id: getAddress(id), token: tokenAddress, creator, name, symbol, uri, nativeReserve, tokenReserve, volume,
+      provenance: { registered: true, chainId: 8453, factory: getAddress(config.factory), market: getAddress(id), block: blockTag },
       decimals: 18, nativeDecimals: 18, unit: 'ETH', virtualNative: 10n ** 18n, supply: BASE_SUPPLY,
       source: 'Base block ' + blockTag, observedAt: Date.now() };
   }
   return {
     disconnect,
+    close() { disconnect(); provider.destroy(); },
     async connect(candidate) {
       disconnect();
       if (!candidate) {

@@ -1,3 +1,4 @@
+import { metadataExtras } from '../../web/metadata-fields.js';
 const IMAGE_LIMIT = 512 * 1024;
 const JSON_LIMIT = 4096;
 const PINATA = 'https://uploads.pinata.cloud/v3/files';
@@ -72,12 +73,15 @@ export async function validatePng(bytes, controller = new AbortController()) {
   throw new Invalid('Invalid PNG');
 }
 export function metadataBytes(value) {
-  if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).some(k=>!['name','symbol','description','imageCid'].includes(k))) throw new Invalid('Invalid metadata fields');
+  if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).some(k=>!['name','symbol','description','imageCid','links','banner'].includes(k))) throw new Invalid('Invalid metadata fields');
   for (const [key,max] of [['name',32],['symbol',10],['description',2000]]) {
     if(typeof value[key] !== 'string' || encoder.encode(value[key]).length>max || /[\u0000-\u001f\u007f]/.test(value[key])) throw new Invalid('Invalid metadata fields');
   }
   if (!value.name.trim() || !/^[A-Z0-9]{1,10}$/.test(value.symbol) || !validCid(value.imageCid)) throw new Invalid('Invalid metadata fields');
-  return encoder.encode(JSON.stringify({ name:value.name, symbol:value.symbol, description:value.description, image:'ipfs://'+value.imageCid }));
+  let extras; try { extras=metadataExtras(value.links,value.banner); } catch { throw new Invalid('Invalid social links or banner URI'); }
+  const bytes=encoder.encode(JSON.stringify({ name:value.name, symbol:value.symbol, description:value.description, image:'ipfs://'+value.imageCid, ...extras }));
+  if(bytes.length>JSON_LIMIT) throw new Invalid('Metadata too large',413);
+  return bytes;
 }
 function abortable(promise, signal) {
   if(signal.aborted) return Promise.reject(Error('timeout'));
