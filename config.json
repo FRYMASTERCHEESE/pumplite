@@ -23,6 +23,6 @@
     "explorer": "https://basescan.org"
   },
   "metadataUploads": {
-    "enabled": false
+    "enabled": true
   }
 }
