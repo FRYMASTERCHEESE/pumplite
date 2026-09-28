@@ -1065,3 +1065,140 @@ test('V2 factory rejects invalid token metadata', async () => {
         )
     );
 });
+
+test('V2 cannot sell more tokens than are actually outstanding', async () => {
+    const { market } = await createMarket({
+        initialSupply: TEN_BILLION,
+        maxSupply: TEN_BILLION,
+        mintable: false,
+        initialMayhem: false
+    });
+
+    await assert.rejects(async () =>
+        market.quoteSell(ONE_BILLION)
+    );
+});
+
+test('V2 quoteBuy rejects zero ETH input', async () => {
+    const { market } = await createMarket();
+
+    await assert.rejects(async () =>
+        market.quoteBuy(0n)
+    );
+});
+
+test('V2 quoteSell rejects zero token input', async () => {
+    const { market } = await createMarket();
+
+    await assert.rejects(async () =>
+        market.quoteSell(0n)
+    );
+});
+
+test('Mayhem sell keeps its support fee inside the market reserve', async () => {
+    const { market, token } = await createMarket({
+        initialSupply: TEN_BILLION,
+        maxSupply: TEN_BILLION,
+        mintable: false,
+        initialMayhem: true
+    });
+
+    const buyInput = parseEther('1');
+
+    const [boughtTokens] =
+        await market.quoteBuy(buyInput);
+
+    await transact(
+        market.connect(trader).buy(
+            boughtTokens,
+            await deadline(),
+            { value: buyInput }
+        )
+    );
+
+    const sellAmount =
+        boughtTokens / 2n;
+
+    await transact(
+        token.connect(trader).approve(
+            await market.getAddress(),
+            sellAmount
+        )
+    );
+
+    const reserveBefore =
+        await market.nativeReserve();
+
+    const supportBefore =
+        await market.totalMarketSupport();
+
+    const [
+        expectedOutput,
+        platformFee,
+        mayhemSupport
+    ] = await market.quoteSell(sellAmount);
+
+    assert.ok(mayhemSupport > 0n);
+
+    await transact(
+        market.connect(trader).sell(
+            sellAmount,
+            expectedOutput,
+            await deadline()
+        )
+    );
+
+    assert.equal(
+        await market.nativeReserve(),
+        reserveBefore - expectedOutput - platformFee
+    );
+
+    assert.equal(
+        await market.totalMarketSupport(),
+        supportBefore + mayhemSupport
+    );
+
+    assert.equal(
+        await nativeBalance(await market.getAddress()),
+        await market.nativeReserve()
+    );
+});
+
+test('Market support increases backing without minting any tokens', async () => {
+    const { market, token } = await createMarket({
+        initialSupply: TEN_BILLION,
+        maxSupply: TEN_BILLION,
+        mintable: false,
+        initialMayhem: false
+    });
+
+    const supplyBefore =
+        await token.totalSupply();
+
+    const tokenReserveBefore =
+        await market.tokenReserve();
+
+    const support =
+        parseEther('2');
+
+    await transact(
+        market.connect(pumpLite).supportMarket({
+            value: support
+        })
+    );
+
+    assert.equal(
+        await token.totalSupply(),
+        supplyBefore
+    );
+
+    assert.equal(
+        await market.tokenReserve(),
+        tokenReserveBefore
+    );
+
+    assert.equal(
+        await market.nativeReserve(),
+        support
+    );
+});
