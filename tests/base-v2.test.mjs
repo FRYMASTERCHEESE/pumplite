@@ -945,3 +945,123 @@ test('V2 sell rejects when minimum ETH output is above the real quote', async ()
         )
     );
 });
+
+test('Creator cannot directly mint V2 tokens outside the market', async () => {
+    const { token } = await createMarket({
+        initialSupply: TEN_BILLION,
+        maxSupply: ONE_TRILLION,
+        mintable: true
+    });
+
+    await assert.rejects(async () =>
+        token.connect(creator).mintToMarket(
+            ONE_BILLION
+        )
+    );
+
+    await assert.rejects(async () =>
+        token.connect(trader).mintToMarket(
+            ONE_BILLION
+        )
+    );
+});
+
+test('Nobody except the market can directly burn market inventory', async () => {
+    const { token } = await createMarket();
+
+    await assert.rejects(async () =>
+        token.connect(creator).burnFromMarket(
+            ONE_BILLION
+        )
+    );
+
+    await assert.rejects(async () =>
+        token.connect(trader).burnFromMarket(
+            ONE_BILLION
+        )
+    );
+});
+
+test('V2 rejects zero-value buys and buy-and-burn calls', async () => {
+    const { market } = await createMarket();
+
+    await assert.rejects(async () =>
+        market.connect(trader).buy(
+            1n,
+            await deadline(),
+            { value: 0n }
+        )
+    );
+
+    await assert.rejects(async () =>
+        market.connect(trader).buyAndBurn(
+            1n,
+            await deadline(),
+            { value: 0n }
+        )
+    );
+});
+
+test('V2 rejects zero-value market support', async () => {
+    const { market } = await createMarket();
+
+    await assert.rejects(async () =>
+        market.connect(pumpLite).supportMarket({
+            value: 0n
+        })
+    );
+});
+
+test('V2 rejects zero inventory minting', async () => {
+    const { market } = await createMarket({
+        initialSupply: TEN_BILLION,
+        maxSupply: ONE_TRILLION,
+        mintable: true
+    });
+
+    await assert.rejects(async () =>
+        market.connect(creator).mintInventory(0n)
+    );
+});
+
+test('V2 factory rejects invalid token metadata', async () => {
+    const badSymbol = {
+        name: 'Bad Symbol',
+        symbol: 'bad',
+        uri: '',
+        initialSupply: TEN_BILLION,
+        maxSupply: TEN_BILLION,
+        mintable: false,
+        initialMayhem: false
+    };
+
+    await assert.rejects(async () =>
+        factory.connect(creator).createMarketV2(
+            badSymbol
+        )
+    );
+
+    const badUri = {
+        ...badSymbol,
+        symbol: 'GOOD',
+        uri: 'http://not-secure.example'
+    };
+
+    await assert.rejects(async () =>
+        factory.connect(creator).createMarketV2(
+            badUri
+        )
+    );
+
+    const blankName = {
+        ...badSymbol,
+        name: '   ',
+        symbol: 'GOOD'
+    };
+
+    await assert.rejects(async () =>
+        factory.connect(creator).createMarketV2(
+            blankName
+        )
+    );
+});
