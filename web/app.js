@@ -37,6 +37,14 @@ function controls() {
   $('wallet-choice-label').hidden = state.chain !== 'base';
   $('wallet-choice').disabled = state.busy || Boolean(state.wallet);
   $('download-metadata').disabled = state.busy;
+  const metadataEnabled = state.config?.metadataUploads?.enabled === true;
+  $('metadata-image').disabled = state.busy || !metadataEnabled;
+  $('publish-metadata').disabled = state.busy || !metadataEnabled || !state.wallet || !$('metadata-image').files?.length;
+  $('metadata-upload-help').textContent =
+    !metadataEnabled ? 'Metadata publishing is currently disabled.' :
+    !state.wallet ? 'Connect a wallet to authorize IPFS publishing. No private key is requested.' :
+    !$('metadata-image').files?.length ? 'Choose a PNG, JPEG or WebP token image.' :
+    'Ready to publish. Authorization signatures do not spend SOL or ETH.';
   $('chain').disabled = state.busy; $('connect').disabled = state.busy;
   $('create').disabled = !writable(); $('trade').disabled = !writable() || !state.quote;
   $('get-quote').disabled = !ready() || !state.market || state.busy;
@@ -181,6 +189,39 @@ $('download-metadata').addEventListener('click', () => action(async () => {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
   status('Metadata JSON downloaded locally. Publish it to persistent storage before creating the token.');
 }));
+$('metadata-image').addEventListener('change', () => controls());
+
+$('publish-metadata').addEventListener('click', () => action(async () => {
+  if (state.config?.metadataUploads?.enabled !== true) throw Error('Metadata uploads are not enabled');
+  if (!state.wallet) throw Error('Connect a wallet first');
+
+  const image = $('metadata-image').files?.[0];
+  if (!image) throw Error('Choose a token image first');
+
+  const adapter = await getAdapter();
+  if (typeof adapter.signMetadataMessage !== 'function') throw Error('Connected wallet does not support metadata authorization');
+
+  const { uploadTokenMetadata } = await import('./metadata-auth-client.js');
+
+  const result = await uploadTokenMetadata({
+    enabled: true,
+    chain: state.chain,
+    subject: state.wallet,
+    signMessage: message => adapter.signMetadataMessage(message),
+    image,
+    name: $('name').value.trim(),
+    symbol: $('symbol').value.trim(),
+    description: $('description').value,
+    onProgress: message => status(message)
+  });
+
+  $('image-uri').value = result.image.uri;
+  $('uri').value = result.metadata.uri;
+
+  status('Metadata published to IPFS. Metadata URI is ready.');
+  controls();
+}));
+
 $('refresh').addEventListener('click', () => action(() => discover()));
 $('more').addEventListener('click', () => action(() => discover(true)));
 $('refresh-market').addEventListener('click', () => action(() => loadMarket(state.market?.id || decodeURIComponent(location.hash.split('/')[1]))));
@@ -246,7 +287,7 @@ try {
   const response = await fetch('./config.json', { cache: 'no-store' });
   if (!response.ok) throw Error('Unable to load public network configuration');
   state.config = await response.json();
-  if (state.config.schemaVersion !== 1 || state.config.feeBps !== 25 || state.config.base.chainId !== 8453) throw Error('Unsupported configuration');
+  if (state.config.schemaVersion !== 1 || state.config.feeBps !== 25 || state.config.base.chainId !== 8453 || typeof state.config.metadataUploads?.enabled !== 'boolean') throw Error('Unsupported configuration');
   switchChain('solana'); await action(route);
   document.documentElement.dataset.walletAppReady = 'ready';
 } catch (error) { status(error.message); controls(); }

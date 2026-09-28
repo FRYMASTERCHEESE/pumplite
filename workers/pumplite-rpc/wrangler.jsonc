@@ -11,7 +11,7 @@
     }
   ],
   "vars": {
-    "METADATA_UPLOADS_ENABLED": "false",
-    "METADATA_AUTH_ENABLED": "false"
+    "METADATA_UPLOADS_ENABLED": "true",
+    "METADATA_AUTH_ENABLED": "true"
   }
 }

@@ -56,6 +56,9 @@
           <details><summary>Prepare metadata JSON locally</summary>
           <label for="description">Description</label><textarea id="description" maxlength="2000" rows="3"></textarea>
           <label for="image-uri">Image URI (optional)</label><input id="image-uri" placeholder="ipfs://… or https://…" maxlength="500">
+          <label for="metadata-image">Token image</label><input id="metadata-image" type="file" accept="image/png,image/jpeg,image/webp">
+          <button id="publish-metadata" type="button" class="outline full" disabled>Publish image + metadata to IPFS</button>
+          <p id="metadata-upload-help" class="fine">Connect a wallet and choose an image. Authorization signatures do not spend SOL or ETH.</p>
           <button id="download-metadata" type="button" class="outline full">Download metadata JSON</button>
           <p class="fine">No upload, image fetch or wallet access. Pin the downloaded document, then put its public URI above.</p></details>
           <button id="create" class="primary" type="submit" disabled>Create token</button>

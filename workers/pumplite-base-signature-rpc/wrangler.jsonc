@@ -5,5 +5,5 @@
   "workers_dev": false,
   "preview_urls": false,
   "routes": [],
-  "vars": { "ALLOW_PUBLIC_BASE_RPC": "false" }
+  "vars": { "ALLOW_PUBLIC_BASE_RPC": "true" }
 }

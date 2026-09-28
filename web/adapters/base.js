@@ -101,6 +101,25 @@ export function adapter(config, notify, changed = () => {}) {
         return connectedAddress;
       } catch (error) { if (attempt === revision) disconnect(); throw error; }
     },
+    async signMetadataMessage(message) {
+      if (typeof message !== 'string' || new TextEncoder().encode(message).length > 2048) throw Error('Metadata authorization message is invalid');
+
+      const active = await wallet();
+      const attempt = revision;
+
+      notify('Review the metadata authorization message. This signature does not spend ETH.');
+
+      const signature = await active.signMessage(message);
+
+      if (attempt !== revision || !signer) throw Error('Wallet changed while signing; reconnect');
+
+      if (typeof signature !== 'string' || !/^0x(?:[0-9a-fA-F]{2})+$/.test(signature) || signature.length > 1026) {
+        throw Error('Wallet returned an invalid Base signature');
+      }
+
+      return signature;
+    },
+
     async list(offset = 0) {
       await network();
       const count = Number(await factory().marketCount());

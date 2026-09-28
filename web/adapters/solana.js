@@ -136,6 +136,31 @@ export function adapter(config, notify, changed = () => {}) {
         return connected.toBase58();
       } catch (error) { if (attempt === revision) disconnect(); throw Error('Solana connection failed' + (error.code !== undefined ? ' (code ' + String(error.code).slice(0, 20) + ')' : '') + ': ' + (error.message || 'Unknown provider error')); }
     },
+    async signMetadataMessage(message) {
+      if (typeof message !== 'string' || enc.encode(message).length > 2048) throw Error('Metadata authorization message is invalid');
+
+      const owner = await wallet();
+      const attempt = revision;
+
+      if (typeof selected?.signMessage !== 'function') throw Error('This Solana wallet does not support message signing');
+
+      notify('Review the metadata authorization message. This signature does not spend SOL.');
+
+      const result = await selected.signMessage(enc.encode(message), 'utf8');
+
+      if (attempt !== revision || !selected?.publicKey?.equals(owner)) throw Error('Wallet changed while signing; reconnect');
+
+      if (result?.publicKey && typeof result.publicKey.equals === 'function' && !result.publicKey.equals(owner)) {
+        throw Error('Wallet signed with a different account');
+      }
+
+      const signature = Buffer.from(result?.signature || []);
+
+      if (signature.length !== 64) throw Error('Wallet returned an invalid Solana signature');
+
+      return signature.toString('base64');
+    },
+
     async list(offset = 0) {
       await network();
       if (!Number.isSafeInteger(offset) || offset < 0 || offset % 8) throw Error('Invalid discovery page');

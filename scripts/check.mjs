@@ -12,7 +12,8 @@ for (const path of [...await files('web'), ...await files('scripts'), ...await f
 }
 const config = JSON.parse(await readFile('config.json', 'utf8'));
 assertSolanaMainnet(config.solana.genesisHash);
-assert.equal(config.transactionsEnabled, false, 'This local stage must remain write-disabled');
+assert.equal(config.transactionsEnabled, false, 'Token creation and trading must remain disabled');
+assert.equal(config.metadataUploads?.enabled, true, 'Metadata publishing must remain enabled');
 assert.equal(config.solana.programId, null);
 assert.equal(config.solana.discoveryUrl, null);
 assert.equal(config.base.factory, null);
