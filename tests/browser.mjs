@@ -16,7 +16,8 @@ try {
     const response = await page.goto(preview, { waitUntil: 'networkidle' });
     assert.equal(response.headers()['x-frame-options'], 'DENY');
     assert.match(response.headers()['content-security-policy'], /frame-ancestors 'none'/);
-    await page.waitForFunction(() => document.querySelector('#deployment').textContent.includes('Solana Mainnet'));
+    await page.waitForFunction(() => document.querySelector('#deployment').textContent.includes('Base Mainnet'));
+    await page.selectOption('#chain','solana');
     assert.equal(await page.locator('#create').isDisabled(), true);
     assert.equal(await page.locator('#refresh').isDisabled(), true);
     assert.equal(await page.locator('body').evaluate(el => el.scrollWidth <= innerWidth), true);

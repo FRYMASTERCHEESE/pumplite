@@ -15,7 +15,7 @@
 <body>
 <a class="skip-link" id="skip-content" href="#main-content">Skip to main content</a>
 <header>
-  <a class="brand" href="#" aria-label="PumpLite home"><span class="mark" aria-hidden="true">↗</span> PumpLite<span class="beta">LOCAL BUILD</span></a>
+  <a class="brand" href="#" aria-label="PumpLite home"><span class="mark" aria-hidden="true">↗</span> PumpLite<span class="beta">BASE MAINNET</span></a>
   <div class="header-controls">
     <label class="sr-only" for="chain">Network</label>
     <select id="chain"><option value="solana">Solana Mainnet</option><option value="base">Base Mainnet</option></select>
@@ -32,45 +32,73 @@
   <div class="notice" id="deployment" role="status">Local implementation. No contracts configured. Trading is disabled.</div>
   <p class="fine" id="mobile-help"><a id="mobile-coinbase" rel="noopener noreferrer" hidden>Open in Coinbase Wallet</a> <a id="mobile-open" rel="noopener noreferrer" hidden>Open in wallet browser</a> Mobile: choose a wallet browser above, then tap Connect wallet there. If handoff fails, open this site from the wallet’s browser. Disconnect clears this site’s session; revoke permissions in your wallet to remove access. Opening this page does not connect or sign.</p>
   <section id="home">
+    <nav class="page-nav" aria-label="Page sections"><button type="button" id="show-create" class="outline">Create a token</button><button type="button" id="show-explore" class="outline">Explore markets</button></nav>
     <div class="hero">
-      <div><p class="eyebrow">SMALL FOOTPRINT. ON-CHAIN MARKETS.</p><h1>A simple start.<br>A transparent market.</h1>
+      <div><p class="eyebrow">YOUR IDEA. YOUR COMMUNITY.</p><h1>Make your idea<br>an on-chain token.</h1>
       <p class="intro">Launch a fixed-supply token. Trade against a public bonding curve. Keep control of your wallet.</p></div>
       <div class="principles"><span><i>01</i><b>Fixed supply</b><small>No future minting</small></span><span><i>02</i><b>0.25% platform fee</b><small>Rounded down per trade</small></span><span><i>03</i><b>Wallet-signed</b><small>No custodial account</small></span></div>
     </div>
     <div class="workspace">
-      <section class="panel discovery">
+      <section class="panel discovery" id="explore-section" tabindex="-1">
         <div class="section-title"><div><p class="eyebrow">EXPLORE</p><h2>Token markets</h2></div><button id="refresh" class="outline">Refresh</button></div>
-        <p class="muted">Fetched on request. No background polling or invented activity.</p>
+        <p class="muted">Real factory markets, fetched on request. No invented activity.</p>
+        <label class="filter"><input type="checkbox" id="verified-only"> Verified only</label><p id="verification-list-status" class="fine" role="status">Owner-reviewed identity labels are separate from factory provenance.</p>
         <form id="open-form" class="search"><label class="sr-only" for="market-address">Market address</label><input id="market-address" placeholder="Open a market address" required autocomplete="off"><button type="submit" class="outline">Open</button></form>
         <div id="markets" class="market-list"><p class="empty">No verified deployment configured.<br>Markets will appear here after deployment is reviewed.</p></div>
         <button id="more" class="outline" hidden>Load more</button>
       </section>
-      <section class="panel launch">
-        <p class="eyebrow">CREATE</p><h2>Start a token</h2>
-        <p class="muted">1 billion tokens. No creator allocation. All supply starts in the market vault.</p>
+      <section class="panel launch" id="create-section" tabindex="-1">
+        <p class="eyebrow">CREATE ON PUMPLITE</p><h2>Create your token</h2>
+        <p id="create-network" class="network-pill">Base Mainnet · ETH pair</p>
+        <div class="launch-facts"><span><b>1 billion</b>Fixed supply</span><span><b>0.25%</b>Trading fee</span><span><b id="create-pair">Base ETH</b>Bonding curve pair</span></div>
+        <p class="fine">No creator allocation. All supply starts in the market vault. No future minting.</p>
         <form id="create-form">
-          <label for="name">Token name</label><input id="name" placeholder="Your token name" required maxlength="32" autocomplete="off">
-          <label for="symbol">Symbol</label><input id="symbol" placeholder="TOKEN" required maxlength="10" pattern="[A-Z0-9]{1,10}" autocomplete="off">
-          <label for="uri">Metadata URI <span class="muted">optional</span></label><input id="uri" placeholder="https://… or ipfs://…" maxlength="200" autocomplete="off">
-          <p class="fine">Solana metadata is immutable. Publish your JSON and image to persistent storage before creation; IPFS pinning is recommended. Network, account-creation and metadata-program costs apply.</p>
-          <details><summary>Prepare metadata JSON locally</summary>
-          <label for="description">Description</label><textarea id="description" maxlength="2000" rows="3"></textarea>
-          <label for="image-uri">Image URI (optional)</label><input id="image-uri" placeholder="ipfs://… or https://…" maxlength="500">
-          <label for="metadata-image">Token image</label><input id="metadata-image" type="file" accept="image/png,image/jpeg,image/webp">
+          <fieldset><legend><span>01</span> Give it an identity</legend>
+          <label for="name">Coin name</label><input id="name" placeholder="A name for your idea" required maxlength="32" autocomplete="off">
+          <label for="symbol">Ticker</label><input id="symbol" placeholder="TOKEN" required maxlength="10" pattern="[A-Z0-9]{1,10}" autocomplete="off" autocapitalize="characters">
+          <label for="description">Description</label><textarea id="description" placeholder="What is this project about?" maxlength="2000" rows="4"></textarea>
+          </fieldset>
+          <fieldset><legend><span>02</span> Make it recognizable</legend>
+          <div class="media-picker"><img id="image-preview" alt="Your selected token image" width="96" height="96" hidden><div><label for="metadata-image">Token image</label><input id="metadata-image" type="file" accept="image/png,image/jpeg,image/webp"><p class="fine">PNG, JPEG or WebP, up to 12 MB. Prepared locally as a plain PNG, up to 1024px and 512 KiB.</p></div></div>
+          <p id="media-status" class="fine" role="status">Choose your own image. Nothing uploads until you approve publishing.</p>
+          <label for="banner-uri">Banner URI <span class="muted">optional</span></label><input id="banner-uri" placeholder="ipfs://… or https://…" maxlength="500" autocomplete="off">
+          <p class="fine">Use a banner already pinned to persistent storage. Banner file uploads are not part of the current service. Remote media is not fetched automatically.</p>
+          </fieldset>
+          <fieldset><legend><span>03</span> Help people find you</legend>
+          <p class="fine">Optional public project links. Adding links does not grant verification.</p>
+          <label for="website">Website</label><input id="website" type="url" placeholder="https://your-project.com" maxlength="256" autocomplete="off">
+          <label for="twitter">X / Twitter</label><input id="twitter" type="url" placeholder="https://x.com/yourproject" maxlength="256" autocomplete="off">
+          <label for="telegram">Telegram</label><input id="telegram" type="url" placeholder="https://t.me/yourproject" maxlength="256" autocomplete="off">
+          <label for="discord">Discord</label><input id="discord" type="url" placeholder="https://discord.gg/yourproject" maxlength="256" autocomplete="off">
+          </fieldset>
+          <fieldset><legend><span>04</span> Publish, review, create</legend>
           <button id="publish-metadata" type="button" class="outline full" disabled>Publish image + metadata to IPFS</button>
-          <p id="metadata-upload-help" class="fine">Connect a wallet and choose an image. Authorization signatures do not spend SOL or ETH.</p>
+          <p id="metadata-upload-help" class="fine">Wallet-authorized publishing is separate from the paid creation transaction.</p>
+          <details id="advanced-metadata"><summary>Metadata URI and local JSON download</summary>
+          <label for="uri">Published metadata URI</label><input id="uri" placeholder="https://… or ipfs://…" maxlength="200" autocomplete="off">
+          <label for="image-uri">Published image URI</label><input id="image-uri" placeholder="ipfs://… or https://…" maxlength="500">
           <button id="download-metadata" type="button" class="outline full">Download metadata JSON</button>
-          <p class="fine">No upload, image fetch or wallet access. Pin the downloaded document, then put its public URI above.</p></details>
-          <button id="create" class="primary" type="submit" disabled>Create token</button>
+          <p class="fine">Download includes your links and banner. Pin the JSON yourself if extended publishing is unavailable, then enter its URI. Downloading does not publish or create a token.</p></details>
+          <p id="creation-review" class="fine">Check the name, ticker and metadata before opening your wallet. Metadata is immutable after creation. Your wallet shows gas and the final fee; you can reject.</p>
+          <button id="create" class="primary" type="submit" disabled>Review creation in wallet</button>
+          <p class="fine">Creation does not grant Verified status. No audit or investment endorsement is implied.</p>
+          </fieldset>
         </form>
+
       </section>
     </div>
   </section>
   <section id="market-page" hidden>
     <a id="back" class="back" href="#">← All markets</a>
     <div class="section-title market-heading"><div><p class="eyebrow" id="market-symbol">TOKEN MARKET</p><h1 id="market-name">Loading market…</h1></div><button id="refresh-market" class="outline">Refresh market</button></div>
+    <div id="market-badges" class="badges"></div>
     <p id="market-source" class="muted"></p>
       <p id="market-metadata" class="fine"></p>
+    <section id="verification-panel" class="panel verification-panel" aria-labelledby="verification-title">
+      <h2 id="verification-title">Token verification</h2><p id="verification-state">Identity has not been checked.</p>
+      <dl id="verification-details" class="identity-details"></dl>
+      <p class="fine">Verified means PumpLite reviewed the token’s identity/provenance. It is not an endorsement, safety guarantee, price promise, or investment recommendation. It is not a security audit.</p>
+    </section>
     <div class="workspace">
       <section class="panel">
         <p class="eyebrow">ON-CHAIN RESERVES</p>

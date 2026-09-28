@@ -1,3 +1,5 @@
+import { metadataExtras } from './metadata-fields.js';
+import { boundedFetch } from './rpc-fetch.js';
 import { uploadMetadataPart } from './metadata-upload.js';
 
 const BASE = 'https://pumplite-rpc.coreyedge123.workers.dev';
@@ -435,7 +437,7 @@ async function encodePlainPng(
   );
 }
 
-async function normalizeImage(file) {
+export async function normalizeImage(file) {
   if (
     !(file instanceof Blob) ||
     ![
@@ -569,6 +571,8 @@ export async function uploadTokenMetadata({
   name,
   symbol,
   description = '',
+  links = {},
+  banner = '',
   onProgress = () => {}
 }) {
   if (enabled !== true) {
@@ -592,6 +596,10 @@ export async function uploadTokenMetadata({
     symbol,
     description
   );
+
+  const extras=metadataExtras(links,banner);
+  if(Object.keys(extras).length) await requireExtendedMetadata();
+  if(encoder.encode(JSON.stringify({name,symbol,description,image:'ipfs://'+'b'.repeat(59),...extras})).length>4096) throw Error('Metadata is too large; shorten description or links');
 
   onProgress(
     'Preparing token image safely…'
@@ -636,7 +644,8 @@ export async function uploadTokenMetadata({
     symbol,
     description,
     image:
-      'ipfs://' + uploadedImage.cid
+      'ipfs://' + uploadedImage.cid,
+    ...extras
   };
 
   const metadataBytes =
@@ -673,7 +682,8 @@ export async function uploadTokenMetadata({
         name,
         symbol,
         description,
-        imageCid: uploadedImage.cid
+        imageCid: uploadedImage.cid,
+        ...(Object.keys(extras).length ? { links, banner } : {})
       },
       'Bearer ' + metadataGrant
     );
@@ -682,4 +692,14 @@ export async function uploadTokenMetadata({
     image: uploadedImage,
     metadata: uploadedMetadata
   };
+}
+
+export async function requireExtendedMetadata() {
+  try {
+    const response=await boundedFetch(BASE+'/metadata/capabilities',{cache:'no-store'},{timeout:8000,maxBytes:1024});
+    const value=await response.json();
+    if(value.version!==2 || !Array.isArray(value.fields) || !['links','banner'].every(k=>value.fields.includes(k))) throw Error('Unsupported version');
+  } catch {
+    throw Error('Social/banner publishing is not available on the upload service yet. Download the complete metadata JSON and pin it yourself, then enter its URI. No authorization was requested.');
+  }
 }

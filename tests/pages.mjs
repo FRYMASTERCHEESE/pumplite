@@ -1,3 +1,4 @@
+import { verifyBrowser } from './verified-browser.mjs';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { once } from 'node:events';
@@ -35,6 +36,7 @@ try {
   const chunks = (await readdir('assets/chunks')).filter(name => /^(solana|base)-.*\.js$/.test(name));
   assert.equal(chunks.length, 2, 'Both chain bundles must exist');
   browser = await chromium.launch({ headless: true, ...(process.env.BROWSER_EXECUTABLE ? { executablePath: process.env.BROWSER_EXECUTABLE } : {}) });
+  await verifyBrowser(browser,base);
   const broken = await browser.newPage({ viewport: { width: 390, height: 844 } });
   await broken.route('**/assets/app.js', route => route.abort());
   await broken.goto(base);
@@ -54,7 +56,7 @@ try {
     assert.equal(request.method, 'getGenesisHash');
     await route.fulfill({ json: { jsonrpc: '2.0', id: request.id, result: '5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d' } });
   });
-  await phantom.goto(base);
+  await phantom.goto(base+'#solana');
   await phantom.waitForFunction(() => document.documentElement.dataset.walletAppReady === 'ready');
   await phantom.locator('#connect').click();
   await phantom.waitForFunction(() => document.querySelector('#connect').textContent === 'Approve in Phantom');
@@ -86,7 +88,7 @@ try {
     page.on('request', req => requests.push(req.url()));
     await page.goto(origin + '/pumplite', { waitUntil: 'networkidle' });
     assert.equal(page.url(), base);
-    await page.waitForFunction(() => document.querySelector('#deployment').textContent.includes('Solana Mainnet'));
+    await page.waitForFunction(() => document.querySelector('#deployment').textContent.includes('Base Mainnet'));
     assert.equal(await page.locator('#create').isDisabled(), true);
     assert.ok(requests.includes(base + 'config.json'));
     assert.ok(requests.includes(base + 'assets/app.js'));
@@ -115,7 +117,7 @@ try {
     assert.equal(await page.locator('#amount').getAttribute('maxlength'), '96');
     await page.locator('#name').fill('Local document');
     await page.locator('#symbol').fill('DOC');
-    await page.locator('details').click();
+    await page.locator('#advanced-metadata summary').click();
     const downloading = page.waitForEvent('download');
     await page.locator('#download-metadata').click();
     const download = await downloading;
