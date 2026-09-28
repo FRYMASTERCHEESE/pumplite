@@ -118,17 +118,82 @@ export async function metadataRoute(request, env, path, headers) {
     form.set('network','public');
     form.set('file',new Blob([bytes],{type:isImage?'image/png':'application/json'}),isImage?'token-logo.png':'token-metadata.json');
     // No arbitrary URLs, retries, signed upload URLs or upstream response forwarding.
-    const upstream=await abortable(fetch(PINATA,{method:'POST',headers:{Authorization:'Bearer '+env.PINATA_JWT},body:form,signal:controller.signal,redirect:'error'}),controller.signal);
-    if(!upstream.ok) throw Error('upstream');
+    let upstream;
+
+    try {
+      upstream=await abortable(fetch(PINATA,{
+        method:'POST',
+        headers:{Authorization:'Bearer '+env.PINATA_JWT},
+        body:form,
+        signal:controller.signal,
+        redirect:'manual'
+      }),controller.signal);
+    } catch {
+      return reply({
+        error:'Metadata provider request failed',
+        stage:'pinata_fetch'
+      },502);
+    }
+
+    if(!upstream.ok) {
+      return reply({
+        error:'Metadata provider rejected upload',
+        stage:'pinata_http',
+        providerStatus:upstream.status
+      },502);
+    }
+
     let result;
-    try { result=JSON.parse(new TextDecoder().decode(await limitedBody(upstream,8192,controller))); } catch { throw Error('upstream'); }
+
+    try {
+      result=JSON.parse(
+        new TextDecoder().decode(
+          await limitedBody(upstream,8192,controller)
+        )
+      );
+    } catch {
+      return reply({
+        error:'Metadata provider response invalid',
+        stage:'pinata_response'
+      },502);
+    }
+
     const cid=result?.data?.cid;
-    if(!validCid(cid)) throw Error('upstream');
-    const stored=await abortable(env.UPLOAD_GUARD.fetch('https://upload-guard.internal/complete',{
-      method:'POST',headers:{'Content-Type':'application/json',Authorization:authorization},
-      body:JSON.stringify({path,sha256:digest,cid}),signal:controller.signal
-    }),controller.signal);
-    if(stored.status!==204) throw Error('receipt');
+
+    if(!validCid(cid)) {
+      return reply({
+        error:'Metadata provider CID invalid',
+        stage:'pinata_cid'
+      },502);
+    }
+
+    const stored=await abortable(
+      env.UPLOAD_GUARD.fetch(
+        'https://upload-guard.internal/complete',
+        {
+          method:'POST',
+          headers:{
+            'Content-Type':'application/json',
+            Authorization:authorization
+          },
+          body:JSON.stringify({
+            path,
+            sha256:digest,
+            cid
+          }),
+          signal:controller.signal
+        }
+      ),
+      controller.signal
+    );
+
+    if(stored.status!==204) {
+      return reply({
+        error:'Metadata receipt rejected',
+        stage:'receipt',
+        receiptStatus:stored.status
+      },502);
+    }
     return reply({cid,uri:'ipfs://'+cid});
   } catch(error) {
     controller.abort();
