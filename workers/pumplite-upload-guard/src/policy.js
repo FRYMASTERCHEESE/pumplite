@@ -8,7 +8,9 @@ export const POLICY = Object.freeze({
   perSubjectRequestsPerDay: 10,
   globalRequestsPerDay: 40,
   perSubjectBytesPerDay: 6 * 1024 * 1024,
-  globalBytesPerDay: 24 * 1024 * 1024
+  globalBytesPerDay: 24 * 1024 * 1024,
+  maxActiveIssueChallenges: 100,
+  maxActiveIssueChallengesPerSubject: 3
 });
 
 export function utcDay(ms = Date.now()) {

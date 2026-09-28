@@ -1,4 +1,5 @@
 import { quotaDecision } from "./quota.js";
+import { POLICY } from "./policy.js";
 
 function one(cursor) {
   const rows = cursor.toArray();
@@ -192,6 +193,48 @@ export function createIssueChallenge(ctx, {
 }) {
   return ctx.storage.transactionSync(() => {
     const sql = ctx.storage.sql;
+
+    // Remove expired challenges so short-lived unauthenticated requests
+    // cannot cause unbounded durable storage growth.
+    sql.exec(
+      `DELETE FROM issue_challenges
+       WHERE expires_at <= ?`,
+      issuedAt
+    );
+
+    const totalRow = one(
+      sql.exec(
+        `SELECT COUNT(*) AS count
+         FROM issue_challenges
+         WHERE consumed_at IS NULL
+           AND expires_at > ?`,
+        issuedAt
+      )
+    );
+
+    const subjectRow = one(
+      sql.exec(
+        `SELECT COUNT(*) AS count
+         FROM issue_challenges
+         WHERE subject = ?
+           AND consumed_at IS NULL
+           AND expires_at > ?`,
+        subject,
+        issuedAt
+      )
+    );
+
+    const totalActive = Number(totalRow?.count || 0);
+    const subjectActive = Number(subjectRow?.count || 0);
+
+    if (
+      totalActive >= POLICY.maxActiveIssueChallenges ||
+      subjectActive >= POLICY.maxActiveIssueChallengesPerSubject
+    ) {
+      const error = new Error("Too many active challenges");
+      error.status = 429;
+      throw error;
+    }
 
     sql.exec(
       `INSERT INTO issue_challenges

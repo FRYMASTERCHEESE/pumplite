@@ -64,7 +64,7 @@ function validIssue(data) {
     (data.path !== "/metadata/image" && data.path !== "/metadata/json") ||
     !Number.isSafeInteger(data.bytes) ||
     data.bytes <= 0 ||
-    data.bytes > 512 * 1024 ||
+    data.bytes > (data.path === "/metadata/image" ? 512 * 1024 : 4096) ||
     typeof data.sha256 !== "string" ||
     !/^[0-9a-f]{64}$/.test(data.sha256)
   ) return false;
