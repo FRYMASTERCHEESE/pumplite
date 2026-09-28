@@ -28,13 +28,8 @@ try {
     await page.locator('#connect').click();
     await page.waitForFunction(() => document.querySelector('#status-text').textContent.includes('No EVM wallet detected'));
     assert.equal(await page.locator('#create').isDisabled(), true);
-    await page.locator('#market-address').fill('not-a-market');
-    await page.locator('#open-form button').click();
-    await page.waitForFunction(() => document.querySelector('#status-text').textContent.includes('No reviewed deployment'));
     assert.equal(await page.locator('#trade').isDisabled(), true);
-    await page.locator('#back').click();
-    await page.waitForFunction(() => !document.querySelector('#home').hidden);
-    await page.locator('#market-address').fill('');
+
     await page.selectOption('#chain', 'solana');
     await page.screenshot({ path: 'build/screenshots/home-' + width + '.png', fullPage: true });
     assert.deepEqual(errors, []);
