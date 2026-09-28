@@ -16,11 +16,12 @@ function clone() {
   return structuredClone(current);
 }
 
-test('current production configuration is fail-closed on both chains', () => {
+test('production enables verified Base while Solana remains fail-closed', () => {
   validatePublicConfig(current);
-  assert.equal(deploymentConfigured(current, 'base'), false);
+  assert.equal(current.base.factory, '0xf722BeD94c4A41B2C71cDCDEB5EEA062352aEe44');
+  assert.equal(deploymentConfigured(current, 'base'), true);
   assert.equal(deploymentConfigured(current, 'solana'), false);
-  assert.equal(transactionConfigEnabled(current, 'base'), false);
+  assert.equal(transactionConfigEnabled(current, 'base'), true);
   assert.equal(transactionConfigEnabled(current, 'solana'), false);
 });
 
@@ -37,6 +38,7 @@ test('Base may be enabled independently without unlocking Solana', () => {
 
 test('Base enabled with no factory fails closed', () => {
   const config = clone();
+  config.base.factory = null;
   config.base.transactionsEnabled = true;
 
   assert.throws(

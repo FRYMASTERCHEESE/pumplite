@@ -18,10 +18,10 @@
     "name": "Base Mainnet",
     "chainId": 8453,
     "rpcUrl": "https://mainnet.base.org",
-    "factory": null,
+    "factory": "0xf722BeD94c4A41B2C71cDCDEB5EEA062352aEe44",
     "treasury": "0x0de7fdcc798f7fac6b03b366c529133a9c60794d",
     "explorer": "https://basescan.org",
-    "transactionsEnabled": false
+    "transactionsEnabled": true
   },
   "metadataUploads": {
     "enabled": true
