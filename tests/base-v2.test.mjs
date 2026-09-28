@@ -192,7 +192,7 @@ test('V2 fixed token supports custom large supply with no future minting', async
         0n
     );
 
-    await assert.rejects(() =>
+    await assert.rejects(async () =>
         market.connect(creator).mintInventory(
             1_000_000n * 10n ** 18n
         )
@@ -215,7 +215,7 @@ test('V2 factory enforces the minimum and maximum supply bounds', async () => {
         initialMayhem: false
     };
 
-    await assert.rejects(() =>
+    await assert.rejects(async () =>
         factory.connect(creator).createMarketV2(
             belowMinimum
         )
@@ -234,7 +234,7 @@ test('V2 factory enforces the minimum and maximum supply bounds', async () => {
         initialMayhem: false
     };
 
-    await assert.rejects(() =>
+    await assert.rejects(async () =>
         factory.connect(creator).createMarketV2(
             tooLarge
         )
@@ -252,7 +252,7 @@ test('Fixed / No Mint requires initial supply to equal final supply', async () =
         initialMayhem: false
     };
 
-    await assert.rejects(() =>
+    await assert.rejects(async () =>
         factory.connect(creator).createMarketV2(
             invalidFixed
         )
@@ -326,7 +326,7 @@ test('Only the token creator can mint additional V2 market inventory', async () 
 
     const before = await token.totalSupply();
 
-    await assert.rejects(() =>
+    await assert.rejects(async () =>
         market.connect(trader).mintInventory(
             ONE_BILLION
         )
@@ -364,7 +364,7 @@ test('V2 hard cap cannot be exceeded', async () => {
         0n
     );
 
-    await assert.rejects(() =>
+    await assert.rejects(async () =>
         market.connect(creator).mintInventory(1n)
     );
 
@@ -395,13 +395,13 @@ test('Creator can permanently lock minting and it cannot be restored', async () 
         0n
     );
 
-    await assert.rejects(() =>
+    await assert.rejects(async () =>
         market.connect(creator).mintInventory(
             ONE_BILLION
         )
     );
 
-    await assert.rejects(() =>
+    await assert.rejects(async () =>
         transact(market.connect(creator).lockMintingForever())
     );
 });
@@ -449,11 +449,11 @@ test('Mayhem cannot be manually changed during the initial 24-hour window', asyn
         initialMayhem: true
     });
 
-    await assert.rejects(() =>
+    await assert.rejects(async () =>
         market.connect(pumpLite).setMayhem(false)
     );
 
-    await assert.rejects(() =>
+    await assert.rejects(async () =>
         market.connect(creator).setMayhem(false)
     );
 
@@ -511,11 +511,11 @@ test('Only PumpLite controller can change Mayhem after 24 hours', async () => {
         24 * 60 * 60 + 1
     );
 
-    await assert.rejects(() =>
+    await assert.rejects(async () =>
         market.connect(creator).setMayhem(true)
     );
 
-    await assert.rejects(() =>
+    await assert.rejects(async () =>
         market.connect(trader).setMayhem(true)
     );
 
@@ -548,7 +548,7 @@ test('Only PumpLite can add real market support and support cannot be withdrawn'
 
     const support = parseEther('1');
 
-    await assert.rejects(() =>
+    await assert.rejects(async () =>
         market.connect(creator).supportMarket({
             value: support
         })
@@ -828,5 +828,120 @@ test('Normal V2 sell returns real ETH and charges the platform fee', async () =>
     assert.equal(
         await market.volume(),
         buyInput + grossSell
+    );
+});
+
+test('V2 buy rejects when minimum output is above the real quote', async () => {
+    const { market } = await createMarket({
+        initialSupply: TEN_BILLION,
+        maxSupply: TEN_BILLION,
+        mintable: false,
+        initialMayhem: false
+    });
+
+    const input = parseEther('0.5');
+
+    const [quotedTokens] =
+        await market.quoteBuy(input);
+
+    await assert.rejects(async () =>
+        market.connect(trader).buy(
+            quotedTokens + 1n,
+            await deadline(),
+            { value: input }
+        )
+    );
+});
+
+test('V2 buy rejects an expired deadline', async () => {
+    const { market } = await createMarket({
+        initialSupply: TEN_BILLION,
+        maxSupply: TEN_BILLION,
+        mintable: false,
+        initialMayhem: false
+    });
+
+    const input = parseEther('0.5');
+
+    const [quotedTokens] =
+        await market.quoteBuy(input);
+
+    const latest =
+        await provider.getBlock('latest');
+
+    await assert.rejects(async () =>
+        market.connect(trader).buy(
+            quotedTokens,
+            latest.timestamp - 1,
+            { value: input }
+        )
+    );
+});
+
+test('V2 rejects trade deadlines far beyond the allowed window', async () => {
+    const { market } = await createMarket({
+        initialSupply: TEN_BILLION,
+        maxSupply: TEN_BILLION,
+        mintable: false,
+        initialMayhem: false
+    });
+
+    const input = parseEther('0.5');
+
+    const [quotedTokens] =
+        await market.quoteBuy(input);
+
+    const latest =
+        await provider.getBlock('latest');
+
+    await assert.rejects(async () =>
+        market.connect(trader).buy(
+            quotedTokens,
+            latest.timestamp + 3600,
+            { value: input }
+        )
+    );
+});
+
+test('V2 sell rejects when minimum ETH output is above the real quote', async () => {
+    const { market, token } = await createMarket({
+        initialSupply: TEN_BILLION,
+        maxSupply: TEN_BILLION,
+        mintable: false,
+        initialMayhem: false
+    });
+
+    const buyInput = parseEther('1');
+
+    const [boughtTokens] =
+        await market.quoteBuy(buyInput);
+
+    await transact(
+        market.connect(trader).buy(
+            boughtTokens,
+            await deadline(),
+            { value: buyInput }
+        )
+    );
+
+    const sellAmount =
+        boughtTokens / 2n;
+
+    await transact(
+        token.connect(trader).approve(
+            await market.getAddress(),
+            sellAmount
+        )
+    );
+
+    const [quotedOutput] =
+        await market.quoteSell(sellAmount);
+
+    await assert.rejects(async () =>
+        market.connect(trader).sell(
+            sellAmount,
+            quotedOutput + 1n,
+            await deadline()
+        )
     );
 });
