@@ -680,3 +680,153 @@ test('Mayhem keeps extra real native backing inside the market', async () => {
         input - platformFee
     );
 });
+
+test('Normal V2 buy sends the platform fee to treasury and keeps backing in market', async () => {
+    const { market, token } = await createMarket({
+        initialSupply: TEN_BILLION,
+        maxSupply: TEN_BILLION,
+        mintable: false,
+        initialMayhem: false
+    });
+
+    const input = parseEther('1');
+
+    const [
+        expectedTokens,
+        platformFee,
+        mayhemSupport
+    ] = await market.quoteBuy(input);
+
+    assert.equal(mayhemSupport, 0n);
+    assert.ok(expectedTokens > 0n);
+    assert.ok(platformFee > 0n);
+
+    const treasuryBefore =
+        await nativeBalance(TREASURY);
+
+    await transact(
+        market.connect(trader).buy(
+            expectedTokens,
+            await deadline(),
+            { value: input }
+        )
+    );
+
+    const treasuryAfter =
+        await nativeBalance(TREASURY);
+
+    assert.equal(
+        treasuryAfter - treasuryBefore,
+        platformFee
+    );
+
+    assert.equal(
+        await token.balanceOf(trader.address),
+        expectedTokens
+    );
+
+    assert.equal(
+        await market.nativeReserve(),
+        input - platformFee
+    );
+
+    assert.equal(
+        await nativeBalance(await market.getAddress()),
+        input - platformFee
+    );
+
+    assert.equal(
+        await market.volume(),
+        input
+    );
+});
+
+test('Normal V2 sell returns real ETH and charges the platform fee', async () => {
+    const { market, token } = await createMarket({
+        initialSupply: TEN_BILLION,
+        maxSupply: TEN_BILLION,
+        mintable: false,
+        initialMayhem: false
+    });
+
+    const buyInput = parseEther('1');
+
+    const [boughtTokens] =
+        await market.quoteBuy(buyInput);
+
+    await transact(
+        market.connect(trader).buy(
+            boughtTokens,
+            await deadline(),
+            { value: buyInput }
+        )
+    );
+
+    const sellAmount =
+        boughtTokens / 2n;
+
+    const [
+        expectedOutput,
+        platformFee,
+        mayhemSupport
+    ] = await market.quoteSell(sellAmount);
+
+    assert.equal(mayhemSupport, 0n);
+    assert.ok(expectedOutput > 0n);
+    assert.ok(platformFee > 0n);
+
+    const reserveBefore =
+        await market.nativeReserve();
+
+    const treasuryBefore =
+        await nativeBalance(TREASURY);
+
+    const tokenBalanceBefore =
+        await token.balanceOf(trader.address);
+
+    await transact(
+        token.connect(trader).approve(
+            await market.getAddress(),
+            sellAmount
+        )
+    );
+
+    await transact(
+        market.connect(trader).sell(
+            sellAmount,
+            expectedOutput,
+            await deadline()
+        )
+    );
+
+    const treasuryAfter =
+        await nativeBalance(TREASURY);
+
+    assert.equal(
+        treasuryAfter - treasuryBefore,
+        platformFee
+    );
+
+    assert.equal(
+        await token.balanceOf(trader.address),
+        tokenBalanceBefore - sellAmount
+    );
+
+    assert.equal(
+        await market.nativeReserve(),
+        reserveBefore - expectedOutput - platformFee
+    );
+
+    assert.equal(
+        await nativeBalance(await market.getAddress()),
+        await market.nativeReserve()
+    );
+
+    const grossSell =
+        expectedOutput + platformFee;
+
+    assert.equal(
+        await market.volume(),
+        buyInput + grossSell
+    );
+});
