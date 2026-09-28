@@ -1,4 +1,4 @@
-﻿import assert from 'node:assert/strict';
+import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 // PLAYWRIGHT_MODULE allows use of the host's bundled Playwright without global installation.
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright');
@@ -24,7 +24,7 @@ try {
     await page.locator('#connect').click();
     await page.waitForFunction(() => document.querySelector('#status-text').textContent.includes('Provider detection: no compatible Solana provider'));
     await page.selectOption('#chain', 'base');
-    assert.match(await page.locator('#deployment').textContent(), /Base Mainnet.*no deployment/);
+    assert.match(await page.locator('#deployment').textContent(), /Base Mainnet.*live configuration/);
     await page.locator('#connect').click();
     await page.waitForFunction(() => document.querySelector('#status-text').textContent.includes('No EVM wallet detected'));
     assert.equal(await page.locator('#create').isDisabled(), true);
@@ -39,7 +39,7 @@ try {
     await page.screenshot({ path: 'build/screenshots/home-' + width + '.png', fullPage: true });
     assert.deepEqual(errors, []);
     assert.deepEqual(external, []);
-    console.log('PASS browser ' + width + 'px: disabled writes, both networks, navigation, no overflow, no external requests, no page errors');
+    console.log('PASS browser ' + width + 'px: Base live, Solana locked, wallet-gated writes, no overflow, no external requests, no page errors');
     await page.close();
   }
 } finally { await browser.close(); }
