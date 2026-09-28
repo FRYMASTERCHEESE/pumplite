@@ -1,4 +1,4 @@
-﻿import test from 'node:test';
+import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
@@ -30,9 +30,9 @@ test('configuration pins the full Mainnet hash and retains the deployment lock',
   assert.equal(SOLANA_MAINNET_GENESIS_HASH, full);
   assert.equal(config.solana.genesisHash, full);
   assert.equal(config.solana.transactionsEnabled, false);
-  assert.equal(config.base.transactionsEnabled, false);
+  assert.equal(config.base.transactionsEnabled, true);
   assert.equal(config.solana.programId, null);
-  assert.equal(config.base.factory, null);
+  assert.equal(config.base.factory, '0xf722BeD94c4A41B2C71cDCDEB5EEA062352aEe44');
 });
 
 test('strict chain check rejects truncated, different and malformed identities', () => {
