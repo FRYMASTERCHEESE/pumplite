@@ -47,6 +47,13 @@ export function validatePublicConfig(config) {
     throw Error('Unsupported Base chain configuration');
   }
 
+  if (
+    config.base?.contractVersion !== undefined &&
+    ![1, 2].includes(config.base.contractVersion)
+  ) {
+    throw Error('Unsupported Base contract version');
+  }
+
   if (typeof config.metadataUploads?.enabled !== 'boolean') {
     throw Error('Invalid metadata configuration');
   }

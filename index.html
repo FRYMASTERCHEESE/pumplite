@@ -50,8 +50,33 @@
       <section class="panel launch" id="create-section" tabindex="-1">
         <p class="eyebrow">CREATE ON PUMPLITE</p><h2>Create your token</h2>
         <p id="create-network" class="network-pill">Base Mainnet · ETH pair</p>
-        <div class="launch-facts"><span><b>1 billion</b>Fixed supply</span><span><b>0.25%</b>Trading fee</span><span><b id="create-pair">Base ETH</b>Bonding curve pair</span></div>
-        <p class="fine">No creator allocation. All supply starts in the market vault. No future minting.</p>
+        <div class="launch-facts"><span><b id="create-supply-fact">1 billion</b><small id="create-supply-mode-fact">Fixed supply</small></span><span><b>0.25%</b>Trading fee</span><span><b id="create-pair">Base ETH</b>Bonding curve pair</span></div>
+        <p id="create-supply-help" class="fine">No creator allocation. All supply starts in the market vault. No future minting.</p>
+
+        <div id="base-v2-create-options" hidden>
+          <fieldset>
+            <legend><span>V2</span> Supply & Mayhem</legend>
+
+            <label for="v2-supply-mode">Supply mode</label>
+            <select id="v2-supply-mode">
+              <option value="fixed">Fixed / No Mint</option>
+              <option value="mintable">Mintable with permanent cap</option>
+            </select>
+
+            <label for="v2-initial-supply">Initial supply</label>
+            <input id="v2-initial-supply" inputmode="decimal" value="1000000000" maxlength="32">
+
+            <label for="v2-max-supply">Maximum lifetime supply</label>
+            <input id="v2-max-supply" inputmode="decimal" value="1000000000" maxlength="32">
+
+            <label>
+              <input id="v2-initial-mayhem" type="checkbox">
+              Enable Mayhem for the first 24 hours
+            </label>
+
+            <p class="fine">Fixed supply can never mint later. Mintable supply can mint only into the market and never above its permanent cap.</p>
+          </fieldset>
+        </div>
         <form id="create-form">
           <fieldset><legend><span>01</span> Give it an identity</legend>
           <label for="name">Coin name</label><input id="name" placeholder="A name for your idea" required maxlength="32" autocomplete="off">
@@ -106,6 +131,39 @@
         <label for="distribution">Supply distributed from vault</label><progress id="distribution" max="100" value="0"></progress><p id="distribution-label" class="fine"></p>
         <h3>How the curve works</h3><p class="muted">Buys add native currency and remove tokens. Sells return tokens and withdraw native currency. Quotes round down. The virtual offset sets starting pricing; it is not money available to withdraw.</p>
         <p class="fine">No scheduled graduation, liquidity migration, owner withdrawal, or price guarantee. Direct donations are excluded from quotes and cannot be recovered. Rounding can leave locked dust. Other traders may move the price within your slippage limit.</p>
+
+        <div id="base-v2-market" hidden>
+          <h3>Base V2 status</h3>
+
+          <dl class="stats">
+            <div><dt>Supply</dt><dd id="v2-supply-status">—</dd></div>
+            <div><dt>Mayhem</dt><dd id="v2-mayhem-status">—</dd></div>
+            <div><dt>Market support</dt><dd id="v2-support-total">—</dd></div>
+            <div><dt>Tokens burned</dt><dd id="v2-burned-total">—</dd></div>
+          </dl>
+
+          <div id="base-v2-creator" hidden>
+            <h3>Creator controls</h3>
+            <form id="v2-mint-form">
+              <label for="v2-mint-amount">Mint inventory into market</label>
+              <input id="v2-mint-amount" inputmode="decimal" placeholder="0" maxlength="32">
+              <button id="v2-mint-submit" type="submit" class="outline full">Review mint in wallet</button>
+            </form>
+            <button id="v2-lock-minting" type="button" class="outline full">Permanently lock minting</button>
+          </div>
+
+          <div id="base-v2-controller" hidden>
+            <h3>Mayhem controller</h3>
+            <button id="v2-mayhem-on" type="button" class="outline">Turn Mayhem ON</button>
+            <button id="v2-mayhem-off" type="button" class="outline">Turn Mayhem OFF</button>
+
+            <form id="v2-support-form">
+              <label for="v2-support-amount">Add ETH market support</label>
+              <input id="v2-support-amount" inputmode="decimal" placeholder="0.00" maxlength="32">
+              <button id="v2-support-submit" type="submit" class="outline full">Review support in wallet</button>
+            </form>
+          </div>
+        </div>
         <div class="links"><a id="market-link" target="_blank" rel="noopener noreferrer">Market ↗</a><a id="token-link" target="_blank" rel="noopener noreferrer">Token ↗</a></div>
       </section>
       <section class="panel">
@@ -116,9 +174,22 @@
           <label for="amount" id="amount-label">Amount</label><input id="amount" maxlength="96" inputmode="decimal" placeholder="0.00" required autocomplete="off">
           <label for="slippage">Slippage tolerance (%)</label><input id="slippage" type="number" min="0.01" max="5" step="0.01" value="1" required>
           <button id="get-quote" type="button" class="outline full">Get current quote</button>
-          <dl class="quote"><div><dt>Expected output</dt><dd id="quote-output">—</dd></div><div><dt>Minimum received</dt><dd id="quote-min">—</dd></div><div><dt>Platform fee</dt><dd id="quote-fee">—</dd></div></dl>
+          <dl class="quote"><div><dt>Expected output</dt><dd id="quote-output">—</dd></div><div><dt>Minimum received</dt><dd id="quote-min">—</dd></div><div><dt>Platform fee</dt><dd id="quote-fee">—</dd></div><div id="quote-support-row" hidden><dt>Mayhem support</dt><dd id="quote-support">—</dd></div></dl>
           <p id="quote-age" class="fine">Quotes use chain reserves. Refresh before signing.</p>
           <button id="trade" type="submit" class="primary" disabled>Review in wallet</button>
+        </form>
+
+        <form id="base-v2-burn-form" hidden>
+          <h3>Buy & Burn</h3>
+          <p class="fine">Spend ETH through the real curve and permanently burn the purchased V2 tokens.</p>
+
+          <label for="v2-burn-amount">Amount (ETH)</label>
+          <input id="v2-burn-amount" inputmode="decimal" placeholder="0.00" maxlength="32">
+
+          <label for="v2-burn-slippage">Slippage tolerance (%)</label>
+          <input id="v2-burn-slippage" type="number" min="0.01" max="5" step="0.01" value="1">
+
+          <button id="base-v2-buy-burn-submit" type="submit" class="outline full">Review Buy & Burn in wallet</button>
         </form>
       </section>
     </div>

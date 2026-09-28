@@ -63,3 +63,63 @@ export function assertReceipt(receipt) {
 export function assertSolanaConfirmation(result) {
   if (!result || !result.value || result.value.err !== null) throw Error('Transaction failed on chain');
 }
+
+
+export const MAYHEM_SUPPORT_BPS = 75n;
+
+export function quoteBaseV2(
+  { nativeReserve, tokenReserve, virtualNative, supply, mayhemActive },
+  side,
+  input
+) {
+  if (input <= 0n || tokenReserve <= 0n || nativeReserve < 0n || supply <= 0n) {
+    throw Error('Invalid amount or V2 market');
+  }
+
+  let output;
+  let fee;
+  let support = 0n;
+  let gross;
+
+  if (side === 'buy') {
+    fee = input * FEE / BPS;
+    if (mayhemActive) support = input * MAYHEM_SUPPORT_BPS / BPS;
+
+    const curveInput = input - fee - support;
+    if (curveInput <= 0n) throw Error('Amount is too small');
+
+    output =
+      tokenReserve *
+      curveInput /
+      (virtualNative + nativeReserve + curveInput);
+
+    if (output <= 0n || output >= tokenReserve) {
+      throw Error('Insufficient token inventory');
+    }
+  } else if (side === 'sell') {
+    const outstanding = supply - tokenReserve;
+
+    if (outstanding < 0n || input > outstanding) {
+      throw Error('Amount exceeds circulating supply');
+    }
+
+    gross =
+      (virtualNative + nativeReserve) *
+      input /
+      (tokenReserve + input);
+
+    if (gross <= 0n || gross > nativeReserve) {
+      throw Error('Insufficient real native reserves');
+    }
+
+    fee = gross * FEE / BPS;
+    if (mayhemActive) support = gross * MAYHEM_SUPPORT_BPS / BPS;
+
+    output = gross - fee - support;
+    if (output <= 0n) throw Error('Amount is too small');
+  } else {
+    throw Error('Invalid trade direction');
+  }
+
+  return { output, fee, support, gross };
+}

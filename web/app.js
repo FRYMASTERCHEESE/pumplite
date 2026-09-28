@@ -4,7 +4,7 @@ import { loadReviewedRegistry, badges, verificationPanel } from './verification-
 import { discoverEvm, solanaDiagnostics } from './wallets.js';
 import { mobileBrowseLink } from './mobile.js';
 import { metadataDocument } from './metadata.js';
-import { parseUnits, formatUnits, quote, minimumOutput, validateMetadata } from './math.js';
+import { parseUnits, formatUnits, quote, quoteBaseV2, minimumOutput, validateMetadata } from './math.js';
 import { validatePublicConfig, deploymentConfigured, transactionConfigEnabled } from './release-config.js';
 if (window.top !== window.self) {
   document.body.replaceChildren(document.createTextNode('Open PumpLite directly in your browser. Embedded wallet interactions are disabled.'));
@@ -45,6 +45,51 @@ function controls() {
   $('wallet-choice').disabled = state.busy || Boolean(state.wallet);
   $('download-metadata').disabled = state.busy;
   const metadataEnabled = state.config?.metadataUploads?.enabled === true;
+
+  const baseV2 =
+    state.chain === 'base' &&
+    state.config?.base?.contractVersion === 2;
+
+  $('base-v2-create-options').hidden = !baseV2;
+  $('create-supply-fact').textContent = baseV2 ? 'Custom' : '1 billion';
+  $('create-supply-mode-fact').textContent = baseV2 ? 'Supply options' : 'Fixed supply';
+  $('create-supply-help').textContent =
+    baseV2
+      ? 'No creator allocation. Choose Fixed / No Mint or a permanently capped Mintable supply.'
+      : 'No creator allocation. All supply starts in the market vault. No future minting.';
+
+  $('v2-supply-mode').disabled = state.busy || !baseV2;
+  $('v2-initial-supply').disabled = state.busy || !baseV2;
+  $('v2-initial-mayhem').disabled = state.busy || !baseV2;
+
+  $('v2-max-supply').disabled =
+    state.busy ||
+    !baseV2 ||
+    $('v2-supply-mode').value !== 'mintable';
+
+  $('base-v2-buy-burn-submit').disabled =
+    !writable() || state.market?.contractVersion !== 2;
+
+  $('v2-mint-submit').disabled =
+    !writable() ||
+    state.market?.contractVersion !== 2 ||
+    state.market?.mintingLocked === true ||
+    state.market?.mintableAtLaunch !== true;
+
+  $('v2-lock-minting').disabled =
+    !writable() ||
+    state.market?.contractVersion !== 2 ||
+    state.market?.mintingLocked === true ||
+    state.market?.mintableAtLaunch !== true;
+
+  $('v2-mayhem-on').disabled =
+    !writable() || state.market?.contractVersion !== 2;
+
+  $('v2-mayhem-off').disabled =
+    !writable() || state.market?.contractVersion !== 2;
+
+  $('v2-support-submit').disabled =
+    !writable() || state.market?.contractVersion !== 2;
   $('metadata-image').disabled = state.busy || !metadataEnabled;
   $('publish-metadata').disabled = state.busy || !metadataEnabled || !state.wallet || !$('metadata-image').files?.length;
   $('metadata-upload-help').textContent =
@@ -62,7 +107,7 @@ function controls() {
 }
 function invalidateQuote() {
   state.quote = null;
-  for (const id of ['quote-output','quote-min','quote-fee']) $(id).textContent = '—';
+  for (const id of ['quote-output','quote-min','quote-fee','quote-support']) $(id).textContent = '—';
   $('quote-age').textContent = 'Get a current quote before signing.';
   controls();
 }
@@ -70,7 +115,12 @@ async function getAdapter() {
   if (state.adapter) return state.adapter;
   const chain = state.chain, epoch = state.epoch;
   if (chain === 'solana') { diagnostic('Loading Solana SDK…'); status('Loading Solana wallet support…'); }
-  const module = chain === 'solana' ? await import('./adapters/solana.js') : await import('./adapters/base.js');
+  const module =
+    chain === 'solana'
+      ? await import('./adapters/solana.js')
+      : state.config?.base?.contractVersion === 2
+        ? await import('./adapters/base-v2.js')
+        : await import('./adapters/base.js');
   if (epoch !== state.epoch) throw Error('Network selection changed');
   state.adapter = module.adapter(state.config[chain], (message, href) => { if (chain === 'solana') diagnostic(message); status(message, href); }, walletChanged);
   return state.adapter;
@@ -131,7 +181,45 @@ function renderMarket(m) {
   $('virtual').textContent = formatUnits(m.virtualNative, m.nativeDecimals) + ' ' + m.unit;
   const distributed = Number((m.supply - m.tokenReserve) * 10_000n / m.supply) / 100;
   $('distribution').value = distributed;
-  $('distribution-label').textContent = distributed.toFixed(2) + '% distributed from the original 1 billion token inventory.';
+  $('distribution-label').textContent =
+    distributed.toFixed(2) + '% distributed from the current token supply.';
+
+  const baseV2 = m.contractVersion === 2;
+  $('base-v2-market').hidden = !baseV2;
+  $('base-v2-burn-form').hidden = !baseV2;
+
+  if (baseV2) {
+    $('v2-supply-status').textContent =
+      (m.mintableAtLaunch ? 'Mintable' : 'Fixed / No Mint') +
+      ' · current ' +
+      formatUnits(m.supply, 18, 2) +
+      ' · max ' +
+      formatUnits(m.maxSupply, 18, 2) +
+      (m.mintingLocked ? ' · minting locked' : '');
+
+    $('v2-mayhem-status').textContent =
+      m.mayhemActive ? 'ACTIVE' : 'OFF';
+
+    $('v2-support-total').textContent =
+      formatUnits(m.totalMarketSupport, 18) + ' ETH';
+
+    $('v2-burned-total').textContent =
+      formatUnits(m.totalBurned, 18, 2) + ' ' + m.symbol;
+
+    const walletAddress = state.wallet?.toLowerCase();
+
+    $('base-v2-creator').hidden =
+      !walletAddress ||
+      walletAddress !== String(m.creator).toLowerCase();
+
+    $('base-v2-controller').hidden =
+      !walletAddress ||
+      walletAddress !== String(m.mayhemController).toLowerCase();
+  } else {
+    $('base-v2-creator').hidden = true;
+    $('base-v2-controller').hidden = true;
+  }
+
   const c = state.config[state.chain];
   $('market-link').href = c.explorer + (state.chain === 'solana' ? '/account/' : '/address/') + m.id;
   $('token-link').href = c.explorer + '/token/' + m.token;
@@ -298,7 +386,45 @@ $('refresh-market').addEventListener('click', () => action(() => loadMarket(stat
 $('open-form').addEventListener('submit', e => { e.preventDefault(); if (!state.busy) location.hash = state.chain + '/' + encodeURIComponent($('market-address').value.trim()); });
 $('create-form').addEventListener('submit', e => { e.preventDefault(); action(async () => {
   requireWrite();
-  const data = { name: $('name').value.trim(), symbol: $('symbol').value.trim(), uri: $('uri').value.trim() };
+  const data = {
+    name: $('name').value.trim(),
+    symbol: $('symbol').value.trim(),
+    uri: $('uri').value.trim()
+  };
+
+  if (
+    state.chain === 'base' &&
+    state.config?.base?.contractVersion === 2
+  ) {
+    const mintable =
+      $('v2-supply-mode').value === 'mintable';
+
+    const initialSupply =
+      parseUnits($('v2-initial-supply').value.trim(), 18);
+
+    const maxSupply =
+      mintable
+        ? parseUnits($('v2-max-supply').value.trim(), 18)
+        : initialSupply;
+
+    const minimum = 1_000_000_000n * 10n ** 18n;
+    const maximum = 1_000_000_000_000_000n * 10n ** 18n;
+
+    if (
+      initialSupply < minimum ||
+      initialSupply > maxSupply ||
+      maxSupply > maximum
+    ) {
+      throw Error(
+        'Supply must be between 1 billion and 1 quadrillion tokens, and maximum supply cannot be below initial supply.'
+      );
+    }
+
+    data.initialSupply = initialSupply;
+    data.maxSupply = maxSupply;
+    data.mintable = mintable;
+    data.initialMayhem = $('v2-initial-mayhem').checked;
+  }
   validateMetadata(data.name, data.symbol, data.uri);
   const extras=metadataExtras(projectLinks(),$('banner-uri').value.trim());
   if(!data.uri && ($('description').value || $('metadata-image').files?.length || Object.keys(extras).length || $('image-uri').value)) throw Error('Publish or pin your metadata first and enter its URI. Token details must not be silently omitted.');
@@ -315,12 +441,25 @@ $('get-quote').addEventListener('click', () => action(async () => {
   const slippage = Number($('slippage').value) * 100;
   const slippageBps = Math.round(slippage);
   if (Math.abs(slippage - slippageBps) > 1e-7) throw Error('Slippage supports two decimal places');
-  const q = quote(m, side, amount), min = minimumOutput(q.output, slippageBps);
+  const q =
+    m.contractVersion === 2
+      ? quoteBaseV2(m, side, amount)
+      : quote(m, side, amount);
+
+  const min = minimumOutput(q.output, slippageBps);
   const decimals = side === 'buy' ? m.decimals : m.nativeDecimals, unit = side === 'buy' ? m.symbol : m.unit;
   state.quote = { ...q, min, amount, side, at: Date.now(), market: m.id, chain: state.chain };
   $('quote-output').textContent = formatUnits(q.output, decimals, decimals) + ' ' + unit;
   $('quote-min').textContent = formatUnits(min, decimals, decimals) + ' ' + unit;
-  $('quote-fee').textContent = formatUnits(q.fee, m.nativeDecimals, m.nativeDecimals) + ' ' + m.unit;
+  $('quote-fee').textContent =
+    formatUnits(q.fee, m.nativeDecimals, m.nativeDecimals) + ' ' + m.unit;
+
+  $('quote-support-row').hidden = m.contractVersion !== 2;
+
+  $('quote-support').textContent =
+    m.contractVersion === 2
+      ? formatUnits(q.support, m.nativeDecimals, m.nativeDecimals) + ' ' + m.unit
+      : '—';
   $('quote-age').textContent = 'Quoted at ' + new Date().toLocaleTimeString() + '. Valid for review for 30 seconds; chain slippage protection still applies.';
 }));
 $('trade-form').addEventListener('submit', e => { e.preventDefault(); action(async () => {
@@ -333,6 +472,82 @@ $('trade-form').addEventListener('submit', e => { e.preventDefault(); action(asy
   await (await getAdapter()).trade(state.market, q.side, q.amount, q.min);
   await loadMarket(state.market.id);
 }); });
+$('v2-supply-mode').addEventListener('change', controls);
+
+$('base-v2-burn-form').addEventListener('submit', e => {
+  e.preventDefault();
+
+  action(async () => {
+    requireWrite();
+
+    if (state.market?.contractVersion !== 2) {
+      throw Error('Buy & Burn requires a Base V2 market');
+    }
+
+    const amount = parseUnits($('v2-burn-amount').value.trim(), 18);
+    const raw = Number($('v2-burn-slippage').value) * 100;
+    const slippageBps = Math.round(raw);
+
+    if (Math.abs(raw - slippageBps) > 1e-7) {
+      throw Error('Slippage supports two decimal places');
+    }
+
+    const fresh = await (await getAdapter()).market(state.market.id);
+    const q = quoteBaseV2(fresh, 'buy', amount);
+    const min = minimumOutput(q.output, slippageBps);
+
+    await state.adapter.buyAndBurn(fresh, amount, min);
+    await loadMarket(fresh.id);
+  });
+});
+
+$('v2-mint-form').addEventListener('submit', e => {
+  e.preventDefault();
+
+  action(async () => {
+    requireWrite();
+
+    const amount = parseUnits($('v2-mint-amount').value.trim(), 18);
+
+    await state.adapter.mintInventory(state.market, amount);
+    await loadMarket(state.market.id);
+  });
+});
+
+$('v2-lock-minting').addEventListener('click', () => action(async () => {
+  requireWrite();
+
+  if (!window.confirm('Permanently disable all future minting? This cannot be undone.')) return;
+
+  await state.adapter.lockMinting(state.market);
+  await loadMarket(state.market.id);
+}));
+
+$('v2-mayhem-on').addEventListener('click', () => action(async () => {
+  requireWrite();
+  await state.adapter.setMayhem(state.market, true);
+  await loadMarket(state.market.id);
+}));
+
+$('v2-mayhem-off').addEventListener('click', () => action(async () => {
+  requireWrite();
+  await state.adapter.setMayhem(state.market, false);
+  await loadMarket(state.market.id);
+}));
+
+$('v2-support-form').addEventListener('submit', e => {
+  e.preventDefault();
+
+  action(async () => {
+    requireWrite();
+
+    const amount = parseUnits($('v2-support-amount').value.trim(), 18);
+
+    await state.adapter.supportMarket(state.market, amount);
+    await loadMarket(state.market.id);
+  });
+});
+
 window.addEventListener('hashchange', () => {
   // Route after an in-flight operation settles; never change transaction context mid-signature.
   if (!state.busy) action(route); else state.pendingRoute = true;
