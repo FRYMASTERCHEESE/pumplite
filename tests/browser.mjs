@@ -1,4 +1,4 @@
-import assert from 'node:assert/strict';
+﻿import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 // PLAYWRIGHT_MODULE allows use of the host's bundled Playwright without global installation.
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright');
@@ -43,3 +43,4 @@ try {
     await page.close();
   }
 } finally { await browser.close(); }
+
