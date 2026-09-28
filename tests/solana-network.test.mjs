@@ -29,7 +29,8 @@ async function rpc(t, reply) {
 test('configuration pins the full Mainnet hash and retains the deployment lock', () => {
   assert.equal(SOLANA_MAINNET_GENESIS_HASH, full);
   assert.equal(config.solana.genesisHash, full);
-  assert.equal(config.transactionsEnabled, false);
+  assert.equal(config.solana.transactionsEnabled, false);
+  assert.equal(config.base.transactionsEnabled, false);
   assert.equal(config.solana.programId, null);
   assert.equal(config.base.factory, null);
 });
