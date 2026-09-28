@@ -7,8 +7,8 @@ use anchor_spl::{
 pub mod math;
 pub mod metadata;
 
-// Build identity only. The website deliberately has no configured deployed program.
-declare_id!("7yCAWc9Tk8F5eTjn731ZZKxNypoBrbaXvFEm6c9z8ybY");
+// Final program identity selected locally. The website remains deployment-locked until verified Mainnet deployment.
+declare_id!("3CHqrdJzwWQj1QikCzpjBhC8iQ3paaMtD1x9kwoW1rku");
 pub const TREASURY: Pubkey = pubkey!("BNpFPPuy2h12dryy4dayemjA4YS17ccVaF82jBDuiwct");
 pub const DECIMALS: u8 = 6;
 

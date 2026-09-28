@@ -6,7 +6,7 @@ import { adapter } from '../web/adapters/solana.js';
 import { createInstructions, discriminator } from '../web/solana-instructions.js';
 import { SOL_SUPPLY } from '../web/math.js';
 const config = JSON.parse(await readFile('config.json')).solana;
-const programId = new PublicKey('7yCAWc9Tk8F5eTjn731ZZKxNypoBrbaXvFEm6c9z8ybY');
+const programId = new PublicKey('3CHqrdJzwWQj1QikCzpjBhC8iQ3paaMtD1x9kwoW1rku');
 const owner = new PublicKey('11111111111111111111111111111112');
 async function fixture(t) {
   const nonce = Buffer.alloc(8, 1), name = '<img src=x onerror=alert(1)>', symbol = 'SAFE', uri = 'https://example.invalid/' + 'x'.repeat(175);

@@ -8,7 +8,7 @@ const config = JSON.parse(await readFile('config.json'));
 const owner = new PublicKey('11111111111111111111111111111112');
 const signature = new Uint8Array(64); signature[63] = 1;
 const signatureString = '1'.repeat(63) + '2';
-const programId = '7yCAWc9Tk8F5eTjn731ZZKxNypoBrbaXvFEm6c9z8ybY';
+const programId = '3CHqrdJzwWQj1QikCzpjBhC8iQ3paaMtD1x9kwoW1rku';
 async function fixture(t, fault) {
   const events = [], calls = [];
   const solana = { publicKey: owner, connect: async () => ({ publicKey: owner }),

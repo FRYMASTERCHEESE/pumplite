@@ -6,9 +6,9 @@ solana_version = "3.1.10"
 resolution = true
 skip-lint = false
 
-# Build identity only, not a verified deployment.
+# Final program identity selected locally; not yet deployed.
 [programs.localnet]
-pumplite = "7yCAWc9Tk8F5eTjn731ZZKxNypoBrbaXvFEm6c9z8ybY"
+pumplite = "3CHqrdJzwWQj1QikCzpjBhC8iQ3paaMtD1x9kwoW1rku"
 
 # Required by the Anchor CLI parser for IDL generation. No wallet exists at this path.
 # Verification never reads it, starts a validator, or uses the provider's RPC.
