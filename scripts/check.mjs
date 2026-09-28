@@ -45,6 +45,40 @@ for (const [name, abi] of Object.entries(abis)) {
     assert.ok(!functions.includes(forbidden), name + ' has prohibited privileged function ' + forbidden);
   }
 }
+
+const v2Abis = JSON.parse(
+  await readFile('web/generated/base-v2-abi.json', 'utf8')
+);
+
+const forbiddenV2 = [
+  'owner',
+  'transferOwnership',
+  'renounceOwnership',
+  'withdraw',
+  'withdrawETH',
+  'withdrawNative',
+  'setTreasury',
+  'setFee',
+  'pause',
+  'unpause',
+  'blacklist',
+  'upgradeTo',
+  'upgradeToAndCall',
+  'mint'
+];
+
+for (const [name, abi] of Object.entries(v2Abis)) {
+  const functions =
+    abi.filter(item => item.type === 'function').map(item => item.name);
+
+  for (const forbidden of forbiddenV2) {
+    assert.ok(
+      !functions.includes(forbidden),
+      name + ' has prohibited privileged function ' + forbidden
+    );
+  }
+}
+
 console.log('PASS syntax, per-chain fail-closed deployment locks, treasury configuration, safe DOM, mainnet-only UI, absent admin and privileged Base functions');
 
 const headerCheck = spawnSync(process.execPath, ['scripts/build-security-headers.mjs','--check'], {encoding:'utf8'});

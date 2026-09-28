@@ -28,7 +28,7 @@ const third = JSON.parse(solc.compile(JSON.stringify(input)));
 assert.ok(JSON.stringify(third.contracts) === JSON.stringify(repeated.contracts), 'Standard-input repeat differs');
 assert.match(solc.version(), /^0\.8\.30\+commit\.73712a01\./);
 await mkdir('build/base-v2', { recursive: true });
-await writeFile('build/base/standard-input.json', JSON.stringify(input, null, 2) + '\n');
+await writeFile('build/base-v2/standard-input.json', JSON.stringify(input, null, 2) + '\n');
 const sha256 = value => createHash('sha256').update(value).digest('hex');
 const manifest = { compiler: solc.version(), settings: input.settings,
   sources: Object.fromEntries(Object.entries(sources).map(([name, source]) => [name, sha256(source.content)])), contracts: {} };
@@ -46,5 +46,5 @@ for (const name of names) {
 }
 await writeFile('web/generated/base-v2-abi.json', JSON.stringify(abis, null, 2) + '\n');
 
-await writeFile('build/base/build-manifest.json', JSON.stringify(manifest, null, 2) + '\n');
+await writeFile('build/base-v2/build-manifest.json', JSON.stringify(manifest, null, 2) + '\n');
 console.log('PASS identical Solidity repeat compilation and self-contained verification input');
