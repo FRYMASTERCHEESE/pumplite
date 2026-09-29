@@ -91,7 +91,7 @@ try {
     await page.goto(origin + '/pumplite', { waitUntil: 'networkidle' });
     assert.equal(page.url(), base);
     await page.waitForFunction(() => document.querySelector('#deployment').textContent.includes('Base Mainnet'));
-    assert.equal(await page.locator('#create').isDisabled(), true);
+    assert.equal(await page.locator('#create').isDisabled(), false, 'Base create button stays actionable before wallet access; wallet access is requested only after click');
     assert.ok(requests.includes(base + 'config.json'));
     assert.ok(requests.includes(base + 'assets/app.js'));
     assert.ok(requests.includes(base + 'assets/styles.css'));
@@ -133,7 +133,7 @@ try {
     );
     await page.selectOption('#chain', 'base');
     assert.match(await page.locator('#deployment').textContent(), /Base Mainnet/);
-    assert.equal(await page.locator('#create').isDisabled(), true);
+    assert.equal(await page.locator('#create').isDisabled(), false);
     await page.goto(base + '#solana/not-a-deployment', { waitUntil: 'networkidle' });
     await page.waitForFunction(() => document.querySelector('#status-text').textContent.includes('No reviewed deployment'));
     await page.reload({ waitUntil: 'networkidle' });

@@ -91,19 +91,26 @@ function controls() {
   $('v2-support-submit').disabled =
     !writable() || state.market?.contractVersion !== 2;
   $('metadata-image').disabled = state.busy || !metadataEnabled;
-  $('publish-metadata').disabled = state.busy || !metadataEnabled || !state.wallet || !$('metadata-image').files?.length;
+  $('publish-metadata').disabled = state.busy || !metadataEnabled;
   $('metadata-upload-help').textContent =
     !metadataEnabled ? 'Metadata publishing is currently disabled.' :
-    !state.wallet ? 'Connect a wallet to authorize IPFS publishing. No private key is requested.' :
-    !$('metadata-image').files?.length ? 'Choose a PNG, JPEG or WebP token image.' :
-    'Ready to publish. Authorization signatures do not spend SOL or ETH.';
+    !$('metadata-image').files?.length ? 'Choose a PNG, JPEG or WebP token image, then tap Publish.' :
+    !state.wallet ? 'Tap Publish. PumpLite will request access to your Base wallet, then ask for authorization signatures. These signatures do not spend ETH.' :
+    'Ready to publish with your connected wallet. Authorization signatures do not spend ETH.';
   $('chain').disabled = state.busy; $('connect').disabled = state.busy;
-  $('create').disabled = !writable(); $('trade').disabled = !writable() || !state.quote;
+  $('create').disabled = state.busy || !transactionConfigEnabled(state.config, state.chain);
+  $('trade').disabled = !writable() || !state.quote;
+  $('create-action-status').textContent =
+    state.chain !== 'base' || !transactionConfigEnabled(state.config, state.chain)
+      ? 'Token creation is not enabled on this network.'
+      : state.wallet
+        ? 'Wallet connected: ' + state.wallet.slice(0, 6) + '…' + state.wallet.slice(-4) + '. Create coin will open the optional first-buy step.'
+        : 'Create coin is ready. If needed, tapping it will request access to your Base wallet first.';
   $('get-quote').disabled = !ready() || !state.market || state.busy;
   $('refresh').disabled = !ready() || state.busy; $('refresh-market').disabled = !ready() || state.busy;
   $('more').disabled = state.busy; $('verified-only').disabled = state.busy;
   $('show-create').disabled=state.busy; $('show-explore').disabled=state.busy;
-  for (const id of ['description','image-uri','banner-uri','website','twitter','telegram','discord','name','symbol','uri','side','amount','slippage','market-address']) $(id).disabled = state.busy;
+  for (const id of ['description','image-uri','banner-uri','website','twitter','telegram','discord','name','symbol','uri','side','amount','slippage','market-address','initial-buy-eth']) $(id).disabled = state.busy;
 }
 function invalidateQuote() {
   state.quote = null;
@@ -279,38 +286,108 @@ function switchChain(chain) {
   status(state.config[chain].name + ' selected. Wallet disconnected.');
 }
 $('chain').addEventListener('change', () => { switchChain($('chain').value); location.hash = ''; $('home').hidden = false; $('market-page').hidden = true; });
+async function connectBaseWalletFromGesture() {
+  if (state.wallet) return state.wallet;
+  if (state.chain !== 'base') throw Error('Select Base Mainnet first');
+
+  wallets.refresh();
+
+  const index = Number($('wallet-choice').value);
+  let selected =
+    Number.isInteger(index)
+      ? wallets.entries[index]?.provider
+      : null;
+
+  // Coinbase Wallet and some mobile wallet browsers expose only window.ethereum.
+  // This is still used only after the user taps Connect/Publish/Create.
+  if (
+    !selected &&
+    typeof window.ethereum?.request === 'function'
+  ) {
+    selected = window.ethereum;
+  }
+
+  status('Requesting access to your Base wallet…');
+
+  const address =
+    await (await getAdapter()).connect(selected);
+
+  state.wallet = address;
+  $('connect').textContent =
+    'Disconnect ' +
+    address.slice(0, 5) +
+    '…' +
+    address.slice(-4);
+
+  status('Wallet connected: ' + address);
+  return address;
+}
+
 $('connect').addEventListener('click', () => action(async () => {
-  if (state.wallet) { state.adapter?.disconnect(); status('Wallet disconnected from this site.'); return; }
+  if (state.wallet) {
+    state.adapter?.disconnect();
+    status('Wallet disconnected from this site.');
+    return;
+  }
+
   if (state.chain === 'solana') {
     diagnostic('Connect tapped');
+
     if (!phantomPrepared) {
-      try { await (await getAdapter()).prepareConnect(); phantomPrepared = true; }
-      catch (error) { diagnostic(error.message); throw error; }
+      try {
+        await (await getAdapter()).prepareConnect();
+        phantomPrepared = true;
+      } catch (error) {
+        diagnostic(error.message);
+        throw error;
+      }
       return;
     }
+
     phantomPrepared = false;
-    try { state.wallet = await state.adapter.connect(true); }
-    catch (error) { diagnostic(error.message); throw error; }
-  } else {
-  wallets.refresh();
-  const selected = wallets.entries[Number($('wallet-choice').value)]?.provider;
-  state.wallet = await (await getAdapter()).connect(selected);
-  }
-  $('connect').textContent = 'Disconnect ' + state.wallet.slice(0, 5) + '…' + state.wallet.slice(-4);
-  status('Wallet connected: ' + state.wallet);
-  if (state.chain === 'solana') {
-    const solanaWrites = transactionConfigEnabled(state.config, 'solana');
-    diagnostic(solanaWrites ?
-      'Wallet connected. Checking Mainnet RPC.' :
-      'Wallet connected. Checking Mainnet RPC; Solana transactions remain disabled.');
+
+    try {
+      state.wallet = await state.adapter.connect(true);
+    } catch (error) {
+      diagnostic(error.message);
+      throw error;
+    }
+
+    $('connect').textContent =
+      'Disconnect ' +
+      state.wallet.slice(0, 5) +
+      '…' +
+      state.wallet.slice(-4);
+
+    status('Wallet connected: ' + state.wallet);
+
+    const solanaWrites =
+      transactionConfigEnabled(state.config, 'solana');
+
+    diagnostic(
+      solanaWrites
+        ? 'Wallet connected. Checking Mainnet RPC.'
+        : 'Wallet connected. Checking Mainnet RPC; Solana transactions remain disabled.'
+    );
+
     try {
       await state.adapter.verifyNetwork();
-      diagnostic(solanaWrites ?
-        'Wallet connected. Mainnet RPC verified.' :
-        'Wallet connected. Mainnet RPC verified. Solana transactions remain disabled.');
+      diagnostic(
+        solanaWrites
+          ? 'Wallet connected. Mainnet RPC verified.'
+          : 'Wallet connected. Mainnet RPC verified. Solana transactions remain disabled.'
+      );
+    } catch (error) {
+      diagnostic(
+        'Wallet connected for account access only. Mainnet RPC NOT verified: ' +
+        error.message +
+        '. On-chain operations remain blocked until verification succeeds.'
+      );
     }
-    catch (error) { diagnostic('Wallet connected for account access only. Mainnet RPC NOT verified: ' + error.message + '. On-chain operations remain blocked until verification succeeds.'); }
+  } else {
+    await connectBaseWalletFromGesture();
   }
+
   if (state.market) await loadMarket(state.market.id);
 }));
 async function copyMetadataText(text) {
@@ -392,14 +469,20 @@ $('publish-metadata').addEventListener('click', () => action(async () => {
       throw Error('Metadata uploads are not enabled');
     }
 
-    if (!state.wallet) {
-      throw Error('Connect a wallet first');
-    }
-
     const image = $('metadata-image').files?.[0];
 
     if (!image) {
+      inline.textContent = 'Choose a PNG, JPEG or WebP token image first.';
       throw Error('Choose a token image first');
+    }
+
+    if (!state.wallet && state.chain === 'base') {
+      inline.textContent = 'Requesting access to your Base wallet…';
+      await connectBaseWalletFromGesture();
+    }
+
+    if (!state.wallet) {
+      throw Error('Connect a wallet first');
     }
 
     inline.textContent =
@@ -467,8 +550,7 @@ $('refresh').addEventListener('click', () => action(() => discover()));
 $('more').addEventListener('click', () => action(() => discover(true)));
 $('refresh-market').addEventListener('click', () => action(() => loadMarket(state.market?.id || decodeURIComponent(location.hash.split('/')[1]))));
 $('open-form').addEventListener('submit', e => { e.preventDefault(); if (!state.busy) location.hash = state.chain + '/' + encodeURIComponent($('market-address').value.trim()); });
-$('create-form').addEventListener('submit', e => { e.preventDefault(); action(async () => {
-  requireWrite();
+function creationData() {
   const data = {
     name: $('name').value.trim(),
     symbol: $('symbol').value.trim(),
@@ -476,44 +558,210 @@ $('create-form').addEventListener('submit', e => { e.preventDefault(); action(as
   };
 
   if (
-    state.chain === 'base' &&
-    state.config?.base?.contractVersion === 2
+    state.chain !== 'base' ||
+    state.config?.base?.contractVersion !== 2
   ) {
-    const mintable =
-      $('v2-supply-mode').value === 'mintable';
-
-    const initialSupply =
-      parseUnits($('v2-initial-supply').value.trim(), 18);
-
-    const maxSupply =
-      mintable
-        ? parseUnits($('v2-max-supply').value.trim(), 18)
-        : initialSupply;
-
-    const minimum = 1_000_000_000n * 10n ** 18n;
-    const maximum = 1_000_000_000_000_000n * 10n ** 18n;
-
-    if (
-      initialSupply < minimum ||
-      initialSupply > maxSupply ||
-      maxSupply > maximum
-    ) {
-      throw Error(
-        'Supply must be between 1 billion and 1 quadrillion tokens, and maximum supply cannot be below initial supply.'
-      );
-    }
-
-    data.initialSupply = initialSupply;
-    data.maxSupply = maxSupply;
-    data.mintable = mintable;
-    data.initialMayhem = $('v2-initial-mayhem').checked;
+    throw Error('Token creation is currently available on Base V2 only');
   }
-  validateMetadata(data.name, data.symbol, data.uri);
-  const extras=metadataExtras(projectLinks(),$('banner-uri').value.trim());
-  if(!data.uri && ($('description').value || $('metadata-image').files?.length || Object.keys(extras).length || $('image-uri').value)) throw Error('Publish or pin your metadata first and enter its URI. Token details must not be silently omitted.');
-  const id = await (await getAdapter()).create(data);
-  location.hash = state.chain + '/' + encodeURIComponent(id);
-}); });
+
+  const mintable =
+    $('v2-supply-mode').value === 'mintable';
+
+  const initialSupply =
+    parseUnits($('v2-initial-supply').value.trim(), 18);
+
+  const maxSupply =
+    mintable
+      ? parseUnits($('v2-max-supply').value.trim(), 18)
+      : initialSupply;
+
+  const minimum =
+    1_000_000_000n * 10n ** 18n;
+
+  const maximum =
+    1_000_000_000_000_000n * 10n ** 18n;
+
+  if (
+    initialSupply < minimum ||
+    initialSupply > maxSupply ||
+    maxSupply > maximum
+  ) {
+    throw Error(
+      'Supply must be between 1 billion and 1 quadrillion tokens, and maximum supply cannot be below initial supply.'
+    );
+  }
+
+  data.initialSupply = initialSupply;
+  data.maxSupply = maxSupply;
+  data.mintable = mintable;
+  data.initialMayhem =
+    $('v2-initial-mayhem').checked;
+
+  validateMetadata(
+    data.name,
+    data.symbol,
+    data.uri
+  );
+
+  const extras =
+    metadataExtras(
+      projectLinks(),
+      $('banner-uri').value.trim()
+    );
+
+  if (
+    !data.uri &&
+    (
+      $('description').value ||
+      $('metadata-image').files?.length ||
+      Object.keys(extras).length ||
+      $('image-uri').value
+    )
+  ) {
+    throw Error(
+      'Publish image + metadata to IPFS first. The Published metadata URI must be filled before this token can be created.'
+    );
+  }
+
+  return data;
+}
+
+function updateInitialBuySymbol() {
+  $('initial-buy-symbol').textContent =
+    $('symbol').value.trim() || 'TOKEN';
+}
+
+$('symbol').addEventListener(
+  'input',
+  updateInitialBuySymbol
+);
+
+$('initial-buy-close').addEventListener(
+  'click',
+  () => $('initial-buy-dialog').close()
+);
+
+$('create-form').addEventListener('submit', e => {
+  e.preventDefault();
+
+  action(async () => {
+    const inline = $('create-action-status');
+
+    try {
+      // Validate everything before requesting wallet access.
+      creationData();
+
+      if (!state.wallet) {
+        inline.textContent =
+          'Requesting access to your Base wallet…';
+        await connectBaseWalletFromGesture();
+      }
+
+      requireWrite();
+
+      updateInitialBuySymbol();
+      $('initial-buy-eth').value = '0';
+
+      inline.textContent =
+        'Wallet ready. Choose 0 ETH to create only, or enter an optional first-buy amount.';
+
+      $('initial-buy-dialog').showModal();
+    } catch (error) {
+      inline.textContent =
+        'Action stopped: ' +
+        (
+          error?.shortMessage ||
+          error?.message ||
+          'Unable to continue'
+        );
+      throw error;
+    }
+  });
+});
+
+$('initial-buy-form').addEventListener('submit', e => {
+  e.preventDefault();
+  $('initial-buy-dialog').close();
+
+  action(async () => {
+    const inline = $('create-action-status');
+
+    try {
+      if (!state.wallet) {
+        inline.textContent =
+          'Requesting access to your Base wallet…';
+        await connectBaseWalletFromGesture();
+      }
+
+      requireWrite();
+
+      const data = creationData();
+
+      const initialBuyText =
+        $('initial-buy-eth').value.trim() || '0';
+
+      const initialBuy =
+        parseUnits(initialBuyText, 18);
+
+      if (initialBuy < 0n) {
+        throw Error(
+          'Optional first buy cannot be negative'
+        );
+      }
+
+      const adapter = await getAdapter();
+
+      inline.textContent =
+        'Review token creation in your wallet. PumpLite creation fee is 0%; Base gas still applies.';
+
+      const id = await adapter.create(data);
+
+      // Always route to the created market, even when an optional
+      // buy is later rejected by the user.
+      location.hash =
+        state.chain + '/' + encodeURIComponent(id);
+
+      if (initialBuy > 0n) {
+        inline.textContent =
+          'Token created. Your same wallet will now show the optional buy confirmation.';
+
+        const market =
+          await adapter.market(id);
+
+        const q =
+          quoteBaseV2(
+            market,
+            'buy',
+            initialBuy
+          );
+
+        const min =
+          minimumOutput(q.output, 100);
+
+        await adapter.trade(
+          market,
+          'buy',
+          initialBuy,
+          min
+        );
+      }
+
+      inline.textContent =
+        initialBuy > 0n
+          ? 'Token created and optional first buy confirmed.'
+          : 'Token created. No optional first buy was requested.';
+    } catch (error) {
+      inline.textContent =
+        'Action stopped: ' +
+        (
+          error?.shortMessage ||
+          error?.message ||
+          'Unable to continue'
+        );
+      throw error;
+    }
+  });
+});
 for (const id of ['side','amount','slippage']) $(id).addEventListener('input', () => { invalidateQuote(); if (state.market) renderMarket(state.market); });
 $('get-quote').addEventListener('click', () => action(async () => {
   requireDeployment(); invalidateQuote();

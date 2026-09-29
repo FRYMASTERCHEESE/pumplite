@@ -50,7 +50,7 @@
       <section class="panel launch" id="create-section" tabindex="-1">
         <p class="eyebrow">CREATE ON PUMPLITE</p><h2>Create your token</h2>
         <p id="create-network" class="network-pill">Base Mainnet · ETH pair</p>
-        <div class="launch-facts"><span><b id="create-supply-fact">1 billion</b><small id="create-supply-mode-fact">Fixed supply</small></span><span><b>0.25%</b>Trading fee</span><span><b id="create-pair">Base ETH</b>Bonding curve pair</span></div>
+        <div class="launch-facts"><span><b id="create-supply-fact">1 billion</b><small id="create-supply-mode-fact">Fixed supply</small></span><span><b>0%</b>PumpLite creation fee</span><span><b>0.25%</b>Trading fee</span></div>
         <p id="create-supply-help" class="fine">No creator allocation. All supply starts in the market vault. No future minting.</p>
 
         <div id="base-v2-create-options" hidden>
@@ -105,8 +105,9 @@
           <label for="image-uri">Published image URI</label><input id="image-uri" placeholder="ipfs://… or https://…" maxlength="500">
           <button id="download-metadata" type="button" class="outline full">Copy metadata JSON</button>
           <p class="fine">Mobile wallet browsers often block file downloads. This button copies the complete metadata JSON instead. You can paste it into a file later if you need the manual backup.</p></details>
-          <p id="creation-review" class="fine">Check the name, ticker and metadata before opening your wallet. Metadata is immutable after creation. Your wallet shows gas and the final fee; you can reject.</p>
-          <button id="create" class="primary" type="submit" disabled>Review creation in wallet</button>
+          <p id="creation-review" class="fine">Check the name, ticker and metadata first. PumpLite charges 0% to create; Base network gas still applies. If PumpLite does not yet have wallet access, tapping Create coin will request access to the same wallet you are using.</p>
+          <button id="create" class="primary" type="submit" disabled>Create coin</button>
+          <p id="create-action-status" class="fine" role="status" aria-live="polite">Fill the token details, publish metadata, then tap Create coin. No transaction is sent until you approve it in your wallet.</p>
           <p class="fine">Creation does not grant Verified status. No audit or investment endorsement is implied.</p>
           </fieldset>
         </form>
@@ -195,6 +196,29 @@
       </section>
     </div>
   </section>
+
+  <dialog id="initial-buy-dialog" class="initial-buy-dialog" aria-labelledby="initial-buy-title">
+    <form id="initial-buy-form">
+      <button id="initial-buy-close" class="dialog-close" type="button" aria-label="Close">×</button>
+      <p class="eyebrow">OPTIONAL FIRST BUY</p>
+      <h2 id="initial-buy-title">How much <span id="initial-buy-symbol">TOKEN</span> do you want to buy?</h2>
+      <p class="muted">Use 0 ETH to create only. Enter more than 0 ETH if you also want your same connected wallet to buy the new token immediately after creation.</p>
+
+      <div class="initial-buy-amount">
+        <label class="sr-only" for="initial-buy-eth">Optional first buy amount in ETH</label>
+        <input id="initial-buy-eth" inputmode="decimal" maxlength="32" value="0" autocomplete="off">
+        <strong>ETH</strong>
+      </div>
+
+      <div class="create-fee-note">
+        <b>0% PumpLite creation fee</b>
+        <small>Base gas still applies. Creation is one wallet confirmation. If you enter more than 0 ETH, the same wallet will show another confirmation for the buy. The normal 0.25% trading fee applies; Mayhem support also applies when Mayhem is active.</small>
+      </div>
+
+      <button id="initial-buy-submit" class="primary full" type="submit">Create coin</button>
+      <p class="fine">Nothing is bought automatically. You can reject either wallet request.</p>
+    </form>
+  </dialog>
 
   <div id="status" class="status" role="status" aria-live="polite"><span id="status-text">No wallet connected. No transactions submitted.</span><a id="status-link" target="_blank" rel="noopener noreferrer" hidden>View transaction ↗</a></div>
 </main>

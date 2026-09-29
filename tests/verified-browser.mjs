@@ -115,7 +115,8 @@ export async function verifyBrowser(browser, base) {
   await page.locator('#metadata-image').setInputFiles({name:'fixture.png',mimeType:'image/png',buffer:Buffer.from(png,'base64')});
   await page.waitForFunction(()=>document.querySelector('#media-status').textContent.startsWith('Local preview ready'));
   assert.equal(await page.locator('#image-preview').isVisible(),true);
-  assert.equal(await page.locator('#create').isDisabled(),true,'No wallet used');
+  assert.equal(await page.locator('#create').isDisabled(),false,'Base create stays actionable and requests wallet access only after a user click');
+  assert.equal(await page.locator('#publish-metadata').isDisabled(),false,'Metadata publish stays actionable after an image is selected');
   assert.equal(await page.locator('body').evaluate(e=>e.scrollWidth<=innerWidth),true);
   assert.deepEqual(errors,[]);
   console.log('PASS redesigned Pages '+width+'px: Base V2 provenance, manual reviews, revoke/filter/mismatch/RPC failures, safe notes, metadata links/banner copy, local media preview, Solana locked');

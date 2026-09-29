@@ -88,6 +88,14 @@ test('Base V2 frontend contains gated V2 features', async () => {
   assert.match(html, /Copy metadata JSON/);
   assert.match(app, /copyMetadataText/);
   assert.match(adapter, /personal_sign/);
+  assert.match(html, /initial-buy-dialog/);
+  assert.match(html, /initial-buy-eth/);
+  assert.match(html, /0% PumpLite creation fee/);
+  assert.match(html, /create-action-status/);
+  assert.match(app, /connectBaseWalletFromGesture/);
+  assert.match(app, /creationData/);
+  assert.match(app, /optional first buy/i);
+  assert.match(app, /adapter\.trade\(/);
 });
 
 test('public Base deployment selects verified V2 Mainnet configuration', async () => {
