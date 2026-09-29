@@ -17,5 +17,5 @@ test('Solana uses only the public read-only proxy address and verified fallback 
 test('CSP grants only the exact Worker HTTPS origin and existing fallback/Base destinations',()=>{
  const policy=securityHeaders(html)['Content-Security-Policy'];
  const sources=policy.split(';').map(s=>s.trim()).find(s=>s.startsWith('connect-src ')).split(/\s+/).slice(1);
- assert.deepEqual(sources,["'self'",'https://pumplite-rpc.coreyedge123.workers.dev','https://solana-rpc.publicnode.com','wss://solana-rpc.publicnode.com','https://mainnet.base.org']);
+ assert.deepEqual(sources,["'self'",'https://pumplite-rpc.coreyedge123.workers.dev','https://solana-rpc.publicnode.com','wss://solana-rpc.publicnode.com','https://mainnet.base.org','https://api.coinbase.com']);
 });
