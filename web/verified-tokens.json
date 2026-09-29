@@ -1,4 +1,17 @@
 {
   "version": 1,
-  "base": {}
+  "base": {
+    "0xa522a4ef81fd31daec390ab46a32d4886e1461c7": {
+      "status": "verified",
+      "easUid": "0x805a4b6019e15479a489751c44d7b078eaad6ccd71b6fe27d1ad93a234ce59b9",
+      "market": "0xa522A4Ef81fD31daec390ab46A32D4886e1461C7",
+      "token": "0xb15A460142c77b42cDF57815b0eeFEb24b593196",
+      "creator": "0x0de7FdCc798F7FAC6b03b366c529133A9c60794d",
+      "name": "PumpLite",
+      "symbol": "PLITE",
+      "metadataURI": "ipfs://bafkreidmtlxnc5g3wtmmvgg5522hkosyacnhuzgczxiqpwxtwarvdwbfsu",
+      "reviewedAt": "2026-09-29T11:17:49.172Z",
+      "note": "PLITE identity and provenance reviewed by PumpLite controller."
+    }
+  }
 }
