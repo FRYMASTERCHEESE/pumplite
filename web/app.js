@@ -268,7 +268,6 @@ function switchChain(chain) {
   state.adapter?.disconnect();
   state.chain = chain; state.epoch++; state.adapter = null; state.wallet = null; state.market = null; state.next = null; state.markets=[]; state.registry=null;
   $('create-network').textContent=chain==='base'?'Base Mainnet · ETH pair':'Solana Mainnet · deployment pending';
-  $('create-pair').textContent=chain==='base'?'Base ETH':'Solana locked';
   $('chain').value = chain; $('connect').textContent = 'Connect wallet';
   const configured = ready();
   const writes = transactionConfigEnabled(state.config, chain);

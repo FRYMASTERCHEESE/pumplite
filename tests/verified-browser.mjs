@@ -65,6 +65,7 @@ export async function verifyBrowser(browser, base) {
    return r.fulfill({json:{jsonrpc:'2.0',id:req.id,result}});
   });
   await page.goto(base,{waitUntil:'networkidle'});
+  await page.waitForFunction(()=>document.querySelector('#chain')?.value==='base');
   assert.equal(await page.locator('#chain').inputValue(),'base');
   await page.locator('#refresh').click();await page.waitForFunction(()=>document.querySelectorAll('.market-row').length===1);
   assert.equal(await page.locator('.market-row .badge').count(),2);

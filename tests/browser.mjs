@@ -28,7 +28,7 @@ try {
     assert.match(await page.locator('#deployment').textContent(), /Base Mainnet.*live configuration/);
     await page.locator('#connect').click();
     await page.waitForFunction(() => document.querySelector('#status-text').textContent.includes('No EVM wallet detected'));
-    assert.equal(await page.locator('#create').isDisabled(), true);
+    assert.equal(await page.locator('#create').isDisabled(), false, 'Base create remains actionable so a user click can request wallet access');
     assert.equal(await page.locator('#trade').isDisabled(), true);
 
     await page.selectOption('#chain', 'solana');
