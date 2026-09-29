@@ -1,0 +1,85 @@
+name: Review PumpLite token identity
+
+on:
+  workflow_dispatch:
+    inputs:
+      market:
+        description: "Base V2 market address to review"
+        required: true
+        type: string
+      eas_uid:
+        description: "Base EAS attestation UID published by the PumpLite controller wallet"
+        required: true
+        type: string
+      decision:
+        description: "Owner identity/provenance decision"
+        required: true
+        type: choice
+        options:
+          - verify
+          - decline
+          - revoke
+      note:
+        description: "Short public review note"
+        required: false
+        default: ""
+        type: string
+      confirmation:
+        description: "Type exactly: I REVIEWED THIS TOKEN"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pumplite-owner-token-review
+  cancel-in-progress: false
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
+        with:
+          version: 10.11.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Validate portable Base proof and apply owner review
+        env:
+          PUMPLITE_REVIEW_DECISION: ${{ inputs.decision }}
+          PUMPLITE_REVIEW_MARKET: ${{ inputs.market }}
+          PUMPLITE_REVIEW_EAS_UID: ${{ inputs.eas_uid }}
+          PUMPLITE_REVIEW_NOTE: ${{ inputs.note }}
+          PUMPLITE_REVIEW_CONFIRMATION: ${{ inputs.confirmation }}
+        run: node scripts/review-market-action.mjs
+
+      - run: pnpm build:pages
+      - run: pnpm check
+      - run: pnpm test
+      - run: pnpm test:pages
+      - run: pnpm check:pages
+
+      - name: Publish reviewed registry mirror
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "PumpLite owner review"
+          git config user.email "actions@users.noreply.github.com"
+          git add web/verified-tokens.json assets/verified-tokens.json
+          if git diff --cached --quiet; then
+            echo "No registry change."
+            exit 0
+          fi
+          git commit -m "Review token ${{ inputs.decision }}: ${{ inputs.market }}"
+          git push origin HEAD:main

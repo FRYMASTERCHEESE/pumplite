@@ -107,8 +107,11 @@ test('Base V2 frontend contains gated V2 features', async () => {
   assert.doesNotMatch(adapter, /createMarketV2\.estimateGas/);
   assert.match(adapter, /baseReadRpcUrls/);
   assert.match(adapter, /baseReadTransport/);
+  assert.match(adapter, /tradeHistory/);
   assert.match(app, /routeMarketId/);
   assert.match(app, /Loading Base market and token balances/);
+  assert.match(app, /refreshMarketAfterAction/);
+  assert.match(app, /mayhemManualReady/);
 });
 
 test('public Base deployment selects verified V2 Mainnet configuration', async () => {

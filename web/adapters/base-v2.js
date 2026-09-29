@@ -1,9 +1,43 @@
 import { discoverEvm, watchWallet } from '../wallets.js';
-import { BrowserProvider, JsonRpcProvider, Contract, getAddress, FetchRequest } from 'ethers';
+import { BrowserProvider, JsonRpcProvider, Contract, getAddress, FetchRequest, AbiCoder, ZeroAddress, ZeroHash, keccak256, solidityPacked, toUtf8Bytes } from 'ethers';
 import { gasBudget } from '../gas.js';
 import { baseReadRpcUrls, baseReadTransport } from '../base-rpc.js';
 import abis from '../generated/base-v2-abi.json' with { type: 'json' };
 import { assertReceipt } from '../math.js';
+
+export const EAS_ADDRESS = '0x4200000000000000000000000000000000000021';
+export const EAS_SCHEMA_REGISTRY_ADDRESS = '0x4200000000000000000000000000000000000020';
+export const PUMPLITE_REVIEW_SCHEMA = 'address market,address token,address creator,address factory,uint8 decision,bytes32 metadataHash,uint64 reviewedAt';
+export const PUMPLITE_REVIEW_SCHEMA_UID = keccak256(
+  solidityPacked(
+    ['string', 'address', 'bool'],
+    [PUMPLITE_REVIEW_SCHEMA, ZeroAddress, true]
+  )
+);
+
+const REVIEW_DECISION = Object.freeze({ verified: 1, declined: 2 });
+const REVIEW_DECISION_NAME = Object.freeze({ 1: 'verified', 2: 'declined' });
+const reviewCoder = AbiCoder.defaultAbiCoder();
+const SCHEMA_REGISTRY_ABI = [
+  'function getSchema(bytes32 uid) view returns (tuple(bytes32 uid,address resolver,bool revocable,string schema) record)',
+  'function register(string schema,address resolver,bool revocable) returns (bytes32)'
+];
+const EAS_ABI = [
+  'function attest((bytes32 schema,(address recipient,uint64 expirationTime,bool revocable,bytes32 refUID,bytes data,uint256 value) data) request) payable returns (bytes32)',
+  'function revoke((bytes32 schema,(bytes32 uid,uint256 value) data) request) payable',
+  'function getAttestation(bytes32 uid) view returns (tuple(bytes32 uid,bytes32 schema,uint64 time,uint64 expirationTime,uint64 revocationTime,bytes32 refUID,address recipient,address attester,bool revocable,bytes data) attestation)',
+  'event Attested(address indexed recipient,address indexed attester,bytes32 uid,bytes32 indexed schemaUID)'
+];
+
+function reviewMetadataHash(uri) {
+  return keccak256(toUtf8Bytes(String(uri || '')));
+}
+
+function reviewDecisionCode(value) {
+  const code = REVIEW_DECISION[value];
+  if (!code) throw Error('Review decision must be verified or declined');
+  return code;
+}
 
 export async function settleBase(tx, notify, explorer) {
   notify('Submitted. Waiting for a Base receipt.', explorer + '/tx/' + tx.hash);
@@ -54,6 +88,10 @@ export function adapter(config, notify, changed = () => {}) {
     if (!config.factory) throw Error('Base contracts have not been deployed');
     return new Contract(config.factory, abis.LaunchFactoryV2, provider);
   };
+  const schemaRegistry = () =>
+    new Contract(EAS_SCHEMA_REGISTRY_ADDRESS, SCHEMA_REGISTRY_ABI, provider);
+  const eas = () =>
+    new Contract(EAS_ADDRESS, EAS_ABI, provider);
   async function network() {
     const id = BigInt(await provider.send('eth_chainId', []));
     if (id !== 8453n) throw Error('RPC is not Base Mainnet');
@@ -456,10 +494,34 @@ export function adapter(config, notify, changed = () => {}) {
     async setMayhem(m, enabled) {
       const s = await wallet();
       const verified = await market(m.id);
-      const curve = new Contract(verified.id, abis.CurveMarketV2, s);
 
-      const gas = await curve.setMayhem.estimateGas(enabled);
-      const gasLimit = gasBudget(gas, 150_000n);
+      if (
+        getAddress(connectedAddress) !==
+        getAddress(verified.mayhemController)
+      ) {
+        throw Error('Connected wallet is not the Mayhem controller');
+      }
+
+      const block = await provider.getBlock('latest');
+      const unlockAt =
+        BigInt(verified.launchedAt) + 86_400n;
+
+      if (BigInt(block.timestamp) < unlockAt) {
+        throw Error(
+          'Manual Mayhem unlocks 24 hours after launch. This is enforced by the deployed market contract.'
+        );
+      }
+
+      const curve = new Contract(
+        verified.id,
+        abis.CurveMarketV2,
+        s
+      );
+
+      const gas =
+        await curve.setMayhem.estimateGas(enabled);
+      const gasLimit =
+        gasBudget(gas, 150_000n);
 
       await wallet();
 
@@ -486,6 +548,336 @@ export function adapter(config, notify, changed = () => {}) {
           gasLimit
         })
       );
+    },
+
+    reviewSchemaUid() {
+      return PUMPLITE_REVIEW_SCHEMA_UID;
+    },
+
+    async reviewSchemaStatus() {
+      await network();
+      const record = await schemaRegistry().getSchema(PUMPLITE_REVIEW_SCHEMA_UID);
+      const registered = record.uid !== ZeroHash;
+
+      if (!registered) {
+        return {
+          registered: false,
+          uid: PUMPLITE_REVIEW_SCHEMA_UID,
+          schema: PUMPLITE_REVIEW_SCHEMA
+        };
+      }
+
+      const matches =
+        record.uid === PUMPLITE_REVIEW_SCHEMA_UID &&
+        getAddress(record.resolver) === getAddress(ZeroAddress) &&
+        record.revocable === true &&
+        record.schema === PUMPLITE_REVIEW_SCHEMA;
+
+      if (!matches) {
+        throw Error('PumpLite EAS schema UID exists with unexpected schema data');
+      }
+
+      return {
+        registered: true,
+        uid: PUMPLITE_REVIEW_SCHEMA_UID,
+        schema: PUMPLITE_REVIEW_SCHEMA
+      };
+    },
+
+    async registerReviewSchema() {
+      const active = await wallet();
+
+      if (getAddress(connectedAddress) !== getAddress(config.treasury)) {
+        throw Error('Only the PumpLite controller wallet can register the review schema from this site');
+      }
+
+      const existing = await this.reviewSchemaStatus();
+      if (existing.registered) return existing;
+
+      const registry = new Contract(
+        EAS_SCHEMA_REGISTRY_ADDRESS,
+        SCHEMA_REGISTRY_ABI,
+        active
+      );
+
+      const gas = await registry.register.estimateGas(
+        PUMPLITE_REVIEW_SCHEMA,
+        ZeroAddress,
+        true
+      );
+      const gasLimit = gasBudget(gas, 500_000n);
+
+      notify(
+        'Registering the PumpLite review schema on Base EAS. This is a one-time Base transaction and uses network gas.'
+      );
+
+      await wallet();
+      await settle(
+        await registry.register(
+          PUMPLITE_REVIEW_SCHEMA,
+          ZeroAddress,
+          true,
+          { gasLimit }
+        )
+      );
+
+      const checked = await this.reviewSchemaStatus();
+      if (!checked.registered) throw Error('EAS schema registration was not visible after confirmation');
+      return checked;
+    },
+
+    async reviewAttestation(uid) {
+      if (typeof uid !== 'string' || !/^0x[0-9a-fA-F]{64}$/.test(uid)) {
+        throw Error('Invalid EAS attestation UID');
+      }
+
+      await network();
+      const attestation = await eas().getAttestation(uid);
+
+      if (attestation.uid === ZeroHash) {
+        throw Error('EAS attestation was not found');
+      }
+
+      let decoded;
+      try {
+        decoded = reviewCoder.decode(
+          ['address','address','address','address','uint8','bytes32','uint64'],
+          attestation.data
+        );
+      } catch {
+        throw Error('EAS attestation data does not match the PumpLite review schema');
+      }
+
+      const decisionCode = Number(decoded[4]);
+      const decision = REVIEW_DECISION_NAME[decisionCode] || 'unknown';
+      const expiration = BigInt(attestation.expirationTime);
+      const now = BigInt(Math.floor(Date.now() / 1000));
+
+      return {
+        uid: attestation.uid,
+        schema: attestation.schema,
+        recipient: getAddress(attestation.recipient),
+        attester: getAddress(attestation.attester),
+        time: BigInt(attestation.time),
+        expirationTime: expiration,
+        revocationTime: BigInt(attestation.revocationTime),
+        revocable: Boolean(attestation.revocable),
+        market: getAddress(decoded[0]),
+        token: getAddress(decoded[1]),
+        creator: getAddress(decoded[2]),
+        factory: getAddress(decoded[3]),
+        decisionCode,
+        decision,
+        metadataHash: decoded[5],
+        reviewedAt: BigInt(decoded[6]),
+        active:
+          attestation.schema === PUMPLITE_REVIEW_SCHEMA_UID &&
+          BigInt(attestation.revocationTime) === 0n &&
+          (expiration === 0n || expiration > now)
+      };
+    },
+
+    async publishReviewAttestation(m, decision) {
+      const active = await wallet();
+      const owner = getAddress(config.treasury);
+
+      if (getAddress(connectedAddress) !== owner) {
+        throw Error('Only the PumpLite controller wallet can publish PumpLite review attestations');
+      }
+
+      const verified = await market(m.id);
+      const schema = await this.reviewSchemaStatus();
+      if (!schema.registered) {
+        throw Error('Register the PumpLite review schema on Base first');
+      }
+
+      const code = reviewDecisionCode(decision);
+      const block = await provider.getBlock('latest');
+      const reviewedAt = BigInt(block.timestamp);
+      const data = reviewCoder.encode(
+        ['address','address','address','address','uint8','bytes32','uint64'],
+        [
+          verified.id,
+          verified.token,
+          verified.creator,
+          getAddress(config.factory),
+          code,
+          reviewMetadataHash(verified.uri),
+          reviewedAt
+        ]
+      );
+
+      const requestData = {
+        recipient: verified.token,
+        expirationTime: 0,
+        revocable: true,
+        refUID: ZeroHash,
+        data,
+        value: 0
+      };
+
+      const easWrite = new Contract(EAS_ADDRESS, EAS_ABI, active);
+      const gas = await easWrite.attest.estimateGas({
+        schema: PUMPLITE_REVIEW_SCHEMA_UID,
+        data: requestData
+      });
+      const gasLimit = gasBudget(gas, 500_000n);
+
+      notify(
+        'Publishing a public PumpLite ' + decision + ' review attestation on Base EAS. Review the wallet network fee before approving.'
+      );
+
+      await wallet();
+      const receipt = await settle(
+        await easWrite.attest(
+          {
+            schema: PUMPLITE_REVIEW_SCHEMA_UID,
+            data: requestData
+          },
+          { gasLimit }
+        )
+      );
+
+      let uid = null;
+      for (const log of receipt.logs) {
+        if (getAddress(log.address) !== getAddress(EAS_ADDRESS)) continue;
+        try {
+          const parsed = easWrite.interface.parseLog(log);
+          if (parsed?.name === 'Attested') {
+            uid = parsed.args.uid;
+            break;
+          }
+        } catch {}
+      }
+
+      if (!uid) throw Error('Confirmed EAS transaction did not contain the expected Attested event');
+
+      const proof = await this.reviewAttestation(uid);
+      if (
+        !proof.active ||
+        proof.decision !== decision ||
+        getAddress(proof.attester) !== owner ||
+        getAddress(proof.market) !== getAddress(verified.id) ||
+        getAddress(proof.token) !== getAddress(verified.token) ||
+        getAddress(proof.creator) !== getAddress(verified.creator) ||
+        getAddress(proof.factory) !== getAddress(config.factory) ||
+        proof.metadataHash !== reviewMetadataHash(verified.uri)
+      ) {
+        throw Error('Published EAS attestation failed the PumpLite read-back checks');
+      }
+
+      return proof;
+    },
+
+    async revokeReviewAttestation(uid) {
+      const active = await wallet();
+      const owner = getAddress(config.treasury);
+      if (getAddress(connectedAddress) !== owner) {
+        throw Error('Only the PumpLite controller wallet can revoke PumpLite review attestations');
+      }
+
+      const proof = await this.reviewAttestation(uid);
+      if (getAddress(proof.attester) !== owner) {
+        throw Error('This attestation was not issued by the PumpLite controller wallet');
+      }
+      if (!proof.active) throw Error('This PumpLite review attestation is already inactive');
+      if (!proof.revocable) throw Error('This EAS attestation is not revocable');
+
+      const easWrite = new Contract(EAS_ADDRESS, EAS_ABI, active);
+      const request = {
+        schema: PUMPLITE_REVIEW_SCHEMA_UID,
+        data: { uid, value: 0 }
+      };
+      const gas = await easWrite.revoke.estimateGas(request);
+      const gasLimit = gasBudget(gas, 250_000n);
+
+      notify('Revoking the public PumpLite EAS review attestation. This uses Base network gas.');
+      await wallet();
+      await settle(await easWrite.revoke(request, { gasLimit }));
+
+      const after = await this.reviewAttestation(uid);
+      if (after.revocationTime === 0n) throw Error('EAS revocation was not visible after confirmation');
+      return after;
+    },
+
+    async tradeHistory(m, limit = 120) {
+      if (
+        !Number.isInteger(limit) ||
+        limit < 1 ||
+        limit > 200
+      ) {
+        throw Error('Invalid trade history limit');
+      }
+
+      await network();
+
+      const id = getAddress(m.id);
+
+      if (!await factory().isMarket(id)) {
+        throw Error('Market is not in the configured factory');
+      }
+
+      const curve = new Contract(
+        id,
+        abis.CurveMarketV2,
+        provider
+      );
+
+      const latest =
+        await provider.getBlockNumber();
+
+      let to = latest;
+      let logs = [];
+
+      // Recent chart history only. Read-only log queries are deliberately
+      // bounded so a chart can never create an unbounded RPC scan.
+      for (
+        let chunk = 0;
+        chunk < 20 && to >= 0 && logs.length < limit;
+        chunk++
+      ) {
+        const from = Math.max(0, to - 4_999);
+        const batch = await curve.queryFilter(
+          curve.filters.Trade(),
+          from,
+          to
+        );
+
+        logs.push(...batch);
+
+        if (from === 0) break;
+        to = from - 1;
+      }
+
+      logs.sort(
+        (a, b) =>
+          Number(a.blockNumber) -
+          Number(b.blockNumber)
+      );
+
+      if (logs.length > limit) {
+        logs = logs.slice(-limit);
+      }
+
+      return logs.map(log => {
+        const isBuy = Boolean(log.args.isBuy);
+        const input = BigInt(log.args.input);
+        const output = BigInt(log.args.output);
+
+        const price =
+          isBuy
+            ? input * 10n ** 18n / output
+            : output * 10n ** 18n / input;
+
+        return {
+          blockNumber: Number(log.blockNumber),
+          transactionHash: log.transactionHash,
+          isBuy,
+          input,
+          output,
+          price
+        };
+      });
     },
 
     async trade(m, side, amount, min) {

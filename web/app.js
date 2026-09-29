@@ -6,13 +6,14 @@ import { mobileBrowseLink } from './mobile.js';
 import { metadataDocument } from './metadata.js';
 import { parseUnits, formatUnits, quote, quoteBaseV2, minimumOutput, validateMetadata } from './math.js';
 import { validatePublicConfig, deploymentConfigured, transactionConfigEnabled } from './release-config.js';
+import { renderPriceChart } from './price-chart.js';
 if (window.top !== window.self) {
   document.body.replaceChildren(document.createTextNode('Open PumpLite directly in your browser. Embedded wallet interactions are disabled.'));
   throw Error('Embedded PumpLite is disabled');
 }
 const $ = id => document.getElementById(id);
 $('skip-content').addEventListener('click', event => { event.preventDefault(); $('main-content').focus(); });
-const state = { config: null, chain: 'base', adapter: null, wallet: null, market: null, quote: null, busy: false, epoch: 0, next: null, markets: [], registry: null };
+const state = { config: null, chain: 'base', adapter: null, wallet: null, market: null, quote: null, busy: false, epoch: 0, next: null, markets: [], registry: null, reviewProof: null, reviewSchemaReady: false };
 function status(message, href) {
   $('status-text').textContent = message;
   $('status-link').hidden = !href;
@@ -82,14 +83,47 @@ function controls() {
     state.market?.mintingLocked === true ||
     state.market?.mintableAtLaunch !== true;
 
+  const controllerWallet =
+    state.wallet &&
+    state.market?.mayhemController &&
+    state.wallet.toLowerCase() ===
+      String(state.market.mayhemController).toLowerCase();
+
+  const mayhemReady =
+    state.market?.contractVersion === 2 &&
+    mayhemManualReady(state.market);
+
   $('v2-mayhem-on').disabled =
-    !writable() || state.market?.contractVersion !== 2;
+    !writable() ||
+    !controllerWallet ||
+    !mayhemReady ||
+    state.market?.mayhemActive === true;
 
   $('v2-mayhem-off').disabled =
-    !writable() || state.market?.contractVersion !== 2;
+    !writable() ||
+    !controllerWallet ||
+    !mayhemReady ||
+    state.market?.mayhemActive !== true;
 
   $('v2-support-submit').disabled =
     !writable() || state.market?.contractVersion !== 2;
+
+  const ownerReviewReady =
+    writable() &&
+    state.chain === 'base' &&
+    state.market?.contractVersion === 2 &&
+    state.wallet?.toLowerCase() === String(state.config?.base?.treasury || '').toLowerCase();
+
+  $('eas-register-schema').disabled =
+    !ownerReviewReady || state.reviewSchemaReady;
+  $('eas-verify').disabled =
+    !ownerReviewReady || !state.reviewSchemaReady;
+  $('eas-decline').disabled =
+    !ownerReviewReady || !state.reviewSchemaReady;
+  $('eas-revoke').disabled =
+    !ownerReviewReady || !state.reviewProof?.active;
+  $('copy-review-uid').disabled =
+    !state.reviewProof?.uid;
   $('metadata-image').disabled = state.busy || !metadataEnabled;
   $('publish-metadata').disabled = state.busy || !metadataEnabled;
   $('metadata-upload-help').textContent =
@@ -119,6 +153,182 @@ function invalidateQuote() {
   for (const id of ['quote-output','quote-min','quote-fee','quote-support']) $(id).textContent = '—';
   $('quote-age').textContent = 'Get a current quote before signing.';
   controls();
+}
+
+const MAYHEM_MANUAL_DELAY_SECONDS = 86_400;
+
+function mayhemManualReady(market) {
+  return Boolean(
+    market?.contractVersion === 2 &&
+    Number.isFinite(Number(market.launchedAt)) &&
+    Math.floor(Date.now() / 1000) >=
+      Number(market.launchedAt) +
+      MAYHEM_MANUAL_DELAY_SECONDS
+  );
+}
+
+function mayhemHelp(market) {
+  const unlock =
+    Number(market.launchedAt) +
+    MAYHEM_MANUAL_DELAY_SECONDS;
+
+  if (mayhemManualReady(market)) {
+    return market.mayhemActive
+      ? 'Manual Mayhem is ACTIVE. The controller wallet can turn it off.'
+      : 'Manual Mayhem is unlocked. The controller wallet can turn it on.';
+  }
+
+  const remaining =
+    Math.max(
+      0,
+      unlock - Math.floor(Date.now() / 1000)
+    );
+
+  const hours = Math.floor(remaining / 3600);
+  const minutes =
+    Math.ceil((remaining % 3600) / 60);
+
+  return (
+    (market.initialMayhem
+      ? 'Initial Mayhem is controlled by the launch setting during the first 24 hours. '
+      : 'Manual Mayhem is locked by the deployed contract for the first 24 hours. ') +
+    'Manual controls unlock at ' +
+    new Date(unlock * 1000).toLocaleString() +
+    ' (about ' +
+    hours +
+    'h ' +
+    minutes +
+    'm).'
+  );
+}
+
+async function refreshMarketAfterAction(id) {
+  let lastError;
+
+  for (
+    const delay of [0, 450, 900, 1600]
+  ) {
+    if (delay) {
+      await new Promise(resolve =>
+        setTimeout(resolve, delay)
+      );
+    }
+
+    try {
+      await loadMarket(id);
+      status(
+        'Confirmed transaction reflected in the refreshed market.'
+      );
+      return;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw Error(
+    'Transaction was confirmed, but the read-only market refresh is still catching up: ' +
+    (lastError?.message || 'refresh unavailable') +
+    '. No wallet transaction was retried.'
+  );
+}
+
+let chartRequest = 0;
+
+function clearMarketChart(message) {
+  $('price-chart').replaceChildren();
+  const empty = document.createElement('p');
+  empty.className = 'price-chart-empty';
+  empty.textContent = message;
+  $('price-chart').append(empty);
+  $('price-chart-change').textContent = 'No trades yet';
+  $('price-chart-change').className = 'chart-change';
+  $('price-chart-status').textContent = message;
+}
+
+async function loadMarketChart(market) {
+  const request = ++chartRequest;
+
+  if (
+    state.chain !== 'base' ||
+    market.contractVersion !== 2
+  ) {
+    clearMarketChart(
+      'Trade chart is available for Base V2 markets.'
+    );
+    return;
+  }
+
+  $('price-chart-status').textContent =
+    'Loading recent real Trade events from Base Mainnet…';
+
+  try {
+    const trades =
+      await (await getAdapter()).tradeHistory(
+        market,
+        120
+      );
+
+    if (
+      request !== chartRequest ||
+      state.market?.id !== market.id
+    ) {
+      return;
+    }
+
+    const summary =
+      renderPriceChart(
+        $('price-chart'),
+        trades,
+        market.symbol
+      );
+
+    if (!summary.count) {
+      $('price-chart-change').textContent =
+        'No trades yet';
+      $('price-chart-change').className =
+        'chart-change';
+      $('price-chart-status').textContent =
+        'No completed buy/sell Trade events were found in the bounded recent Base history.';
+      return;
+    }
+
+    const change = summary.changePct;
+    const direction =
+      change > 0
+        ? 'up'
+        : change < 0
+          ? 'down'
+          : '';
+
+    $('price-chart-change').className =
+      'chart-change' +
+      (direction ? ' ' + direction : '');
+
+    $('price-chart-change').textContent =
+      (change > 0 ? '+' : '') +
+      change.toFixed(2) +
+      '%';
+
+    $('price-chart-status').textContent =
+      summary.count +
+      ' recent on-chain trades · latest execution price ' +
+      summary.latestPrice.toPrecision(6) +
+      ' ETH/' +
+      market.symbol +
+      '. Green segments moved up; red segments moved down.';
+  } catch (error) {
+    if (
+      request !== chartRequest ||
+      state.market?.id !== market.id
+    ) {
+      return;
+    }
+
+    clearMarketChart(
+      'Recent trade history is temporarily unavailable: ' +
+      (error?.message || 'read failed')
+    );
+  }
 }
 async function getAdapter() {
   if (state.adapter) return state.adapter;
@@ -209,6 +419,9 @@ function renderMarket(m) {
     $('v2-mayhem-status').textContent =
       m.mayhemActive ? 'ACTIVE' : 'OFF';
 
+    $('v2-mayhem-help').textContent =
+      mayhemHelp(m);
+
     $('v2-support-total').textContent =
       formatUnits(m.totalMarketSupport, 18) + ' ETH';
 
@@ -229,11 +442,112 @@ function renderMarket(m) {
     $('base-v2-controller').hidden = true;
   }
 
+  const ownerWallet =
+    state.wallet?.toLowerCase();
+
+  const reviewOwner =
+    state.chain === 'base' &&
+    ownerWallet &&
+    ownerWallet ===
+      String(state.config.base.treasury).toLowerCase();
+
+  $('owner-review-panel').hidden =
+    !reviewOwner;
+
+  $('owner-review-market').textContent =
+    m.id;
+
   const c = state.config[state.chain];
   $('market-link').href = c.explorer + (state.chain === 'solana' ? '/account/' : '/address/') + m.id;
   $('token-link').href = c.explorer + '/token/' + m.token;
   $('amount-label').textContent = $('side').value === 'buy' ? 'Amount (' + m.unit + ')' : 'Amount (' + m.symbol + ')';
 }
+async function reconcilePortableReview(market) {
+  state.reviewProof = null;
+
+  if (state.chain !== 'base' || !state.registry?.base) return;
+
+  const key = market.id.toLowerCase();
+  const entry = state.registry.base[key];
+  if (!entry?.easUid) return;
+
+  try {
+    const proof = await (await getAdapter()).reviewAttestation(entry.easUid);
+    const expectedDecision = entry.status === 'verified' ? 'verified' : 'declined';
+    const valid =
+      proof.active &&
+      proof.decision === expectedDecision &&
+      proof.schema === state.adapter.reviewSchemaUid() &&
+      proof.attester.toLowerCase() === String(state.config.base.treasury).toLowerCase() &&
+      proof.recipient.toLowerCase() === market.token.toLowerCase() &&
+      proof.market.toLowerCase() === market.id.toLowerCase() &&
+      proof.token.toLowerCase() === market.token.toLowerCase() &&
+      proof.creator.toLowerCase() === market.creator.toLowerCase() &&
+      proof.factory.toLowerCase() === String(state.config.base.factory).toLowerCase();
+
+    if (!valid) throw Error('portable EAS proof no longer matches this market');
+    state.reviewProof = proof;
+  } catch (error) {
+    const next = { version: 1, base: { ...state.registry.base } };
+    delete next.base[key];
+    state.registry = next;
+    status(
+      'PumpLite review mirror was hidden because its portable Base EAS proof could not be validated: ' +
+      (error?.message || 'verification unavailable')
+    );
+  }
+}
+
+function showReviewProof(proof) {
+  state.reviewProof = proof || null;
+  const box = $('eas-proof');
+
+  if (!proof?.uid) {
+    box.hidden = true;
+    $('eas-review-uid').textContent = '';
+    $('eas-review-link').removeAttribute('href');
+    $('eas-review-status').textContent =
+      'No owner attestation has been selected for this review yet.';
+    controls();
+    return;
+  }
+
+  box.hidden = false;
+  $('eas-review-uid').textContent = proof.uid;
+  $('eas-review-link').href =
+    'https://base.easscan.org/attestation/view/' + encodeURIComponent(proof.uid);
+
+  $('eas-review-status').textContent =
+    proof.active
+      ? 'Public Base EAS review: ' + proof.decision.toUpperCase() + '. Copy this UID into the protected GitHub review workflow to publish the matching PumpLite badge.'
+      : 'This Base EAS review proof is revoked/inactive. Use the GitHub review workflow with Revoke to remove its PumpLite mirror.';
+
+  controls();
+}
+
+async function loadOwnerReviewTools(market) {
+  const isOwner =
+    state.chain === 'base' &&
+    state.wallet &&
+    state.wallet.toLowerCase() === String(state.config.base.treasury).toLowerCase();
+
+  if (!isOwner || market.contractVersion !== 2) {
+    state.reviewSchemaReady = false;
+    controls();
+    return;
+  }
+
+  const schema = await (await getAdapter()).reviewSchemaStatus();
+  state.reviewSchemaReady = schema.registered;
+  $('eas-schema-status').textContent =
+    schema.registered
+      ? 'PumpLite portable review schema is registered on Base EAS · ' + schema.uid
+      : 'PumpLite portable review schema is not registered yet. Registering it is a one-time Base transaction and uses network gas.';
+
+  showReviewProof(state.reviewProof);
+  controls();
+}
+
 async function loadMarket(id) {
   requireDeployment(); invalidateQuote();
   state.market = null;
@@ -242,14 +556,23 @@ async function loadMarket(id) {
   $('balance').textContent = 'Connect a wallet to read balances.';
   const m = await (await getAdapter()).market(id);
   await refreshRegistry();
+  await reconcilePortableReview(m);
   state.market = m; renderMarket(m);
   if (state.wallet) {
     const balances = await state.adapter.balances(m);
     $('balance').textContent = 'Wallet: ' + formatUnits(balances.native, m.nativeDecimals) + ' ' + m.unit +
       ' · ' + formatUnits(balances.tokens, m.decimals) + ' ' + m.symbol + ' (network costs additional)';
   }
+
+  void loadMarketChart(m);
+  void loadOwnerReviewTools(m).catch(error => {
+    $('eas-schema-status').textContent =
+      'Portable review tools are temporarily unavailable: ' +
+      (error?.message || 'read failed');
+  });
 }
 async function route() {
+  chartRequest++;
   state.market = null; invalidateQuote();
   $('market-badges').replaceChildren(); $('verification-details').replaceChildren();
   $('verification-state').textContent='Identity has not been checked.';
@@ -413,6 +736,60 @@ $('connect').addEventListener('click', () => action(async () => {
     await loadMarket(marketId);
   }
 }));
+$('copy-review-market').addEventListener(
+  'click',
+  () => action(async () => {
+    if (!state.market) throw Error('Open a market first');
+    await copyMetadataText(state.market.id);
+    status('Market address copied for the protected PumpLite review workflow.');
+  })
+);
+
+$('copy-review-uid').addEventListener(
+  'click',
+  () => action(async () => {
+    if (!state.reviewProof?.uid) throw Error('Publish or load an EAS review proof first');
+    await copyMetadataText(state.reviewProof.uid);
+    status('EAS attestation UID copied. Paste it into the protected GitHub review workflow.');
+  })
+);
+
+$('eas-register-schema').addEventListener('click', () => action(async () => {
+  requireWrite();
+  const result = await state.adapter.registerReviewSchema();
+  state.reviewSchemaReady = result.registered;
+  $('eas-schema-status').textContent =
+    'PumpLite portable review schema is registered on Base EAS · ' + result.uid;
+  controls();
+}));
+
+$('eas-verify').addEventListener('click', () => action(async () => {
+  requireWrite();
+  if (!state.market) throw Error('Open a market first');
+  if (!window.confirm('Publish a public Verified by PumpLite identity/provenance attestation for this token on Base? This uses Base gas and is not an investment endorsement.')) return;
+  const proof = await state.adapter.publishReviewAttestation(state.market, 'verified');
+  showReviewProof(proof);
+  status('Verified by PumpLite EAS proof published on Base. Now mirror this UID with the protected GitHub review workflow.');
+}));
+
+$('eas-decline').addEventListener('click', () => action(async () => {
+  requireWrite();
+  if (!state.market) throw Error('Open a market first');
+  if (!window.confirm('Publish a public PumpLite identity/provenance review decline for this token on Base? This uses Base gas and does not label the token a scam.')) return;
+  const proof = await state.adapter.publishReviewAttestation(state.market, 'declined');
+  showReviewProof(proof);
+  status('Declined review EAS proof published on Base. Now mirror this UID with the protected GitHub review workflow.');
+}));
+
+$('eas-revoke').addEventListener('click', () => action(async () => {
+  requireWrite();
+  if (!state.reviewProof?.uid) throw Error('No EAS review proof is loaded');
+  if (!window.confirm('Revoke this PumpLite EAS review proof on Base? Revocation uses Base gas.')) return;
+  const proof = await state.adapter.revokeReviewAttestation(state.reviewProof.uid);
+  showReviewProof(proof);
+  status('PumpLite EAS review proof revoked. Run the protected GitHub review workflow with Revoke to remove the mirrored badge.');
+}));
+
 async function copyMetadataText(text) {
   if (navigator.clipboard?.writeText) {
     try {
@@ -994,7 +1371,7 @@ $('trade-form').addEventListener('submit', e => { e.preventDefault(); action(asy
   }
   invalidateQuote();
   await (await getAdapter()).trade(state.market, q.side, q.amount, q.min);
-  await loadMarket(state.market.id);
+  await refreshMarketAfterAction(state.market.id);
 }); });
 $('v2-supply-mode').addEventListener('change', controls);
 
@@ -1021,7 +1398,7 @@ $('base-v2-burn-form').addEventListener('submit', e => {
     const min = minimumOutput(q.output, slippageBps);
 
     await state.adapter.buyAndBurn(fresh, amount, min);
-    await loadMarket(fresh.id);
+    await refreshMarketAfterAction(fresh.id);
   });
 });
 
@@ -1034,7 +1411,7 @@ $('v2-mint-form').addEventListener('submit', e => {
     const amount = parseUnits($('v2-mint-amount').value.trim(), 18);
 
     await state.adapter.mintInventory(state.market, amount);
-    await loadMarket(state.market.id);
+    await refreshMarketAfterAction(state.market.id);
   });
 });
 
@@ -1044,19 +1421,19 @@ $('v2-lock-minting').addEventListener('click', () => action(async () => {
   if (!window.confirm('Permanently disable all future minting? This cannot be undone.')) return;
 
   await state.adapter.lockMinting(state.market);
-  await loadMarket(state.market.id);
+  await refreshMarketAfterAction(state.market.id);
 }));
 
 $('v2-mayhem-on').addEventListener('click', () => action(async () => {
   requireWrite();
   await state.adapter.setMayhem(state.market, true);
-  await loadMarket(state.market.id);
+  await refreshMarketAfterAction(state.market.id);
 }));
 
 $('v2-mayhem-off').addEventListener('click', () => action(async () => {
   requireWrite();
   await state.adapter.setMayhem(state.market, false);
-  await loadMarket(state.market.id);
+  await refreshMarketAfterAction(state.market.id);
 }));
 
 $('v2-support-form').addEventListener('submit', e => {
@@ -1068,7 +1445,7 @@ $('v2-support-form').addEventListener('submit', e => {
     const amount = parseUnits($('v2-support-amount').value.trim(), 18);
 
     await state.adapter.supportMarket(state.market, amount);
-    await loadMarket(state.market.id);
+    await refreshMarketAfterAction(state.market.id);
   });
 });
 
@@ -1100,7 +1477,7 @@ async function loadPublicConfig() {
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       const response = await fetch(
-        './config.json?boot=20260929f&attempt=' + attempt,
+        './config.json?boot=20260929g&attempt=' + attempt,
         { cache: 'no-store' }
       );
 

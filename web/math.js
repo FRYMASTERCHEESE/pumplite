@@ -39,8 +39,9 @@ export function quote({ nativeReserve, tokenReserve, virtualNative, supply }, si
 export function minimumOutput(output, slippageBps) {
   if (!Number.isInteger(slippageBps) || slippageBps < 1 || slippageBps > 500) throw Error('Slippage must be 0.01%–5%');
   const minimum = output * (BPS - BigInt(slippageBps)) / BPS;
-  if (minimum <= 0n) throw Error('Minimum output rounds to zero');
-  return minimum;
+  // Keep the smallest valid quote usable instead of inventing a PumpLite
+  // minimum. The contract still requires a positive, nonzero output.
+  return minimum > 0n ? minimum : 1n;
 }
 export function validateContentUri(uri, maxBytes = 200) {
   if (typeof uri !== 'string' || new TextEncoder().encode(uri).length > maxBytes) throw Error('Content URI exceeds its UTF-8 byte limit');

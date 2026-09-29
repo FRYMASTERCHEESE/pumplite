@@ -10,7 +10,7 @@
 <title>PumpLite · Token launches, kept simple</title>
 <link rel="stylesheet" href="./assets/styles.css">
 <script defer src="./assets/phantom-diagnostic.js"></script>
-<script type="module" src="./assets/app.js?boot=20260929f"></script>
+<script type="module" src="./assets/app.js?boot=20260929g"></script>
 </head>
 <body>
 <a class="skip-link" id="skip-content" href="#main-content">Skip to main content</a>
@@ -125,6 +125,39 @@
       <h2 id="verification-title">Token verification</h2><p id="verification-state">Identity has not been checked.</p>
       <dl id="verification-details" class="identity-details"></dl>
       <p class="fine">Verified means PumpLite reviewed the token’s identity/provenance. It is not an endorsement, safety guarantee, price promise, or investment recommendation. It is not a security audit.</p>
+      <div id="owner-review-panel" class="owner-review" hidden>
+        <h3>Owner review + portable Base verification</h3>
+        <p class="fine">New PumpLite coins start Pending review. The PumpLite controller wallet can publish a public Ethereum Attestation Service (EAS) review on Base, then mirror that proof into PumpLite’s protected GitHub review registry. No admin password, GitHub token, private key or seed phrase is stored in this public page.</p>
+        <code id="owner-review-market"></code>
+        <p id="eas-schema-status" class="fine">Checking the PumpLite EAS review schema…</p>
+        <button id="eas-register-schema" type="button" class="outline full">Register PumpLite review schema on Base</button>
+        <div class="review-actions">
+          <button id="eas-verify" type="button" class="primary">Publish Verified attestation</button>
+          <button id="eas-decline" type="button" class="outline">Publish Declined attestation</button>
+        </div>
+        <p id="eas-review-status" class="fine">No owner attestation has been selected for this review yet.</p>
+        <div id="eas-proof" hidden>
+          <code id="eas-review-uid"></code>
+          <div class="links">
+            <button id="copy-review-uid" type="button" class="outline">Copy EAS UID</button>
+            <a id="eas-review-link" target="_blank" rel="noopener noreferrer">View Base EAS proof ↗</a>
+            <button id="eas-revoke" type="button" class="outline">Revoke proof</button>
+          </div>
+        </div>
+        <div class="links">
+          <button id="copy-review-market" type="button" class="outline">Copy market address</button>
+          <a id="owner-review-link" href="https://github.com/FRYMASTERCHEESE/pumplite/actions/workflows/review-token.yml" target="_blank" rel="noopener noreferrer">Mirror proof in GitHub review workflow ↗</a>
+        </div>
+        <p class="fine">A Base EAS attestation is publicly and independently verifiable. Other wallets, explorers and markets can read it if they choose to integrate PumpLite’s schema; PumpLite cannot force another service to display its own verification badge.</p>
+      </div>
+    </section>
+    <section class="panel market-chart-panel" aria-labelledby="price-chart-title">
+      <div class="chart-heading">
+        <div><p class="eyebrow">PRICE CHART</p><h2 id="price-chart-title">Recent on-chain trades</h2></div>
+        <strong id="price-chart-change" class="chart-change">No trades yet</strong>
+      </div>
+      <div id="price-chart" class="price-chart" role="img" aria-label="Recent PLITE market trade price chart"></div>
+      <p id="price-chart-status" class="fine">Loading recent on-chain trade history…</p>
     </section>
     <div class="workspace">
       <section class="panel">
@@ -158,6 +191,7 @@
             <h3>Mayhem controller</h3>
             <button id="v2-mayhem-on" type="button" class="outline">Turn Mayhem ON</button>
             <button id="v2-mayhem-off" type="button" class="outline">Turn Mayhem OFF</button>
+            <p id="v2-mayhem-help" class="fine">Manual Mayhem status is loading…</p>
 
             <form id="v2-support-form">
               <label for="v2-support-amount">Add ETH market support</label>
@@ -174,6 +208,7 @@
         <form id="trade-form">
           <label for="side">Direction</label><select id="side"><option value="buy">Buy tokens</option><option value="sell">Sell tokens</option></select>
           <label for="amount" id="amount-label">Amount</label><input id="amount" maxlength="96" inputmode="decimal" placeholder="0.00" required autocomplete="off">
+          <p id="trade-minimum-note" class="fine">No PumpLite minimum. Any positive amount that produces a nonzero on-chain quote is allowed. Base network gas still applies.</p>
           <label for="slippage">Slippage tolerance (%)</label><input id="slippage" type="number" min="0.01" max="5" step="0.01" value="1" required>
           <button id="get-quote" type="button" class="outline full">Get current quote</button>
           <dl class="quote"><div><dt>Expected output</dt><dd id="quote-output">—</dd></div><div><dt>Minimum received</dt><dd id="quote-min">—</dd></div><div><dt>Platform fee</dt><dd id="quote-fee">—</dd></div><div id="quote-support-row" hidden><dt>Mayhem support</dt><dd id="quote-support">—</dd></div></dl>
