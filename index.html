@@ -10,7 +10,7 @@
 <title>PumpLite · Token launches, kept simple</title>
 <link rel="stylesheet" href="./assets/styles.css">
 <script defer src="./assets/phantom-diagnostic.js"></script>
-<script type="module" src="./assets/app.js?boot=20260929g"></script>
+<script type="module" src="./assets/app.js?boot=20260930c"></script>
 </head>
 <body>
 <a class="skip-link" id="skip-content" href="#main-content">Skip to main content</a>
@@ -206,41 +206,40 @@
         <p class="eyebrow">TRADE</p><h2>Your wallet. Your decision.</h2>
         <p id="balance" class="fine">Connect a wallet to read balances.</p>
 
-        <section aria-labelledby="native-assets-title">
-          <h3 id="native-assets-title">Trade with ETH, BTC, SOL or DOGE</h3>
+        <section id="trade-quick-buy" class="trade-helper" aria-labelledby="trade-quick-buy-title">
+          <h3 id="trade-quick-buy-title">Quick trade value</h3>
+          <p class="fine">PumpLite Base V2 settles directly in Base ETH. Use this helper to enter a buy value in NZD, USD, ETH, BTC, SOL or DOGE, or to display a sell quote in those units.</p>
 
-          <p class="fine">
-            ETH trades directly through PumpLite on Base.
-            For native BTC, SOL or DOGE, swap into Base ETH first,
-            then use the PumpLite Buy button.
-          </p>
-
-          <div class="links" aria-label="Cross-chain trade routes">
-            <a href="https://swap.thorchain.org/"
-               target="_blank"
-               rel="noopener noreferrer">
-              Bitcoin BTC ? Base ETH ?
-            </a>
-
-            <a href="https://swap.thorchain.org/"
-               target="_blank"
-               rel="noopener noreferrer">
-              Solana SOL ? Base ETH ?
-            </a>
-
-            <a href="https://swap.thorchain.org/"
-               target="_blank"
-               rel="noopener noreferrer">
-              Dogecoin DOGE ? Base ETH ?
-            </a>
+          <div class="trade-helper-grid">
+            <div id="trade-spend-field">
+              <label for="trade-display-amount">Buy value</label>
+              <input id="trade-display-amount" inputmode="decimal" placeholder="5.00" maxlength="32" autocomplete="off">
+            </div>
+            <div>
+              <label for="trade-display-currency">Show value in</label>
+              <select id="trade-display-currency">
+                <option value="NZD" selected>NZD</option>
+                <option value="USD">USD</option>
+                <option value="ETH">ETH</option>
+                <option value="BTC">BTC</option>
+                <option value="SOL">SOL</option>
+                <option value="DOGE">DOGE</option>
+              </select>
+            </div>
           </div>
 
-          <p class="fine">
-            Selling works in reverse: sell your PumpLite token for Base ETH,
-            then swap the ETH to native BTC, SOL or DOGE.
-            Always check the network, live quote, fees and destination
-            before approving a cross-chain transaction.
-          </p>
+          <button id="trade-use-display" type="button" class="outline full">Use Base ETH equivalent</button>
+          <p id="trade-display-estimate" class="fine" role="status" aria-live="polite">Enter a buy value to calculate an approximate Base ETH amount.</p>
+
+          <details class="native-route-help">
+            <summary>Using native BTC, SOL or DOGE?</summary>
+            <p class="fine">Native BTC, SOL and DOGE cannot be sent directly to a Base smart contract. Convert the native asset to Base ETH before buying. After selling, PumpLite pays Base ETH; convert that Base ETH to the native asset if you want to cash out that way. Always review the live route, network, fees and destination before signing.</p>
+            <div class="native-route-links">
+              <a href="https://swap.thorchain.org/" target="_blank" rel="noopener noreferrer">Open BTC swap</a>
+              <a href="https://swap.thorchain.org/" target="_blank" rel="noopener noreferrer">Open SOL swap</a>
+              <a href="https://swap.thorchain.org/" target="_blank" rel="noopener noreferrer">Open DOGE swap</a>
+            </div>
+          </details>
         </section>
 
         <form id="trade-form">
