@@ -19,7 +19,7 @@ await assertOutputDirectory(assets);
 await assertOutputDirectory(dist);
 await access('.nojekyll');
 const html = await readFile('index.html', 'utf8');
-if (!html.includes('src="./assets/app.js"') || !html.includes('href="./assets/styles.css"')) {
+if (!html.includes('src="./assets/app.js?boot=20260929c"') || !html.includes('href="./assets/styles.css"')) {
   throw Error('Root HTML must load the compiled, relative Pages assets');
 }
 // Build in memory before replacing any previously working static assets.

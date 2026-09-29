@@ -92,8 +92,8 @@ try {
     assert.equal(page.url(), base);
     await page.waitForFunction(() => document.querySelector('#deployment').textContent.includes('Base Mainnet'));
     assert.equal(await page.locator('#create').isDisabled(), false, 'Base create button stays actionable before wallet access; wallet access is requested only after click');
-    assert.ok(requests.includes(base + 'config.json'));
-    assert.ok(requests.includes(base + 'assets/app.js'));
+    assert.ok(requests.some(url => url.startsWith(base + 'config.json?boot=')));
+    assert.ok(requests.some(url => url.startsWith(base + 'assets/app.js?boot=')));
     assert.ok(requests.includes(base + 'assets/styles.css'));
     assert.ok(!requests.some(url => /\/(solana|base)-/.test(url)), 'No wallet SDK is fetched initially');
     assert.equal(await page.locator('body').evaluate(el => el.scrollWidth <= innerWidth), true);

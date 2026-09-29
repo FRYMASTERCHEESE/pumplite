@@ -901,10 +901,61 @@ function renderWalletChoices() {
 renderWalletChoices();
 window.addEventListener('focus', () => { wallets.refresh(); if (!state.busy) diagnostic('Page resumed; provider detection refreshed.'); });
 diagnostic('Ready; no wallet request sent.');
+async function loadPublicConfig() {
+  let lastError;
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const response = await fetch(
+        './config.json?boot=20260929c&attempt=' + attempt,
+        { cache: 'no-store' }
+      );
+
+      if (!response.ok) {
+        throw Error(
+          'Configuration request failed (HTTP ' +
+          response.status +
+          ')'
+        );
+      }
+
+      return validatePublicConfig(
+        await response.json()
+      );
+    } catch (error) {
+      lastError = error;
+
+      if (attempt < 2) {
+        await new Promise(resolve =>
+          setTimeout(resolve, 300)
+        );
+      }
+    }
+  }
+
+  throw lastError ||
+    Error('Unable to load public network configuration');
+}
+
 try {
-  const response = await fetch('./config.json', { cache: 'no-store' });
-  if (!response.ok) throw Error('Unable to load public network configuration');
-  state.config = validatePublicConfig(await response.json());
-  switchChain('base'); await action(route);
-  document.documentElement.dataset.walletAppReady = 'ready';
-} catch (error) { status(error.message); controls(); }
+  $('deployment').textContent =
+    'Loading verified Base Mainnet configuration…';
+
+  state.config = await loadPublicConfig();
+
+  switchChain('base');
+  await action(route);
+
+  document.documentElement.dataset.walletAppReady =
+    'ready';
+} catch (error) {
+  $('deployment').textContent =
+    'Base Mainnet configuration could not load. Trading remains disabled until this is fixed.';
+
+  status(
+    error.message ||
+    'Unable to load public network configuration'
+  );
+
+  controls();
+}
