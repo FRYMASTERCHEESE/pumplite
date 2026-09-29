@@ -25,7 +25,14 @@
                  "contractVersion":  2,
                  "rpcFallbackUrls":  [
                                          "https://mainnet.base.org"
-                                     ]
+                                     ],
+                 "holderClaim":  {
+                                     "enabled":  false,
+                                     "contract":  null,
+                                     "token":  "0xb15A460142c77b42cDF57815b0eeFEb24b593196",
+                                     "claimAmount":  "1",
+                                     "maxClaims":  50
+                                 }
              },
     "metadataUploads":  {
                             "enabled":  true

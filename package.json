@@ -1,35 +1,37 @@
 {
-  "name": "pumplite",
-  "version": "0.2.0",
-  "private": true,
-  "type": "module",
-  "packageManager": "pnpm@10.11.0",
-  "scripts": {
-    "build:contracts": "node scripts/compile-base.mjs && node scripts/compile-base-v2.mjs",
-    "build": "node scripts/compile-base.mjs && node scripts/compile-base-v2.mjs && node scripts/build.mjs",
-    "test": "node scripts/compile-base.mjs && node scripts/compile-base-v2.mjs && node --test tests/*.test.mjs",
-    "test:base": "node scripts/compile-base.mjs && node --test tests/base.test.mjs",
-    "check": "node scripts/check.mjs",
-    "preview": "node scripts/serve.mjs",
-    "test:browser": "node tests/browser.mjs",
-    "build:pages": "node scripts/build.mjs",
-    "check:pages": "node scripts/build.mjs --check",
-    "test:pages": "node tests/pages.mjs",
-    "test:base-v2": "node scripts/compile-base-v2.mjs && node --test tests/base-v2.test.mjs",
-    "prepare:base-v2-release": "node scripts/compile-base.mjs && node scripts/compile-base-v2.mjs && node scripts/prepare-base-v2-release.mjs",
-    "test:base-v2-release": "node scripts/compile-base.mjs && node scripts/compile-base-v2.mjs && node scripts/prepare-base-v2-release.mjs && node --test tests/base-v2-release.test.mjs",
-    "verify:base-v2-live": "node scripts/compile-base-v2.mjs && node scripts/verify-base-v2-live.mjs"
-  },
-  "dependencies": {
-    "@solana/web3.js": "1.98.4",
-    "buffer": "6.0.3",
-    "ethers": "6.15.0"
-  },
-  "devDependencies": {
-    "@openzeppelin/contracts": "5.4.0",
-    "esbuild": "0.25.5",
-    "ganache": "7.9.2",
-    "solc": "0.8.30",
-    "playwright": "1.62.1"
-  }
+    "name":  "pumplite",
+    "version":  "0.2.0",
+    "private":  true,
+    "type":  "module",
+    "packageManager":  "pnpm@10.11.0",
+    "scripts":  {
+                    "build:contracts":  "node scripts/compile-base.mjs \u0026\u0026 node scripts/compile-base-v2.mjs",
+                    "build":  "node scripts/compile-base.mjs \u0026\u0026 node scripts/compile-base-v2.mjs \u0026\u0026 node scripts/build.mjs",
+                    "test":  "node scripts/compile-base.mjs \u0026\u0026 node scripts/compile-base-v2.mjs \u0026\u0026 node scripts/compile-plite-holder-claim.mjs \u0026\u0026 node --test tests/*.test.mjs",
+                    "test:base":  "node scripts/compile-base.mjs \u0026\u0026 node --test tests/base.test.mjs",
+                    "check":  "node scripts/check.mjs",
+                    "preview":  "node scripts/serve.mjs",
+                    "test:browser":  "node tests/browser.mjs",
+                    "build:pages":  "node scripts/build.mjs",
+                    "check:pages":  "node scripts/build.mjs --check",
+                    "test:pages":  "node tests/pages.mjs",
+                    "test:base-v2":  "node scripts/compile-base-v2.mjs \u0026\u0026 node --test tests/base-v2.test.mjs",
+                    "prepare:base-v2-release":  "node scripts/compile-base.mjs \u0026\u0026 node scripts/compile-base-v2.mjs \u0026\u0026 node scripts/prepare-base-v2-release.mjs",
+                    "test:base-v2-release":  "node scripts/compile-base.mjs \u0026\u0026 node scripts/compile-base-v2.mjs \u0026\u0026 node scripts/prepare-base-v2-release.mjs \u0026\u0026 node --test tests/base-v2-release.test.mjs",
+                    "verify:base-v2-live":  "node scripts/compile-base-v2.mjs \u0026\u0026 node scripts/verify-base-v2-live.mjs",
+                    "build:claim":  "node scripts/compile-base-v2.mjs \u0026\u0026 node scripts/compile-plite-holder-claim.mjs",
+                    "test:claim":  "node scripts/compile-base-v2.mjs \u0026\u0026 node scripts/compile-plite-holder-claim.mjs \u0026\u0026 node --test tests/plite-holder-claim.test.mjs"
+                },
+    "dependencies":  {
+                         "@solana/web3.js":  "1.98.4",
+                         "buffer":  "6.0.3",
+                         "ethers":  "6.15.0"
+                     },
+    "devDependencies":  {
+                            "@openzeppelin/contracts":  "5.4.0",
+                            "esbuild":  "0.25.5",
+                            "ganache":  "7.9.2",
+                            "solc":  "0.8.30",
+                            "playwright":  "1.62.1"
+                        }
 }

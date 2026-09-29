@@ -22,6 +22,15 @@ const SCHEMA_REGISTRY_ABI = [
   'function getSchema(bytes32 uid) view returns (tuple(bytes32 uid,address resolver,bool revocable,string schema) record)',
   'function register(string schema,address resolver,bool revocable) returns (bytes32)'
 ];
+const HOLDER_CLAIM_ABI = [
+  'function token() view returns (address)',
+  'function CLAIM_AMOUNT() view returns (uint256)',
+  'function MAX_CLAIMS() view returns (uint256)',
+  'function claimCount() view returns (uint256)',
+  'function remainingClaims() view returns (uint256)',
+  'function claimed(address) view returns (bool)',
+  'function claim()'
+];
 const EAS_ABI = [
   'function attest((bytes32 schema,(address recipient,uint64 expirationTime,bool revocable,bytes32 refUID,bytes data,uint256 value) data) request) payable returns (bytes32)',
   'function revoke((bytes32 schema,(bytes32 uid,uint256 value) data) request) payable',
@@ -212,8 +221,129 @@ export function adapter(config, notify, changed = () => {}) {
       observedAt: Date.now()
     };
   }
+  function holderClaimConfig() {
+    const value = config.holderClaim;
+
+    if (
+      !value ||
+      value.enabled !== true ||
+      typeof value.contract !== 'string'
+    ) {
+      return null;
+    }
+
+    return value;
+  }
+
+  async function holderClaimStatus() {
+    const value = holderClaimConfig();
+
+    if (!value) {
+      return {
+        enabled: false,
+        claimed: null,
+        claimCount: 0n,
+        remaining: 0n,
+        maxClaims: 50n,
+        claimAmount: 10n ** 18n
+      };
+    }
+
+    await network();
+
+    const claim = new Contract(
+      value.contract,
+      HOLDER_CLAIM_ABI,
+      provider
+    );
+
+    const [
+      tokenAddress,
+      claimAmount,
+      maxClaims,
+      claimCount,
+      remaining
+    ] = await Promise.all([
+      claim.token(),
+      claim.CLAIM_AMOUNT(),
+      claim.MAX_CLAIMS(),
+      claim.claimCount(),
+      claim.remainingClaims()
+    ]);
+
+    if (
+      getAddress(tokenAddress) !==
+      getAddress(value.token)
+    ) {
+      throw Error(
+        'Holder claim contract points to an unexpected token'
+      );
+    }
+
+    let alreadyClaimed = null;
+
+    if (connectedAddress) {
+      alreadyClaimed =
+        await claim.claimed(connectedAddress);
+    }
+
+    return {
+      enabled: true,
+      contract: getAddress(value.contract),
+      token: getAddress(tokenAddress),
+      claimAmount,
+      maxClaims,
+      claimCount,
+      remaining,
+      claimed: alreadyClaimed
+    };
+  }
+
+  async function claimHolderToken() {
+    const value = holderClaimConfig();
+
+    if (!value) {
+      throw Error('PLITE holder claim is not open yet');
+    }
+
+    const active = await wallet();
+    const before = await holderClaimStatus();
+
+    if (before.claimed) {
+      throw Error('This wallet already claimed PLITE');
+    }
+
+    if (before.remaining <= 0n) {
+      throw Error('All 50 PLITE holder claims are already taken');
+    }
+
+    const claim = new Contract(
+      value.contract,
+      HOLDER_CLAIM_ABI,
+      active
+    );
+
+    const gas =
+      await claim.claim.estimateGas();
+
+    const gasLimit =
+      gasBudget(gas, 200_000n);
+
+    notify(
+      'Review the PLITE claim in your wallet. The token itself is free; Base network gas may apply.'
+    );
+
+    await wallet();
+    await settle(
+      await claim.claim({ gasLimit })
+    );
+
+    return holderClaimStatus();
+  }
   return {
     disconnect,
+    holderClaimStatus,
+    claimHolderToken,
     close() { disconnect(); provider.destroy(); },
     async connect(candidate) {
       disconnect();

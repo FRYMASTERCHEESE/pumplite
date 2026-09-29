@@ -10,7 +10,7 @@
 <title>PumpLite · Token launches, kept simple</title>
 <link rel="stylesheet" href="./assets/styles.css">
 <script defer src="./assets/phantom-diagnostic.js"></script>
-<script type="module" src="./assets/app.js?boot=20260930c"></script>
+<script type="module" src="./assets/app.js?boot=20260930d"></script>
 </head>
 <body>
 <a class="skip-link" id="skip-content" href="#main-content">Skip to main content</a>
@@ -114,7 +114,17 @@
 
       </section>
     </div>
-  </section>
+    <section id="holder-claim-section" class="panel holder-claim" aria-labelledby="holder-claim-title">
+      <p class="eyebrow">PLITE COMMUNITY</p>
+      <h2 id="holder-claim-title">First 50 opt-in PLITE holders</h2>
+      <p class="muted">When the claim opens, the first 50 different Base wallet addresses can each claim 1 PLITE. No purchase is required. One wallet can claim once; a wallet address does not prove a unique human.</p>
+      <p id="holder-claim-progress" class="fine" role="status" aria-live="polite">Claim setup is being prepared. No claim transaction is available yet.</p>
+      <div class="holder-claim-actions">
+        <button id="holder-claim-refresh" type="button" class="outline" disabled>Refresh claim status</button>
+        <button id="holder-claim-button" type="button" class="primary" disabled>Claim 1 PLITE</button>
+      </div>
+      <p class="fine">Claiming is a free token distribution, not a promise of value or return. Base network gas may still apply to the claim transaction.</p>
+    </section>  </section>
   <section id="market-page" hidden>
     <a id="back" class="back" href="#">← All markets</a>
     <div class="section-title market-heading"><div><p class="eyebrow" id="market-symbol">TOKEN MARKET</p><h1 id="market-name">Loading market…</h1></div><button id="refresh-market" class="outline">Refresh market</button></div>

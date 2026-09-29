@@ -163,3 +163,8 @@ textarea{font:inherit;width:100%;max-width:100%;background:#111e17;color:#fff;bo
 .native-route-links a{display:inline-block;border:1px solid var(--line);border-radius:9px;padding:9px 11px;text-decoration:none}
 .native-route-links a:hover{border-color:var(--green)}
 @media(max-width:560px){.trade-helper-grid{grid-template-columns:1fr}.native-route-links{display:grid}.native-route-links a{text-align:center}}
+/* Transparent opt-in PLITE first-50 holder claim. */
+.holder-claim{margin-top:22px}
+.holder-claim-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+.holder-claim-actions .primary{margin-top:0}
+@media(max-width:560px){.holder-claim-actions{grid-template-columns:1fr}}
