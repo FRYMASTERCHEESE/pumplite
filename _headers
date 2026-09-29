@@ -1,5 +1,5 @@
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://pumplite-rpc.coreyedge123.workers.dev https://solana-rpc.publicnode.com wss://solana-rpc.publicnode.com https://mainnet.base.org; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://pumplite-rpc.coreyedge123.workers.dev https://solana-rpc.publicnode.com wss://solana-rpc.publicnode.com https://mainnet.base.org https://api.coinbase.com; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff
   Referrer-Policy: no-referrer

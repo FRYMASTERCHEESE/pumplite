@@ -92,9 +92,14 @@ test('Base V2 frontend contains gated V2 features', async () => {
   assert.match(html, /initial-buy-eth/);
   assert.match(html, /0% PumpLite creation fee/);
   assert.match(html, /create-action-status/);
+  assert.match(html, /initial-buy-currency/);
+  assert.match(html, /initial-buy-fiat-estimate/);
+  assert.match(html, /initial-buy-flow-status/);
   assert.match(app, /connectBaseWalletFromGesture/);
   assert.match(app, /creationData/);
   assert.match(app, /optional first buy/i);
+  assert.match(app, /exchange-rates\?currency=ETH/);
+  assert.match(app, /Your token was created, but the optional first buy did not complete/);
   assert.match(app, /adapter\.trade\(/);
 });
 

@@ -110,7 +110,9 @@ function controls() {
   $('refresh').disabled = !ready() || state.busy; $('refresh-market').disabled = !ready() || state.busy;
   $('more').disabled = state.busy; $('verified-only').disabled = state.busy;
   $('show-create').disabled=state.busy; $('show-explore').disabled=state.busy;
-  for (const id of ['description','image-uri','banner-uri','website','twitter','telegram','discord','name','symbol','uri','side','amount','slippage','market-address','initial-buy-eth']) $(id).disabled = state.busy;
+  for (const id of ['description','image-uri','banner-uri','website','twitter','telegram','discord','name','symbol','uri','side','amount','slippage','market-address','initial-buy-eth','initial-buy-currency']) $(id).disabled = state.busy;
+  $('initial-buy-submit').disabled = state.busy;
+  $('initial-buy-close').disabled = state.busy;
 }
 function invalidateQuote() {
   state.quote = null;
@@ -630,6 +632,112 @@ function updateInitialBuySymbol() {
     $('symbol').value.trim() || 'TOKEN';
 }
 
+let initialBuyRates = null;
+let initialBuyRatesAt = 0;
+let initialBuyEstimateSequence = 0;
+
+function formatInitialBuyFiat(value, currency) {
+  return new Intl.NumberFormat(
+    currency === 'NZD' ? 'en-NZ' : 'en-US',
+    {
+      style: 'currency',
+      currency,
+      maximumFractionDigits: 2
+    }
+  ).format(value);
+}
+
+async function loadInitialBuyRates() {
+  if (
+    initialBuyRates &&
+    Date.now() - initialBuyRatesAt < 60_000
+  ) return initialBuyRates;
+
+  const response = await fetch(
+    'https://api.coinbase.com/v2/exchange-rates?currency=ETH',
+    {
+      cache: 'no-store',
+      credentials: 'omit',
+      referrerPolicy: 'no-referrer'
+    }
+  );
+
+  if (!response.ok) {
+    throw Error('Live fiat estimate unavailable');
+  }
+
+  const value = await response.json();
+  const nzd = Number(value?.data?.rates?.NZD);
+  const usd = Number(value?.data?.rates?.USD);
+
+  if (
+    !Number.isFinite(nzd) ||
+    !Number.isFinite(usd) ||
+    nzd <= 0 ||
+    usd <= 0
+  ) {
+    throw Error('Live fiat estimate unavailable');
+  }
+
+  initialBuyRates = { NZD: nzd, USD: usd };
+  initialBuyRatesAt = Date.now();
+  return initialBuyRates;
+}
+
+async function updateInitialBuyEstimate() {
+  const sequence = ++initialBuyEstimateSequence;
+  const text = $('initial-buy-eth').value.trim() || '0';
+  const amount = Number(text);
+  const currency = $('initial-buy-currency').value;
+  const output = $('initial-buy-fiat-estimate');
+
+  $('initial-buy-submit').textContent =
+    Number.isFinite(amount) && amount > 0
+      ? 'Create coin + buy'
+      : 'Create coin only';
+
+  if (!Number.isFinite(amount) || amount < 0) {
+    output.textContent =
+      'Enter a valid ETH amount. The transaction itself is always in ETH.';
+    return;
+  }
+
+  if (amount === 0) {
+    output.textContent =
+      '0 ETH · creation only. Base gas still applies.';
+    return;
+  }
+
+  output.textContent =
+    'Loading approximate ' + currency + ' value…';
+
+  try {
+    const rates = await loadInitialBuyRates();
+    if (sequence !== initialBuyEstimateSequence) return;
+
+    output.textContent =
+      text +
+      ' ETH ≈ ' +
+      formatInitialBuyFiat(amount * rates[currency], currency) +
+      ' (approximate). The wallet transaction is still in ETH.';
+  } catch {
+    if (sequence !== initialBuyEstimateSequence) return;
+
+    output.textContent =
+      'Fiat estimate is temporarily unavailable. The ETH amount is unchanged.';
+  }
+}
+
+$('initial-buy-eth').addEventListener(
+  'input',
+  () => void updateInitialBuyEstimate()
+);
+
+$('initial-buy-currency').addEventListener(
+  'change',
+  () => void updateInitialBuyEstimate()
+);
+
 $('symbol').addEventListener(
   'input',
   updateInitialBuySymbol
@@ -660,6 +768,10 @@ $('create-form').addEventListener('submit', e => {
 
       updateInitialBuySymbol();
       $('initial-buy-eth').value = '0';
+      $('initial-buy-currency').value = 'NZD';
+      $('initial-buy-flow-status').textContent =
+        'Nothing has been submitted yet.';
+      void updateInitialBuyEstimate();
 
       inline.textContent =
         'Wallet ready. Choose 0 ETH to create only, or enter an optional first-buy amount.';
@@ -680,10 +792,11 @@ $('create-form').addEventListener('submit', e => {
 
 $('initial-buy-form').addEventListener('submit', e => {
   e.preventDefault();
-  $('initial-buy-dialog').close();
 
   action(async () => {
     const inline = $('create-action-status');
+    const flow = $('initial-buy-flow-status');
+    let createdId = null;
 
     try {
       if (!state.wallet) {
@@ -710,22 +823,23 @@ $('initial-buy-form').addEventListener('submit', e => {
 
       const adapter = await getAdapter();
 
+      flow.textContent =
+        'Step 1: review token creation in your wallet. This dialog will stay here until the result is known.';
+
       inline.textContent =
         'Review token creation in your wallet. PumpLite creation fee is 0%; Base gas still applies.';
 
-      const id = await adapter.create(data);
-
-      // Always route to the created market, even when an optional
-      // buy is later rejected by the user.
-      location.hash =
-        state.chain + '/' + encodeURIComponent(id);
+      createdId = await adapter.create(data);
 
       if (initialBuy > 0n) {
+        flow.textContent =
+          'Token created. Preparing your optional first buy with the same wallet…';
+
         inline.textContent =
           'Token created. Your same wallet will now show the optional buy confirmation.';
 
         const market =
-          await adapter.market(id);
+          await adapter.market(createdId);
 
         const q =
           quoteBaseV2(
@@ -736,6 +850,9 @@ $('initial-buy-form').addEventListener('submit', e => {
 
         const min =
           minimumOutput(q.output, 100);
+
+        flow.textContent =
+          'Step 2: review the optional buy in your wallet.';
 
         await adapter.trade(
           market,
@@ -749,14 +866,69 @@ $('initial-buy-form').addEventListener('submit', e => {
         initialBuy > 0n
           ? 'Token created and optional first buy confirmed.'
           : 'Token created. No optional first buy was requested.';
+
+      flow.textContent =
+        initialBuy > 0n
+          ? 'Finished: token created and first buy confirmed.'
+          : 'Finished: token created only.';
+
+      $('initial-buy-dialog').close();
+
+      const routeHash =
+        state.chain + '/' + encodeURIComponent(createdId);
+
+      location.hash = routeHash;
+
+      if (
+        location.hash === '#' + routeHash &&
+        state.busy
+      ) {
+        state.pendingRoute = true;
+      }
     } catch (error) {
-      inline.textContent =
-        'Action stopped: ' +
-        (
-          error?.shortMessage ||
-          error?.message ||
-          'Unable to continue'
+      const message =
+        error?.shortMessage ||
+        error?.message ||
+        'Unable to continue';
+
+      if (createdId) {
+        inline.textContent =
+          'Your token was created, but the optional first buy did not complete: ' +
+          message;
+
+        flow.textContent =
+          'The token exists. PumpLite will open its market page; you can buy later from there.';
+
+        $('initial-buy-dialog').close();
+
+        const routeHash =
+          state.chain + '/' + encodeURIComponent(createdId);
+
+        location.hash = routeHash;
+
+        if (
+          location.hash === '#' + routeHash &&
+          state.busy
+        ) {
+          state.pendingRoute = true;
+        }
+
+        status(
+          'Token created successfully. Optional first buy did not complete: ' +
+          message
         );
+
+        return;
+      }
+
+      flow.textContent =
+        'Creation did not complete: ' +
+        message +
+        '. Nothing was created. This dialog stays open so you can retry or close it.';
+
+      inline.textContent =
+        'Action stopped: ' + message;
+
       throw error;
     }
   });

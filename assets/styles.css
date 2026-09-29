@@ -99,3 +99,31 @@ textarea{font:inherit;width:100%;max-width:100%;background:#111e17;color:#fff;bo
     font-size:20px
   }
 }
+
+/* First-buy fiat estimate. */
+.initial-buy-fiat-row{
+  display:grid;
+  grid-template-columns:1fr minmax(190px,1fr);
+  gap:12px;
+  align-items:center;
+  margin:0 0 8px
+}
+.initial-buy-fiat-row label{
+  margin:0;
+  color:var(--muted)
+}
+.initial-buy-fiat-row select{
+  margin:0
+}
+#initial-buy-fiat-estimate{
+  margin:7px 0 4px;
+  color:var(--green)
+}
+#initial-buy-flow-status{
+  margin:4px 0 18px
+}
+@media(max-width:560px){
+  .initial-buy-fiat-row{
+    grid-template-columns:1fr
+  }
+}

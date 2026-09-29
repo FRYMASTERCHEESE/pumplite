@@ -6,7 +6,7 @@
 <meta name="referrer" content="no-referrer">
 <meta name="theme-color" content="#101b18">
 <meta name="description" content="PumpLite: a Base Mainnet token launchpad with fixed or permanently capped mintable supply, Mayhem support, and wallet-signed trading.">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://pumplite-rpc.coreyedge123.workers.dev https://solana-rpc.publicnode.com wss://solana-rpc.publicnode.com https://mainnet.base.org; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://pumplite-rpc.coreyedge123.workers.dev https://solana-rpc.publicnode.com wss://solana-rpc.publicnode.com https://mainnet.base.org https://api.coinbase.com; object-src 'none'; base-uri 'none'; form-action 'none'">
 <title>PumpLite · Token launches, kept simple</title>
 <link rel="stylesheet" href="./assets/styles.css">
 <script defer src="./assets/phantom-diagnostic.js"></script>
@@ -209,6 +209,16 @@
         <input id="initial-buy-eth" inputmode="decimal" maxlength="32" value="0" autocomplete="off">
         <strong>ETH</strong>
       </div>
+
+      <div class="initial-buy-fiat-row">
+        <label for="initial-buy-currency">Show approximate value in</label>
+        <select id="initial-buy-currency">
+          <option value="NZD" selected>New Zealand dollars (NZD)</option>
+          <option value="USD">United States dollars (USD)</option>
+        </select>
+      </div>
+      <p id="initial-buy-fiat-estimate" class="fine" role="status">0 ETH · creation only. Base gas still applies.</p>
+      <p id="initial-buy-flow-status" class="fine" role="status">Nothing has been submitted yet.</p>
 
       <div class="create-fee-note">
         <b>0% PumpLite creation fee</b>
