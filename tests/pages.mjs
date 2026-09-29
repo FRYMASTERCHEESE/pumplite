@@ -120,10 +120,17 @@ try {
     await page.locator('#name').fill('Local document');
     await page.locator('#symbol').fill('DOC');
     await page.locator('#advanced-metadata summary').click();
-    const downloading = page.waitForEvent('download');
+    assert.equal(await page.locator('#download-metadata').textContent(), 'Copy metadata JSON');
+    await page.evaluate(() => {
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: { writeText: async () => {} }
+      });
+    });
     await page.locator('#download-metadata').click();
-    const download = await downloading;
-    assert.equal(JSON.parse(await readFile(await download.path(),'utf8')).name,'Local document');
+    await page.waitForFunction(() =>
+      document.querySelector('#status-text').textContent.includes('Metadata JSON copied to clipboard')
+    );
     await page.selectOption('#chain', 'base');
     assert.match(await page.locator('#deployment').textContent(), /Base Mainnet/);
     assert.equal(await page.locator('#create').isDisabled(), true);

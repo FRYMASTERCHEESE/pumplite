@@ -84,6 +84,10 @@ test('Base V2 frontend contains gated V2 features', async () => {
   assert.match(adapter, /supportMarket/);
   assert.match(html, /base-v2-create-options/);
   assert.match(html, /base-v2-burn-form/);
+  assert.match(html, /metadata-publish-status/);
+  assert.match(html, /Copy metadata JSON/);
+  assert.match(app, /copyMetadataText/);
+  assert.match(adapter, /personal_sign/);
 });
 
 test('public Base deployment selects verified V2 Mainnet configuration', async () => {

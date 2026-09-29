@@ -99,11 +99,12 @@
           <fieldset><legend><span>04</span> Publish, review, create</legend>
           <button id="publish-metadata" type="button" class="outline full" disabled>Publish image + metadata to IPFS</button>
           <p id="metadata-upload-help" class="fine">Wallet-authorized publishing is separate from the paid creation transaction.</p>
+          <p id="metadata-publish-status" class="fine" role="status" aria-live="polite">Ready when your image and wallet are connected.</p>
           <details id="advanced-metadata"><summary>Metadata URI and local JSON download</summary>
           <label for="uri">Published metadata URI</label><input id="uri" placeholder="https://… or ipfs://…" maxlength="200" autocomplete="off">
           <label for="image-uri">Published image URI</label><input id="image-uri" placeholder="ipfs://… or https://…" maxlength="500">
-          <button id="download-metadata" type="button" class="outline full">Download metadata JSON</button>
-          <p class="fine">Download includes your links and banner. Pin the JSON yourself if extended publishing is unavailable, then enter its URI. Downloading does not publish or create a token.</p></details>
+          <button id="download-metadata" type="button" class="outline full">Copy metadata JSON</button>
+          <p class="fine">Mobile wallet browsers often block file downloads. This button copies the complete metadata JSON instead. You can paste it into a file later if you need the manual backup.</p></details>
           <p id="creation-review" class="fine">Check the name, ticker and metadata before opening your wallet. Metadata is immutable after creation. Your wallet shows gas and the final fee; you can reject.</p>
           <button id="create" class="primary" type="submit" disabled>Review creation in wallet</button>
           <p class="fine">Creation does not grant Verified status. No audit or investment endorsement is implied.</p>

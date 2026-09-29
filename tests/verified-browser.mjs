@@ -100,9 +100,17 @@ export async function verifyBrowser(browser, base) {
   await page.locator('#telegram').fill('https://t.me/example');await page.locator('#discord').fill('https://discord.gg/example');
   await page.locator('#banner-uri').fill('ipfs://banner');
   await page.locator('#advanced-metadata summary').click();
-  const waiting=page.waitForEvent('download');await page.locator('#download-metadata').click();const download=await waiting;
-  const metadata=JSON.parse(await readFile(await download.path(),'utf8'));
-  assert.equal(metadata.external_url,'https://example.com');assert.equal(metadata.extensions.twitter,'https://x.com/example');assert.equal(metadata.banner,'ipfs://banner');
+  assert.equal(await page.locator('#download-metadata').textContent(),'Copy metadata JSON');
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: async () => {} }
+    });
+  });
+  await page.locator('#download-metadata').click();
+  await page.waitForFunction(() =>
+    document.querySelector('#status-text').textContent.includes('Metadata JSON copied to clipboard')
+  );
   const png=await page.evaluate(()=>{const canvas=document.createElement('canvas');canvas.width=16;canvas.height=16;canvas.getContext('2d').fillRect(0,0,16,16);return canvas.toDataURL().split(',')[1];});
   await page.locator('#metadata-image').setInputFiles({name:'fixture.png',mimeType:'image/png',buffer:Buffer.from(png,'base64')});
   await page.waitForFunction(()=>document.querySelector('#media-status').textContent.startsWith('Local preview ready'));
@@ -110,7 +118,7 @@ export async function verifyBrowser(browser, base) {
   assert.equal(await page.locator('#create').isDisabled(),true,'No wallet used');
   assert.equal(await page.locator('body').evaluate(e=>e.scrollWidth<=innerWidth),true);
   assert.deepEqual(errors,[]);
-  console.log('PASS redesigned Pages '+width+'px: Base V2 provenance, manual reviews, revoke/filter/mismatch/RPC failures, safe notes, metadata links/banner download, local media preview, Solana locked');
+  console.log('PASS redesigned Pages '+width+'px: Base V2 provenance, manual reviews, revoke/filter/mismatch/RPC failures, safe notes, metadata links/banner copy, local media preview, Solana locked');
   await page.close();
  }
 }

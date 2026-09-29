@@ -313,12 +313,53 @@ $('connect').addEventListener('click', () => action(async () => {
   }
   if (state.market) await loadMarket(state.market.id);
 }));
+async function copyMetadataText(text) {
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return;
+    } catch {}
+  }
+
+  const area = document.createElement('textarea');
+  area.value = text;
+  area.setAttribute('readonly', '');
+  area.style.position = 'fixed';
+  area.style.left = '-9999px';
+  document.body.append(area);
+  area.select();
+
+  let copied = false;
+
+  try {
+    copied = document.execCommand('copy');
+  } finally {
+    area.remove();
+  }
+
+  if (!copied) {
+    throw Error('This browser blocked clipboard access. Open PumpLite in a normal browser or copy the Published metadata URI after IPFS publishing.');
+  }
+}
+
 $('download-metadata').addEventListener('click', () => action(async () => {
-  const text = metadataDocument($('name').value.trim(), $('symbol').value.trim(), $('description').value, $('image-uri').value.trim(), projectLinks(), $('banner-uri').value.trim());
-  const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
-  const link = document.createElement('a'); link.href = url; link.download = 'token-metadata.json'; link.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-  status('Metadata JSON downloaded locally. Publish it to persistent storage before creating the token.');
+  const text = metadataDocument(
+    $('name').value.trim(),
+    $('symbol').value.trim(),
+    $('description').value,
+    $('image-uri').value.trim(),
+    projectLinks(),
+    $('banner-uri').value.trim()
+  );
+
+  await copyMetadataText(text);
+
+  $('metadata-publish-status').textContent =
+    'Metadata JSON copied to your clipboard. This backup does not publish or create the token.';
+
+  status(
+    'Metadata JSON copied to clipboard. Publish to IPFS before creating the token.'
+  );
 }));
 let mediaSequence=0, publishedDraft=null;
 function projectLinks(){return Object.fromEntries(LINK_FIELDS.map(key=>[key,$(key).value.trim()]));}
@@ -344,36 +385,78 @@ $('metadata-image').addEventListener('change', async () => {
 });
 
 $('publish-metadata').addEventListener('click', () => action(async () => {
-  if (state.config?.metadataUploads?.enabled !== true) throw Error('Metadata uploads are not enabled');
-  if (!state.wallet) throw Error('Connect a wallet first');
+  const inline = $('metadata-publish-status');
 
-  const image = $('metadata-image').files?.[0];
-  if (!image) throw Error('Choose a token image first');
+  try {
+    if (state.config?.metadataUploads?.enabled !== true) {
+      throw Error('Metadata uploads are not enabled');
+    }
 
-  const adapter = await getAdapter();
-  if (typeof adapter.signMetadataMessage !== 'function') throw Error('Connected wallet does not support metadata authorization');
+    if (!state.wallet) {
+      throw Error('Connect a wallet first');
+    }
 
-  const { uploadTokenMetadata } = await import('./metadata-auth-client.js');
+    const image = $('metadata-image').files?.[0];
 
-  const result = await uploadTokenMetadata({
-    enabled: true,
-    chain: state.chain,
-    subject: state.wallet,
-    signMessage: message => adapter.signMetadataMessage(message),
-    image,
-    name: $('name').value.trim(),
-    symbol: $('symbol').value.trim(),
-    description: $('description').value,
-    links: projectLinks(), banner: $('banner-uri').value.trim(),
-    onProgress: message => status(message)
-  });
+    if (!image) {
+      throw Error('Choose a token image first');
+    }
 
-  $('image-uri').value = result.image.uri;
-  $('uri').value = result.metadata.uri;
-  publishedDraft=draftIdentity();
+    inline.textContent =
+      'Preparing secure IPFS publishing…';
 
-  status('Metadata published to IPFS. Metadata URI is ready.');
-  controls();
+    const adapter = await getAdapter();
+
+    if (typeof adapter.signMetadataMessage !== 'function') {
+      throw Error(
+        'Connected wallet does not support metadata authorization'
+      );
+    }
+
+    const { uploadTokenMetadata } =
+      await import('./metadata-auth-client.js');
+
+    const result = await uploadTokenMetadata({
+      enabled: true,
+      chain: state.chain,
+      subject: state.wallet,
+      signMessage: message =>
+        adapter.signMetadataMessage(message),
+      image,
+      name: $('name').value.trim(),
+      symbol: $('symbol').value.trim(),
+      description: $('description').value,
+      links: projectLinks(),
+      banner: $('banner-uri').value.trim(),
+      onProgress: message => {
+        inline.textContent = message;
+        status(message);
+      }
+    });
+
+    $('image-uri').value = result.image.uri;
+    $('uri').value = result.metadata.uri;
+    publishedDraft = draftIdentity();
+
+    inline.textContent =
+      'Published successfully. Image and metadata IPFS addresses are ready.';
+
+    status(
+      'Metadata published to IPFS. Metadata URI is ready.'
+    );
+
+    controls();
+  } catch (error) {
+    const message =
+      error?.shortMessage ||
+      error?.message ||
+      'Metadata publishing could not complete';
+
+    inline.textContent =
+      'Publish failed: ' + message;
+
+    throw error;
+  }
 }));
 
 $('show-create').addEventListener('click',()=>{$('create-section').scrollIntoView({block:'start'});$('name').focus();});
