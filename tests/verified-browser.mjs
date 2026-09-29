@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { Interface } from 'ethers';
+import { Interface, AbiCoder, keccak256, toUtf8Bytes, ZeroHash } from 'ethers';
 import { OFFICIAL_BASE_FACTORY } from '../web/verification.js';
+import { EAS_ADDRESS, PUMPLITE_REVIEW_SCHEMA_UID } from '../web/adapters/base-v2.js';
 
 // Called against the production /pumplite/ export.
 // All chain and owner-list data are synthetic; no wallet transaction is submitted.
@@ -11,14 +12,41 @@ export async function verifyBrowser(browser, base) {
  const market='0x'+'1'.repeat(40),token='0x'+'2'.repeat(40),creator='0x'+'3'.repeat(40);
  const treasury='0x0de7fdcc798f7fac6b03b366c529133a9c60794d';
  const supply=10n**27n;
- const entry={status:'verified',market,token,creator,name:'Fixture token',symbol:'FX',metadataURI:'ipfs://fixture',reviewedAt:'2026-01-01T00:00:00.000Z',note:'<img src=x onerror=alert(1)>'};
+ const easUid='0x'+'4'.repeat(64);
+ const reviewData=AbiCoder.defaultAbiCoder().encode(
+  ['address','address','address','address','uint8','bytes32','uint64'],
+  [
+   market,
+   token,
+   creator,
+   OFFICIAL_BASE_FACTORY,
+   1,
+   keccak256(toUtf8Bytes('ipfs://fixture')),
+   1n
+  ]
+ );
+ const eas=new Interface([
+  'function getAttestation(bytes32 uid) view returns (tuple(bytes32 uid,bytes32 schema,uint64 time,uint64 expirationTime,uint64 revocationTime,bytes32 refUID,address recipient,address attester,bool revocable,bytes data) attestation)'
+ ]);
+ const entry={
+  status:'verified',
+  market,
+  token,
+  creator,
+  name:'Fixture token',
+  symbol:'FX',
+  metadataURI:'ipfs://fixture',
+  easUid,
+  reviewedAt:'2026-01-01T00:00:00.000Z',
+  note:'<img src=x onerror=alert(1)>'
+ };
  for(const width of [390,1440]) {
   const page=await browser.newPage({viewport:{width,height:900}}), errors=[];
   let registry={version:1,base:{[market]:entry}}, registryDown=false,registered=true,rpcDown=false;
   page.on('pageerror',e=>errors.push(e.message));
   await page.addInitScript(()=>{window.ethereum={request(){throw Error('Real wallet calls prohibited');}};});
   await page.route('**/assets/verified-tokens.json',r=>r.fulfill(registryDown?{status:503,body:'Unavailable'}:{json:registry}));
-  await page.route('https://mainnet.base.org/',async r=>{
+  await page.route(/https:\/\/(?:mainnet\.base\.org|base-rpc\.publicnode\.com)\/?/,async r=>{
    if(rpcDown)return r.fulfill({status:503,body:'Unavailable'});
    const req=r.request().postDataJSON();let result;
    assert.ok(!Array.isArray(req));
@@ -26,9 +54,52 @@ export async function verifyBrowser(browser, base) {
    else if(req.method==='eth_blockNumber')result='0x64';
    else if(req.method==='eth_call') {
     const tx=req.params[0],address=tx.to.toLowerCase();
-    const iface=address===OFFICIAL_BASE_FACTORY?f:address===market?c:address===token?t:null;
+    const iface=
+     address===OFFICIAL_BASE_FACTORY
+      ? f
+      : address===market
+       ? c
+       : address===token
+        ? t
+        : address===EAS_ADDRESS
+         ? eas
+         : null;
+
     assert.ok(iface,'Unexpected target');
-    const call=iface.parseTransaction({data:tx.data});
+
+    const call=
+     iface.parseTransaction({
+      data:tx.data
+     });
+
+    if(address===EAS_ADDRESS){
+     assert.equal(
+      call.name,
+      'getAttestation'
+     );
+
+     assert.equal(
+      call.args[0],
+      easUid
+     );
+
+     result=
+      eas.encodeFunctionResult(
+       'getAttestation',
+       [[
+        easUid,
+        PUMPLITE_REVIEW_SCHEMA_UID,
+        1n,
+        0n,
+        0n,
+        ZeroHash,
+        token,
+        treasury,
+        true,
+        reviewData
+       ]]
+      );
+    } else {
     const values={
       marketCount:1n,
       markets:market,
@@ -59,8 +130,17 @@ export async function verifyBrowser(browser, base) {
       totalMinted:supply,
       remainingMintAllowance:0n
     };
-    assert.ok(Object.hasOwn(values,call.name),'Unexpected V2 call '+call.name);
-    result=iface.encodeFunctionResult(call.name,[values[call.name]]);
+    assert.ok(
+     Object.hasOwn(values,call.name),
+     'Unexpected V2 call '+call.name
+    );
+
+    result=
+     iface.encodeFunctionResult(
+      call.name,
+      [values[call.name]]
+     );
+    }
    } else throw Error('Forbidden/unexpected RPC '+req.method);
    return r.fulfill({json:{jsonrpc:'2.0',id:req.id,result}});
   });
