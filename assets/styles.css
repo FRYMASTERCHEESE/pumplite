@@ -127,3 +127,27 @@ textarea{font:inherit;width:100%;max-width:100%;background:#111e17;color:#fff;bo
     grid-template-columns:1fr
   }
 }
+
+/* Recent on-chain market chart and owner review states. */
+.market-chart-panel{overflow:hidden}
+.chart-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.chart-heading h2{margin-top:4px}
+.chart-change{font-size:14px;white-space:nowrap}
+.chart-change.up{color:#35e28b}
+.chart-change.down{color:#ff5f6d}
+.price-chart{min-height:260px;border:1px solid var(--line);border-radius:14px;background:#0c1712;padding:12px;overflow:hidden}
+.price-chart svg{display:block;width:100%;height:250px}
+.price-chart .grid{stroke:#294036;stroke-width:1}
+.price-chart .up-line{stroke:#35e28b;stroke-width:3;fill:none;stroke-linecap:round}
+.price-chart .down-line{stroke:#ff5f6d;stroke-width:3;fill:none;stroke-linecap:round}
+.price-chart .point-buy{fill:#35e28b}
+.price-chart .point-sell{fill:#ff5f6d}
+.price-chart .axis-label{fill:#8fa99a;font-size:12px}
+.price-chart-empty{display:grid;place-items:center;min-height:236px;color:var(--muted);text-align:center}
+.badge.pending{color:#ffe59a;border-color:#786a38;background:#292514}
+.badge.declined{color:#ffb2b9;border-color:#7b3a43;background:#2b171b}
+.owner-review{margin-top:18px;padding:16px;border:1px solid var(--line);border-radius:12px;background:#0f1b16}
+.owner-review code{display:block;overflow-wrap:anywhere;margin:10px 0;color:var(--green)}
+@media(max-width:560px){.chart-heading{display:grid}.chart-change{white-space:normal}.price-chart{padding:8px}}
+
+.review-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}.owner-review #eas-proof{margin:12px 0;padding:12px;border:1px solid var(--line);border-radius:10px;background:#0b1511}.owner-review #eas-proof code{margin:0 0 10px}.owner-review .links button{width:auto}.owner-review .links{align-items:center}@media(max-width:560px){.review-actions{grid-template-columns:1fr}.owner-review .links{display:grid}.owner-review .links>*{width:100%}}

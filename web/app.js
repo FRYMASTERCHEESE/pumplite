@@ -1212,7 +1212,9 @@ $('initial-buy-form').addEventListener('submit', e => {
         $('initial-buy-eth').value.trim() || '0';
 
       const initialBuy =
-        parseUnits(initialBuyText, 18);
+        /^(?:0+)(?:\.0+)?$/.test(initialBuyText)
+          ? 0n
+          : parseUnits(initialBuyText, 18);
 
       if (initialBuy < 0n) {
         throw Error(

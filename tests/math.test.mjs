@@ -35,11 +35,11 @@ test('single buyer cannot receive more native currency on immediate round trip',
   assert.ok(sell.output < 1_000_000_000n);
   assert.ok(sell.gross <= m.nativeReserve);
 });
-test('unbacked sales, dust and invalid slippage are rejected', () => {
+test('unbacked sales and invalid slippage are rejected while smallest positive output remains usable', () => {
   const m = { supply: SOL_SUPPLY, virtualNative: 30_000_000_000n, nativeReserve: 0n, tokenReserve: SOL_SUPPLY };
   assert.throws(() => quote(m, 'sell', 1n));
   assert.throws(() => quote(m, 'buy', 0n));
-  assert.throws(() => minimumOutput(1n, 100));
+  assert.equal(minimumOutput(1n, 100), 1n);
   for (const tolerance of [0, 501, NaN, 1.1]) assert.throws(() => minimumOutput(1000n, tolerance));
   assert.equal(minimumOutput(10_000n, 100), 9900n);
 });
