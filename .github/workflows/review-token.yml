@@ -67,6 +67,7 @@ jobs:
       - run: pnpm build:pages
       - run: pnpm check
       - run: pnpm test
+      - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm test:pages
       - run: pnpm check:pages
 
