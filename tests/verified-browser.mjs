@@ -155,7 +155,10 @@ export async function verifyBrowser(browser, base) {
   assert.equal(await page.locator('.market-row').count(),0,'Revocation removes verified-only results');
   await page.locator('#verified-only').uncheck();await page.waitForFunction(()=>!document.querySelector('#verified-only').disabled);
   assert.equal(await page.locator('.market-row .verified').count(),0);
-  assert.equal(await page.locator('.market-row .badge').textContent(),'Created on PumpLite');
+  assert.deepEqual(
+   await page.locator('.market-row .badge').allTextContents(),
+   ['Created on PumpLite','Pending review']
+  );
   registry={version:1,base:{[market]:entry}};
   await page.locator('.market-row').click();await page.waitForFunction(()=>document.querySelector('#verification-state').textContent.startsWith('Verified'));
   assert.equal(await page.locator('#verification-details img').count(),0,'Notes rendered as inert text');
@@ -165,7 +168,11 @@ export async function verifyBrowser(browser, base) {
   await page.locator('#refresh-market').click();await page.waitForFunction(()=>!document.querySelector('#refresh-market').disabled);
   assert.equal(await page.locator('#market-badges .verified').count(),0);
   registryDown=true;await page.locator('#refresh-market').click();await page.waitForFunction(()=>!document.querySelector('#refresh-market').disabled);
-  assert.equal(await page.locator('#market-badges .badge').count(),1,'List failure preserves provenance only');
+  assert.deepEqual(
+   await page.locator('#market-badges .badge').allTextContents(),
+   ['Created on PumpLite','Pending review'],
+   'Review-list failure preserves provenance and falls back to Pending review'
+  );
   rpcDown=true;await page.locator('#refresh-market').click();await page.waitForFunction(()=>!document.querySelector('#refresh-market').disabled);
   assert.equal(await page.locator('#market-badges .badge').count(),0,'RPC failure clears old badges');
   rpcDown=false;registryDown=false;registered=false;
