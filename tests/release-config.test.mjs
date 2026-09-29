@@ -18,7 +18,8 @@ function clone() {
 
 test('production enables verified Base while Solana remains fail-closed', () => {
   validatePublicConfig(current);
-  assert.equal(current.base.factory, '0xf722BeD94c4A41B2C71cDCDEB5EEA062352aEe44');
+  assert.equal(current.base.factory, '0xdA8c34819ae397FD4bE3C95947DEA64f4A3278f4');
+  assert.equal(current.base.contractVersion, 2);
   assert.equal(deploymentConfigured(current, 'base'), true);
   assert.equal(deploymentConfigured(current, 'solana'), false);
   assert.equal(transactionConfigEnabled(current, 'base'), true);

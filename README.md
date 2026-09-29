@@ -1,7 +1,7 @@
-# PumpLite — local implementation
+# PumpLite — Base V2 Mainnet
 
-A lightweight fixed-supply token launchpad targeting **Solana Mainnet and Base Mainnet**.
-**Base Mainnet is deployed and enabled for real transactions** through LaunchFactory `0xf722BeD94c4A41B2C71cDCDEB5EEA062352aEe44`. **Solana Mainnet remains undeployed and transaction-locked.** The Base deployment is still awaiting independent security/economic audit.
+A token launchpad targeting **Solana Mainnet and Base Mainnet**.
+**Base Mainnet V2 is deployed and enabled for real transactions** through LaunchFactoryV2 `0xdA8c34819ae397FD4bE3C95947DEA64f4A3278f4`. V2 includes fixed or permanently capped mintable supply, Mayhem market support, Buy & Burn, and wallet-signed bonding-curve trading. **Solana Mainnet remains undeployed and transaction-locked.** Independent security/economic review remains appropriate for production financial software.
 No admin panel, owner withdrawals, mutable fees, proxies, or market-edit controls are provided.
 
 ## Run locally
@@ -18,7 +18,7 @@ pnpm preview
 
 Open http://127.0.0.1:4173. The preview binds only to loopback.
 The initial page makes no blockchain requests; libraries are loaded only when needed.
-Production configuration enables Base Mainnet at `0xf722BeD94c4A41B2C71cDCDEB5EEA062352aEe44` with `transactionsEnabled=true`. Solana remains locked with `programId=null` and `transactionsEnabled=false`.
+Production configuration enables Base Mainnet V2 at `0xdA8c34819ae397FD4bE3C95947DEA64f4A3278f4` with `contractVersion=2` and `transactionsEnabled=true`. Solana remains locked with `programId=null` and `transactionsEnabled=false`.
 There are deliberately no deployment scripts. Do not enable writes merely because tests pass.
 
 Browser checks, with the preview running:
@@ -101,10 +101,10 @@ The program identity remains build configuration only; transactions are still di
 
 ## Base contracts
 
-`contracts/base/LaunchFactory.sol` registers immutable per-market deployments.
-Each `CurveMarket` creates its own fixed-supply `LaunchToken`.
+`contracts/base/v2/LaunchFactoryV2.sol` registers immutable V2 per-market deployments.
+Each `CurveMarketV2` creates its own `LaunchTokenV2` with either fixed supply or a permanent lifetime mint cap. Mayhem can retain 0.75% of trade value as real market backing while active, alongside the fixed 0.25% platform fee. Buy & Burn purchases through the real curve and permanently burns the purchased market inventory.
 Compilation uses pinned Solidity 0.8.30, the Shanghai EVM target, optimizer 200 runs, and OpenZeppelin 5.4.0.
-The compiler writes ignored local artifacts to `build/base` and deterministic browser ABIs to `web/generated/base-abi.json`.
+V1 and V2 compiler evidence is kept separately under `build/base` and `build/base-v2`; the browser ABIs are `web/generated/base-abi.json` and `web/generated/base-v2-abi.json`.
 
 `pnpm test` exercises deployed bytecode on a **process-local EVM test fixture**.
 This is not a public test network, fork, Mainnet transaction, or product demo.
@@ -112,14 +112,17 @@ Test accounts exist only inside the in-memory provider; their signing material i
 
 ## Product rules
 
-- 1 billion tokens per launch. Solana: 6 decimals; Base: 18 decimals. All arithmetic uses raw units.
-- No creator allocation. Entire supply enters the vault. No additional minting or freezing.
-- Fixed 25 bps (0.25%) fee, entirely paid to the platform treasury. No referral/creator fee split.
-- Native pricing offset: 30 SOL or 1 ETH. These are economic design parameters, **not real liquidity**.
-- Buys deposit net native currency and receive vault tokens; sells return tokens and receive only backed native currency.
+- Base V2 supports fixed / no-mint launches or mintable launches with an immutable lifetime cap.
+- Base V2 initial and maximum supply must remain within the V2 contract bounds; mintable inventory can only be minted directly into the market.
+- Mintable creators can permanently lock future minting.
+- Fixed 25 bps (0.25%) platform fee is paid to the platform treasury.
+- When Mayhem is active, an additional 75 bps (0.75%) is retained as real market backing rather than paid to the treasury.
+- Initial Mayhem can be selected for the first 24 hours; after that window the configured Mayhem controller can switch it on or off.
+- Buy & Burn spends real ETH through the bonding curve and permanently burns the purchased token inventory.
+- Native pricing offset remains 1 ETH on Base. It is a pricing parameter, not withdrawable liquidity.
 - Positive minimum output and a maximum five-minute on-chain deadline are required.
-- No graduation, migration, arbitrary withdrawal, pause, mutable market settings, or recovery of direct donations.
-- Launch creation charges network/account-creation costs, but no separate platform creation fee.
+- No arbitrary owner withdrawal, mutable treasury, proxy upgrade, blacklist, or pause function exists in the V2 contracts.
+- Launch creation still incurs network gas; PumpLite does not add a separate creation fee in the V2 factory.
 
 Treasuries are public constants:
 

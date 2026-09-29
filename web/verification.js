@@ -1,4 +1,4 @@
-export const OFFICIAL_BASE_FACTORY = '0xf722bed94c4a41b2c71cdcdeb5eea062352aee44';
+export const OFFICIAL_BASE_FACTORY = '0xda8c34819ae397fd4be3c95947dea64f4a3278f4';
 export const VERIFICATION_DISCLOSURE = 'Verified means PumpLite reviewed the token’s identity/provenance. It is not an endorsement, safety guarantee, price promise, or investment recommendation. It is not a security audit.';
 const address = value => typeof value === 'string' && /^0x[0-9a-fA-F]{40}$/.test(value) && !/^0x0{40}$/.test(value);
 const equal = (a,b) => address(a) && address(b) && a.toLowerCase() === b.toLowerCase();

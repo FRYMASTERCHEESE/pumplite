@@ -12,6 +12,12 @@ const config = JSON.parse(configText);
 
 validatePublicConfig(config);
 
+if (config.base?.contractVersion === 2) {
+  throw Error(
+    'Base V2 is already activated; use npm run verify:base-v2-live instead'
+  );
+}
+
 assert.equal(config.base.chainId, 8453, 'Base V2 preparation requires Base Mainnet');
 assert.equal(
   config.base.contractVersion,

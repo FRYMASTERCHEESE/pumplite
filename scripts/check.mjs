@@ -30,6 +30,12 @@ for (const chain of [config.solana, config.base]) {
 }
 assert.equal(config.solana.explorer, 'https://solscan.io');
 assert.equal(config.base.explorer, 'https://basescan.org');
+assert.equal(config.base.contractVersion, 2, 'Base V2 must be the active contract version');
+assert.equal(
+  config.base.factory.toLowerCase(),
+  '0xda8c34819ae397fd4be3c95947dea64f4a3278f4',
+  'Base V2 factory mismatch'
+);
 assert.equal(config.solana.treasury, 'BNpFPPuy2h12dryy4dayemjA4YS17ccVaF82jBDuiwct');
 assert.equal(config.base.treasury, '0x0de7fdcc798f7fac6b03b366c529133a9c60794d');
 await assert.rejects(access('admin.html'));

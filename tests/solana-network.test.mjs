@@ -32,7 +32,7 @@ test('configuration pins the full Mainnet hash and retains the deployment lock',
   assert.equal(config.solana.transactionsEnabled, false);
   assert.equal(config.base.transactionsEnabled, true);
   assert.equal(config.solana.programId, null);
-  assert.equal(config.base.factory, '0xf722BeD94c4A41B2C71cDCDEB5EEA062352aEe44');
+  assert.equal(config.base.factory, '0xdA8c34819ae397FD4bE3C95947DEA64f4A3278f4');
 });
 
 test('strict chain check rejects truncated, different and malformed identities', () => {

@@ -26,7 +26,7 @@ test('V1 and V2 standard compiler inputs are isolated', async () => {
   assert.equal(v2.sources['LaunchFactory.sol'], undefined);
 });
 
-test('V1 and V2 manifests are isolated', async () => {
+test('V1 and V2 build manifests are isolated', async () => {
   const v1 = await readJson('build/base/build-manifest.json');
   const v2 = await readJson('build/base-v2/build-manifest.json');
 
@@ -41,23 +41,28 @@ test('V1 and V2 manifests are isolated', async () => {
   );
 });
 
-test('release candidate stays fail-closed while V1 remains live', async () => {
+test('tracked Base V2 deployment record matches the active public config', async () => {
   const live = await readJson('config.json');
-  const candidate =
-    await readJson('build/base-v2/release/release-candidate.json');
-  const activation =
-    await readJson('build/base-v2/release/activation-template.json');
+  const deployment = await readJson('deployments/base-v2-mainnet.json');
 
-  assert.equal(live.base.contractVersion, undefined);
-  assert.equal(candidate.liveV1ConfigurationChanged, false);
-  assert.equal(candidate.deployed, false);
-  assert.equal(candidate.activated, false);
-  assert.equal(candidate.transactionsEnabled, false);
-  assert.equal(candidate.deployment.factory, null);
-
-  assert.equal(activation.base.contractVersion, 2);
-  assert.equal(activation.base.factory, null);
-  assert.equal(activation.base.transactionsEnabled, false);
+  assert.equal(live.base.chainId, 8453);
+  assert.equal(live.base.contractVersion, 2);
+  assert.equal(live.base.transactionsEnabled, true);
+  assert.equal(
+    live.base.factory.toLowerCase(),
+    deployment.factory.toLowerCase()
+  );
+  assert.equal(deployment.contract, 'LaunchFactoryV2');
+  assert.match(deployment.deploymentTransaction, /^0x[0-9a-f]{64}$/i);
+  assert.equal(
+    deployment.constructor.treasury.toLowerCase(),
+    live.base.treasury.toLowerCase()
+  );
+  assert.equal(
+    deployment.constructor.mayhemController.toLowerCase(),
+    live.base.treasury.toLowerCase()
+  );
+  assert.equal(deployment.publicActivation, true);
 });
 
 test('Base V2 ABIs expose no ownership, withdrawal, upgrade, pause, or treasury mutation', async () => {

@@ -1,5 +1,7 @@
 # PumpLite Base V2 release preparation
 
+> Status: V2 has since been deployed and activated on Base Mainnet. This document is retained as pre-deployment history. Use `npm run verify:base-v2-live` for the current deployment.
+
 This stage prepares PumpLite Base V2 for a later Base Mainnet deployment without changing or replacing the working V1 deployment.
 
 ## Current safety state

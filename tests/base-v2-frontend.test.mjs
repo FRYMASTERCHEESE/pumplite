@@ -86,14 +86,16 @@ test('Base V2 frontend contains gated V2 features', async () => {
   assert.match(html, /base-v2-burn-form/);
 });
 
-test('current public Base deployment stays V1 unless V2 is explicitly selected', async () => {
+test('public Base deployment selects verified V2 Mainnet configuration', async () => {
   const config = JSON.parse(await readFile('config.json', 'utf8'));
 
-  assert.equal(config.base.contractVersion, undefined);
-
-  const v2 = structuredClone(config);
-  v2.base.contractVersion = 2;
-  assert.doesNotThrow(() => validatePublicConfig(v2));
+  assert.equal(config.base.contractVersion, 2);
+  assert.equal(
+    config.base.factory,
+    '0xdA8c34819ae397FD4bE3C95947DEA64f4A3278f4'
+  );
+  assert.equal(config.base.transactionsEnabled, true);
+  assert.doesNotThrow(() => validatePublicConfig(config));
 
   const bad = structuredClone(config);
   bad.base.contractVersion = 3;

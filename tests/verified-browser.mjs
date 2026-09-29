@@ -2,11 +2,15 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { Interface } from 'ethers';
 import { OFFICIAL_BASE_FACTORY } from '../web/verification.js';
-// Called against the production /pumplite/ export. All chain and owner-list data are synthetic.
+
+// Called against the production /pumplite/ export.
+// All chain and owner-list data are synthetic; no wallet transaction is submitted.
 export async function verifyBrowser(browser, base) {
- const abi=JSON.parse(await readFile('web/generated/base-abi.json'));
- const f=new Interface(abi.LaunchFactory),c=new Interface(abi.CurveMarket),t=new Interface(abi.LaunchToken);
+ const abi=JSON.parse(await readFile('web/generated/base-v2-abi.json'));
+ const f=new Interface(abi.LaunchFactoryV2),c=new Interface(abi.CurveMarketV2),t=new Interface(abi.LaunchTokenV2);
  const market='0x'+'1'.repeat(40),token='0x'+'2'.repeat(40),creator='0x'+'3'.repeat(40);
+ const treasury='0x0de7fdcc798f7fac6b03b366c529133a9c60794d';
+ const supply=10n**27n;
  const entry={status:'verified',market,token,creator,name:'Fixture token',symbol:'FX',metadataURI:'ipfs://fixture',reviewedAt:'2026-01-01T00:00:00.000Z',note:'<img src=x onerror=alert(1)>'};
  for(const width of [390,1440]) {
   const page=await browser.newPage({viewport:{width,height:900}}), errors=[];
@@ -21,10 +25,42 @@ export async function verifyBrowser(browser, base) {
    if(req.method==='eth_chainId')result='0x2105';
    else if(req.method==='eth_blockNumber')result='0x64';
    else if(req.method==='eth_call') {
-    const tx=req.params[0],address=tx.to.toLowerCase();const iface=address===OFFICIAL_BASE_FACTORY?f:address===market?c:address===token?t:null;
-    assert.ok(iface,'Unexpected target');const call=iface.parseTransaction({data:tx.data});
-    const values={marketCount:1n,markets:market,isMarket:registered,token,nativeReserve:0n,tokenReserve:10n**27n,volume:0n,creator,TREASURY:'0x0de7fdcc798f7fac6b03b366c529133a9c60794d',metadataURI:'ipfs://fixture',name:'Fixture token',symbol:'FX'};
-    assert.ok(Object.hasOwn(values,call.name));result=iface.encodeFunctionResult(call.name,[values[call.name]]);
+    const tx=req.params[0],address=tx.to.toLowerCase();
+    const iface=address===OFFICIAL_BASE_FACTORY?f:address===market?c:address===token?t:null;
+    assert.ok(iface,'Unexpected target');
+    const call=iface.parseTransaction({data:tx.data});
+    const values={
+      marketCount:1n,
+      markets:market,
+      isMarket:registered,
+
+      token,
+      nativeReserve:0n,
+      tokenReserve:supply,
+      volume:0n,
+      creator,
+      treasury,
+      metadataURI:'ipfs://fixture',
+      initialSupply:supply,
+      initialMayhem:false,
+      manualMayhem:false,
+      mayhemActive:false,
+      launchedAt:1n,
+      totalMarketSupport:0n,
+      totalBurned:0n,
+      mayhemController:treasury,
+
+      name:'Fixture token',
+      symbol:'FX',
+      totalSupply:supply,
+      maxSupply:supply,
+      mintableAtLaunch:false,
+      mintingLocked:true,
+      totalMinted:supply,
+      remainingMintAllowance:0n
+    };
+    assert.ok(Object.hasOwn(values,call.name),'Unexpected V2 call '+call.name);
+    result=iface.encodeFunctionResult(call.name,[values[call.name]]);
    } else throw Error('Forbidden/unexpected RPC '+req.method);
    return r.fulfill({json:{jsonrpc:'2.0',id:req.id,result}});
   });
@@ -74,7 +110,7 @@ export async function verifyBrowser(browser, base) {
   assert.equal(await page.locator('#create').isDisabled(),true,'No wallet used');
   assert.equal(await page.locator('body').evaluate(e=>e.scrollWidth<=innerWidth),true);
   assert.deepEqual(errors,[]);
-  console.log('PASS redesigned Pages '+width+'px: provenance, manual reviews, revoke/filter/mismatch/RPC failures, safe notes, metadata links/banner download, local media preview, Solana locked');
+  console.log('PASS redesigned Pages '+width+'px: Base V2 provenance, manual reviews, revoke/filter/mismatch/RPC failures, safe notes, metadata links/banner download, local media preview, Solana locked');
   await page.close();
  }
 }

@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "network": "Base Mainnet",
+  "chainId": 8453,
+  "contract": "LaunchFactoryV2",
+  "factory": "0xdA8c34819ae397FD4bE3C95947DEA64f4A3278f4",
+  "deploymentTransaction": "0xfac76d43a8105bcfaa85a03b12045117d29a5b837c7cebec8ef8cd1994d924c8",
+  "deploymentBlock": 51923298,
+  "deployer": "0x0de7FdCc798F7FAC6b03b366c529133A9c60794d",
+  "constructor": {
+    "mayhemController": "0x0de7FdCc798F7FAC6b03b366c529133A9c60794d",
+    "treasury": "0x0de7FdCc798F7FAC6b03b366c529133A9c60794d"
+  },
+  "verification": {
+    "runtimeTemplateMatches": true,
+    "controllerMatches": true,
+    "treasuryMatches": true,
+    "marketCountAtDeployment": "0"
+  },
+  "previousFactoryV1": "0xf722BeD94c4A41B2C71cDCDEB5EEA062352aEe44",
+  "deployedFromCommit": "7176bfcbbc12968b55a45a0cc72a961f37b01a5e",
+  "publicActivation": true
+}
