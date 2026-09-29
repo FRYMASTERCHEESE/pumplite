@@ -1,7 +1,7 @@
 import { discoverEvm, watchWallet } from '../wallets.js';
 import { BrowserProvider, JsonRpcProvider, Contract, getAddress, FetchRequest } from 'ethers';
 import { gasBudget } from '../gas.js';
-import { boundedFetch } from '../rpc-fetch.js';
+import { baseReadRpcUrls, baseReadTransport } from '../base-rpc.js';
 import abis from '../generated/base-v2-abi.json' with { type: 'json' };
 import { assertReceipt } from '../math.js';
 
@@ -18,15 +18,33 @@ export async function settleBase(tx, notify, explorer) {
 export function adapter(config, notify, changed = () => {}) {
   if (config.chainId !== 8453) throw Error('Unsupported Base chain configuration');
   if (config.contractVersion !== 2) throw Error('Base V2 adapter requires contractVersion 2');
-  const request = new FetchRequest(config.rpcUrl);
-  request.timeout = 15000; request.setThrottleParams({ maxAttempts: 1 });
-  request.getUrlFunc = async (req, signal) => {
-    const controller = new AbortController();
-    signal?.addListener(() => controller.abort()); if (signal?.cancelled) controller.abort();
-    const response = await boundedFetch(req.url, { method: req.method, headers: req.headers, body: req.body, signal: controller.signal });
-    return { statusCode: response.status, statusMessage: response.statusText, headers: { 'content-type': 'application/json' }, body: new Uint8Array(await response.arrayBuffer()) };
-  };
-  const provider = new JsonRpcProvider(request, undefined, { batchMaxCount: 1 });
+  const readRpcUrls = baseReadRpcUrls(config);
+  const request = new FetchRequest(readRpcUrls[0]);
+  request.timeout = 15000;
+  request.setThrottleParams({ maxAttempts: 1 });
+
+  let fallbackAnnounced = false;
+
+  request.getUrlFunc = (req, signal) =>
+    baseReadTransport(
+      req,
+      signal,
+      readRpcUrls,
+      () => {
+        if (fallbackAnnounced) return;
+        fallbackAnnounced = true;
+
+        notify(
+          'Primary Base read RPC is busy. Using the backup Base Mainnet read RPC. No wallet transaction was retried.'
+        );
+      }
+    );
+
+  const provider = new JsonRpcProvider(
+    request,
+    undefined,
+    { batchMaxCount: 1 }
+  );
   let walletProvider, signer, connectedAddress, selected, revision = 0, unwatch = () => {};
   function disconnect() {
     revision++; unwatch(); unwatch = () => {}; walletProvider?.destroy();

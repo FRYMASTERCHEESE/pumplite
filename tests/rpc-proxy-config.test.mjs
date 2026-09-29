@@ -11,11 +11,11 @@ test('Solana uses only the public read-only proxy address and verified fallback 
  assert.equal(config.solana.transactionsEnabled,false);assert.equal(config.base.transactionsEnabled,true);assert.equal(config.solana.programId,null);assert.equal(config.base.factory,'0xdA8c34819ae397FD4bE3C95947DEA64f4A3278f4');
  assert.equal(config.solana.treasury,'BNpFPPuy2h12dryy4dayemjA4YS17ccVaF82jBDuiwct');
  assert.equal(config.base.treasury,'0x0de7fdcc798f7fac6b03b366c529133a9c60794d');
- assert.equal(config.base.rpcUrl,'https://mainnet.base.org');
+ assert.equal(config.base.rpcUrl,'https://base-rpc.publicnode.com');assert.deepEqual(config.base.rpcFallbackUrls,['https://mainnet.base.org']);
  const url=new URL(config.solana.rpcUrl);assert.equal(url.search,'');assert.equal(url.username,'');assert.equal(url.password,'');
 });
 test('CSP grants only the exact Worker HTTPS origin and existing fallback/Base destinations',()=>{
  const policy=securityHeaders(html)['Content-Security-Policy'];
  const sources=policy.split(';').map(s=>s.trim()).find(s=>s.startsWith('connect-src ')).split(/\s+/).slice(1);
- assert.deepEqual(sources,["'self'",'https://pumplite-rpc.coreyedge123.workers.dev','https://solana-rpc.publicnode.com','wss://solana-rpc.publicnode.com','https://mainnet.base.org','https://api.coinbase.com']);
+ assert.deepEqual(sources,["'self'",'https://pumplite-rpc.coreyedge123.workers.dev','https://solana-rpc.publicnode.com','wss://solana-rpc.publicnode.com','https://mainnet.base.org','https://base-rpc.publicnode.com','https://api.coinbase.com']);
 });

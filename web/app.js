@@ -321,6 +321,15 @@ async function connectBaseWalletFromGesture() {
     address.slice(-4);
 
   status('Wallet connected: ' + address);
+
+  if (
+    state.market ||
+    location.hash.startsWith('#base/')
+  ) {
+    $('balance').textContent =
+      'Wallet connected. Loading Base market and token balances…';
+  }
+
   return address;
 }
 
@@ -389,7 +398,20 @@ $('connect').addEventListener('click', () => action(async () => {
     await connectBaseWalletFromGesture();
   }
 
-  if (state.market) await loadMarket(state.market.id);
+  const routeParts =
+    location.hash.slice(1).split('/');
+
+  const routeMarketId =
+    routeParts[0] === 'base' && routeParts[1]
+      ? decodeURIComponent(routeParts[1])
+      : null;
+
+  const marketId =
+    state.market?.id || routeMarketId;
+
+  if (marketId) {
+    await loadMarket(marketId);
+  }
 }));
 async function copyMetadataText(text) {
   if (navigator.clipboard?.writeText) {
@@ -1078,7 +1100,7 @@ async function loadPublicConfig() {
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       const response = await fetch(
-        './config.json?boot=20260929c&attempt=' + attempt,
+        './config.json?boot=20260929f&attempt=' + attempt,
         { cache: 'no-store' }
       );
 
