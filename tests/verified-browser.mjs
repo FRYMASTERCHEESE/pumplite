@@ -52,6 +52,7 @@ export async function verifyBrowser(browser, base) {
    assert.ok(!Array.isArray(req));
    if(req.method==='eth_chainId')result='0x2105';
    else if(req.method==='eth_blockNumber')result='0x64';
+   else if(req.method==='eth_getLogs')result=[];
    else if(req.method==='eth_call') {
     const tx=req.params[0],address=tx.to.toLowerCase();
     const iface=
@@ -161,6 +162,12 @@ export async function verifyBrowser(browser, base) {
   );
   registry={version:1,base:{[market]:entry}};
   await page.locator('.market-row').click();await page.waitForFunction(()=>document.querySelector('#verification-state').textContent.startsWith('Verified'));
+  await page.waitForFunction(()=>document.querySelector('#price-chart-change')?.textContent==='No trades yet');
+  assert.equal(
+   await page.locator('#price-chart-change').textContent(),
+   'No trades yet',
+   'Empty on-chain Trade history must produce an honest empty chart'
+  );
   assert.equal(await page.locator('#verification-details img').count(),0,'Notes rendered as inert text');
   assert.match(await page.locator('#verification-details').textContent(),/onerror/);
   assert.equal(await page.locator('body').evaluate(e=>e.scrollWidth<=innerWidth),true);
