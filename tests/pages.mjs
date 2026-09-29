@@ -40,7 +40,7 @@ try {
   browser = await chromium.launch({ headless: true, ...(process.env.BROWSER_EXECUTABLE ? { executablePath: process.env.BROWSER_EXECUTABLE } : {}) });
   await verifyBrowser(browser,base);
   const broken = await browser.newPage({ viewport: { width: 390, height: 844 } });
-  await broken.route('**/assets/app.js', route => route.abort());
+  await broken.route('**/assets/app.js*', route => route.abort());
   await broken.goto(base);
   await broken.locator('#connect').click();
   assert.match(await broken.locator('#phantom-tap').textContent(), /Tap received.*not ready/);
