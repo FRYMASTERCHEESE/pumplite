@@ -316,7 +316,9 @@ export function adapter(config, notify, changed = () => {}) {
         maxSupply < initialSupply
       ) throw Error('Invalid V2 supply configuration');
 
-      const f = factory().connect(await wallet());
+      await wallet();
+
+      const readFactory = factory();
 
       const launchConfig = {
         name,
@@ -328,22 +330,45 @@ export function adapter(config, notify, changed = () => {}) {
         initialMayhem: initialMayhem === true
       };
 
-      const gas = await f.createMarketV2.estimateGas(launchConfig);
+      // Estimate through the reviewed Base RPC, not the wallet provider.
+      // Some mobile EVM wallets reject a zero-native-value contract
+      // estimation as though it were a zero-amount transfer. Token
+      // creation is nonpayable, so the transaction must not include value.
+      const data =
+        readFactory.interface.encodeFunctionData(
+          'createMarketV2',
+          [launchConfig]
+        );
+
+      const gas = await provider.estimateGas({
+        from: connectedAddress,
+        to: config.factory,
+        data
+      });
+
       const gasLimit = gasBudget(gas, 5_000_000n);
 
-      notify('Estimated V2 creation gas: ' + gas + '. Review the wallet fee before approving.');
+      notify(
+        'Estimated V2 creation gas: ' +
+        gas +
+        '. Review the wallet fee before approving.'
+      );
 
-      await wallet();
+      const activeSigner = await wallet();
 
       const receipt = await settle(
-        await f.createMarketV2(launchConfig, { gasLimit })
+        await activeSigner.sendTransaction({
+          to: config.factory,
+          data,
+          gasLimit
+        })
       );
 
       for (const log of receipt.logs) {
         if (getAddress(log.address) !== getAddress(config.factory)) continue;
 
         try {
-          const parsed = f.interface.parseLog(log);
+          const parsed = readFactory.interface.parseLog(log);
           if (parsed?.name === 'MarketCreatedV2') return parsed.args.market;
         } catch {}
       }

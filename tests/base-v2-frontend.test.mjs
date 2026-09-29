@@ -101,6 +101,10 @@ test('Base V2 frontend contains gated V2 features', async () => {
   assert.match(app, /exchange-rates\?currency=ETH/);
   assert.match(app, /Your token was created, but the optional first buy did not complete/);
   assert.match(app, /adapter\.trade\(/);
+  assert.match(adapter, /provider\.estimateGas\(\{/);
+  assert.match(adapter, /from: connectedAddress/);
+  assert.match(adapter, /activeSigner\.sendTransaction\(\{/);
+  assert.doesNotMatch(adapter, /createMarketV2\.estimateGas/);
 });
 
 test('public Base deployment selects verified V2 Mainnet configuration', async () => {
