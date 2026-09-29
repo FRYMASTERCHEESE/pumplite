@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="dark">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://mainnet.base.org https://base-rpc.publicnode.com; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>PLITE Â· First 50 Holder Claim</title>
+<link rel="stylesheet" href="./assets/styles.css">
+<script type="module" src="./assets/claim.js?boot=20260930e"></script>
+</head>
+<body>
+<main id="main-content" tabindex="-1">
+  <section class="panel holder-claim claim-page">
+    <p class="eyebrow">PUMPLITE Â· BASE MAINNET</p>
+    <h1>First 50 PLITE Holders</h1>
+    <p class="intro">The first 50 Base wallet addresses can each claim 1 PLITE. One wallet can claim once. No purchase is required.</p>
+
+    <div class="notice" id="claim-network" role="status">Loading Base Mainnet claim configurationâ€¦</div>
+
+    <div class="claim-progress-card">
+      <strong id="claim-progress">Not launched yet</strong>
+      <p id="claim-detail" class="fine">Connect the PumpLite controller wallet to launch, or open a verified claim link.</p>
+    </div>
+
+    <button id="claim-connect" class="outline full" type="button">Connect Base wallet</button>
+
+    <section id="claim-owner-tools" class="claim-owner-tools" hidden>
+      <h2>Controller launch</h2>
+      <p class="fine">One tap starts the launch. Your wallet will still require two separate approvals: one to deploy the fixed claim contract and one to transfer exactly 50 PLITE. PumpLite never receives your private key.</p>
+      <button id="claim-launch" class="primary full" type="button">Launch First 50 Claim</button>
+      <button id="claim-fund" class="outline full" type="button" hidden>Finish funding claim</button>
+    </section>
+
+    <button id="claim-now" class="primary full" type="button" disabled>Claim 1 PLITE</button>
+
+    <div id="claim-share-box" hidden>
+      <h2>Share this claim</h2>
+      <p class="fine">Only share this link after the page says the claim is fully funded.</p>
+      <code id="claim-share-url"></code>
+      <button id="claim-copy-link" class="outline full" type="button">Copy claim link</button>
+    </div>
+
+    <div class="links">
+      <a href="./">Back to PumpLite</a>
+      <a id="claim-contract-link" target="_blank" rel="noopener noreferrer" hidden>View claim contract â†—</a>
+      <a id="claim-token-link" target="_blank" rel="noopener noreferrer">View PLITE token â†—</a>
+    </div>
+
+    <p class="fine">PLITE token: <code id="claim-token-address">â€”</code></p>
+    <p class="fine">A wallet address does not prove a unique human. Base network gas applies to deployment, funding and claims. The free token claim does not promise any value, profit or return.</p>
+  </section>
+</main>
+</body>
+</html>

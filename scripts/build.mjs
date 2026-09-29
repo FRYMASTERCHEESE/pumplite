@@ -24,7 +24,7 @@ if (!/src="\.\/assets\/app\.js\?boot=[0-9A-Za-z_-]+"/.test(html) || !html.includ
 }
 // Build in memory before replacing any previously working static assets.
 const result = await build({
-  entryPoints: ['web/app.js'], outdir: 'assets', bundle: true, splitting: true,
+  entryPoints: { app: 'web/app.js', claim: 'web/claim.js' }, outdir: 'assets', bundle: true, splitting: true,
   write: false, format: 'esm', platform: 'browser', target: ['es2022'],
   minify: true, metafile: true, chunkNames: 'chunks/[name]-[hash]',
   define: { 'process.env.NODE_ENV': '"production"' }
@@ -80,7 +80,7 @@ if (checkOnly) {
     await mkdir(dirname(path), { recursive: true }); await writeFile(path, bytes);
   }
   await mkdir(dist, { recursive: true });
-  for (const path of ['index.html', 'config.json', '.nojekyll', '_headers']) await copyFile(path, resolve(dist, path));
+  for (const path of ['index.html', 'claim.html', 'config.json', '.nojekyll', '_headers']) await copyFile(path, resolve(dist, path));
   await cp(assets, resolve(dist, 'assets'), { recursive: true });
   await mkdir('build', { recursive: true });
   await writeFile('build/frontend-metafile.json', JSON.stringify(result.metafile, null, 2) + '\n');

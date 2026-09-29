@@ -151,3 +151,27 @@ textarea{font:inherit;width:100%;max-width:100%;background:#111e17;color:#fff;bo
 @media(max-width:560px){.chart-heading{display:grid}.chart-change{white-space:normal}.price-chart{padding:8px}}
 
 .review-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}.owner-review #eas-proof{margin:12px 0;padding:12px;border:1px solid var(--line);border-radius:10px;background:#0b1511}.owner-review #eas-proof code{margin:0 0 10px}.owner-review .links button{width:auto}.owner-review .links{align-items:center}@media(max-width:560px){.review-actions{grid-template-columns:1fr}.owner-review .links{display:grid}.owner-review .links>*{width:100%}}
+
+/* Quick trade value helper. Base V2 settlement remains ETH. */
+.trade-helper{margin:18px 0 22px;padding:16px;border:1px solid var(--line);border-radius:12px;background:#0f1b16}
+.trade-helper h3{margin:0 0 8px}
+.trade-helper-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.trade-helper-grid label{margin-top:10px}
+#trade-display-estimate{color:var(--green);margin:10px 0 0}
+.native-route-help{margin-top:16px}
+.native-route-links{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}
+.native-route-links a{display:inline-block;border:1px solid var(--line);border-radius:9px;padding:9px 11px;text-decoration:none}
+.native-route-links a:hover{border-color:var(--green)}
+@media(max-width:560px){.trade-helper-grid{grid-template-columns:1fr}.native-route-links{display:grid}.native-route-links a{text-align:center}}
+/* Transparent opt-in PLITE first-50 holder claim. */
+.holder-claim{margin-top:22px}
+.holder-claim-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+.holder-claim-actions .primary{margin-top:0}
+@media(max-width:560px){.holder-claim-actions{grid-template-columns:1fr}}
+.claim-page{max-width:760px;margin:40px auto}
+.claim-progress-card{border:1px solid var(--line);border-radius:14px;padding:18px;margin:18px 0}
+.claim-progress-card strong{font-size:1.35rem}
+.claim-owner-tools{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:18px 0;margin:18px 0}
+.claim-owner-tools .full,.claim-page .full{width:100%;margin-top:10px}
+#claim-share-url{display:block;overflow-wrap:anywhere;padding:12px 0}
+.claim-page-link{display:inline-block;text-decoration:none}

@@ -140,9 +140,10 @@ test('one wallet cannot claim twice', async () => {
 
   await (await claim.connect(account).claim()).wait();
 
-  await assert.rejects(
-    claim.connect(account).claim()
-  );
+  await assert.rejects(async () => {
+    const tx = await claim.connect(account).claim();
+    await tx.wait();
+  });
 
   assert.equal(
     await token.balanceOf(await account.getAddress()),
@@ -159,9 +160,10 @@ test('a fifty-first wallet cannot claim after the 50-wallet cap', async () => {
     await (await claim.connect(signers[i]).claim()).wait();
   }
 
-  await assert.rejects(
-    claim.connect(signers[51]).claim()
-  );
+  await assert.rejects(async () => {
+    const tx = await claim.connect(signers[51]).claim();
+    await tx.wait();
+  });
 
   assert.equal(await claim.claimCount(), 50n);
 });
@@ -185,9 +187,10 @@ test('claim fails closed when the contract is not funded', async () => {
     [await token.getAddress()]
   );
 
-  await assert.rejects(
-    claim.connect(signers[1]).claim()
-  );
+  await assert.rejects(async () => {
+    const tx = await claim.connect(signers[1]).claim();
+    await tx.wait();
+  });
 
   assert.equal(await claim.claimCount(), 0n);
   assert.equal(

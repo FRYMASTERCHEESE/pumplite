@@ -11,7 +11,7 @@ const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright')
 const fixture = await mkdtemp(join(tmpdir(), 'pumplite-pages-'));
 let browser, server;
 try {
-  for (const file of ['index.html', 'config.json', '.nojekyll']) await copyFile(file, join(fixture, file));
+  for (const file of ['index.html', 'claim.html', 'config.json', '.nojekyll']) await copyFile(file, join(fixture, file));
   await cp('assets', join(fixture, 'assets'), { recursive: true });
   const mount = '/pumplite/';
   const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json' };
@@ -95,6 +95,16 @@ try {
     assert.ok(requests.some(url => url.startsWith(base + 'config.json?boot=')));
     assert.ok(requests.some(url => url.startsWith(base + 'assets/app.js?boot=')));
     assert.ok(requests.includes(base + 'assets/styles.css'));
+    assert.equal(
+      (await page.request.get(base + 'claim.html')).status(),
+      200,
+      'First 50 claim page must be published'
+    );
+    assert.equal(
+      (await page.request.get(base + 'assets/claim.js')).status(),
+      200,
+      'First 50 claim browser bundle must be published'
+    );
     assert.ok(!requests.some(url => /\/(solana|base)-/.test(url)), 'No wallet SDK is fetched initially');
     assert.equal(await page.locator('body').evaluate(el => el.scrollWidth <= innerWidth), true);
     // Force both production lazy-module graphs to resolve without calling connect or signing.

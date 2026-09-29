@@ -168,3 +168,10 @@ textarea{font:inherit;width:100%;max-width:100%;background:#111e17;color:#fff;bo
 .holder-claim-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
 .holder-claim-actions .primary{margin-top:0}
 @media(max-width:560px){.holder-claim-actions{grid-template-columns:1fr}}
+.claim-page{max-width:760px;margin:40px auto}
+.claim-progress-card{border:1px solid var(--line);border-radius:14px;padding:18px;margin:18px 0}
+.claim-progress-card strong{font-size:1.35rem}
+.claim-owner-tools{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:18px 0;margin:18px 0}
+.claim-owner-tools .full,.claim-page .full{width:100%;margin-top:10px}
+#claim-share-url{display:block;overflow-wrap:anywhere;padding:12px 0}
+.claim-page-link{display:inline-block;text-decoration:none}

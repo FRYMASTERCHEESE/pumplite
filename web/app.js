@@ -705,7 +705,7 @@ async function connectBaseWalletFromGesture() {
   status('Wallet connected: ' + address);
 
   void refreshHolderClaim().catch(error => {
-    holder-claim-progress.textContent =
+    $('holder-claim-progress').textContent =
       'Claim status unavailable: ' + (error?.message || 'read failed');
   });
 
@@ -1800,7 +1800,7 @@ function walletChanged() {
   phantomPrepared = false;
   state.wallet = null; $('connect').textContent = 'Connect wallet'; invalidateQuote();
   $('balance').textContent = 'Wallet changed. Reconnect to read balances.';
-  holder-claim-progress.textContent =
+  $('holder-claim-progress').textContent =
     holderClaimConfigured()
       ? 'Claim status will refresh after reconnect.'
       : 'Claim contract is prepared but is not deployed and funded yet. No claim transaction is available.';

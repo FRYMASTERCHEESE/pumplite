@@ -24,6 +24,7 @@ const input = {
           'abi',
           'evm.bytecode.object',
           'evm.deployedBytecode.object',
+          'evm.deployedBytecode.immutableReferences',
           'metadata'
         ]
       }
@@ -83,10 +84,27 @@ if (runtimeBytes > 24_576) {
 await mkdir('build/plite-holder-claim', {
   recursive: true
 });
+await mkdir('web/generated', {
+  recursive: true
+});
 
 await writeFile(
   'build/plite-holder-claim/PLITEHolderClaim.json',
   JSON.stringify(artifact, null, 2) + '\n'
+);
+
+const browserArtifact = {
+  abi: artifact.abi,
+  bytecode: '0x' + artifact.evm.bytecode.object,
+  deployedBytecode:
+    '0x' + artifact.evm.deployedBytecode.object,
+  immutableReferences:
+    artifact.evm.deployedBytecode.immutableReferences
+};
+
+await writeFile(
+  'web/generated/plite-holder-claim.json',
+  JSON.stringify(browserArtifact, null, 2) + '\n'
 );
 
 const sha256 = value =>
