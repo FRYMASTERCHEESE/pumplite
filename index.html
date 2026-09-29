@@ -205,6 +205,44 @@
       <section class="panel">
         <p class="eyebrow">TRADE</p><h2>Your wallet. Your decision.</h2>
         <p id="balance" class="fine">Connect a wallet to read balances.</p>
+
+        <section aria-labelledby="native-assets-title">
+          <h3 id="native-assets-title">Trade with ETH, BTC, SOL or DOGE</h3>
+
+          <p class="fine">
+            ETH trades directly through PumpLite on Base.
+            For native BTC, SOL or DOGE, swap into Base ETH first,
+            then use the PumpLite Buy button.
+          </p>
+
+          <div class="links" aria-label="Cross-chain trade routes">
+            <a href="https://swap.thorchain.org/"
+               target="_blank"
+               rel="noopener noreferrer">
+              Bitcoin BTC ? Base ETH ?
+            </a>
+
+            <a href="https://swap.thorchain.org/"
+               target="_blank"
+               rel="noopener noreferrer">
+              Solana SOL ? Base ETH ?
+            </a>
+
+            <a href="https://swap.thorchain.org/"
+               target="_blank"
+               rel="noopener noreferrer">
+              Dogecoin DOGE ? Base ETH ?
+            </a>
+          </div>
+
+          <p class="fine">
+            Selling works in reverse: sell your PumpLite token for Base ETH,
+            then swap the ETH to native BTC, SOL or DOGE.
+            Always check the network, live quote, fees and destination
+            before approving a cross-chain transaction.
+          </p>
+        </section>
+
         <form id="trade-form">
           <label for="side">Direction</label><select id="side"><option value="buy">Buy tokens</option><option value="sell">Sell tokens</option></select>
           <label for="amount" id="amount-label">Amount</label><input id="amount" maxlength="96" inputmode="decimal" placeholder="0.00" required autocomplete="off">
