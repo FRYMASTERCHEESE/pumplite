@@ -5,5 +5,9 @@ web/styles.css text eol=lf
 web/phantom-diagnostic.js text eol=lf
 web/verified-tokens.json text eol=lf
 
+# Source assets copied byte-for-byte into the published Pages build.
+web/plite-icon-48.svg text eol=lf
+web/plite-info.json text eol=lf
+
 # PNG files are binary and must never be line-ending normalized.
 *.png -text
