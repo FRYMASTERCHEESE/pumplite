@@ -40,7 +40,13 @@ contract PLITEHolderClaim {
     function claim() external {
         if (claimed[msg.sender]) revert AlreadyClaimed();
         if (claimCount >= MAX_CLAIMS) revert ClaimFinished();
-        if (token.balanceOf(address(this)) < CLAIM_AMOUNT) {
+
+        // Fail closed unless every remaining claim is fully backed.
+        // Before claim #1 this requires all 50 PLITE to be present.
+        uint256 requiredBalance =
+            (MAX_CLAIMS - claimCount) * CLAIM_AMOUNT;
+
+        if (token.balanceOf(address(this)) < requiredBalance) {
             revert InsufficientFunding();
         }
 

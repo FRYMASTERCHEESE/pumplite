@@ -187,3 +187,11 @@ textarea{font:inherit;width:100%;max-width:100%;background:#111e17;color:#fff;bo
 .help-grid article{border:1px solid var(--line);border-radius:12px;padding:16px;background:#14221b}
 .help-grid h3{margin:0 0 8px}
 @media(max-width:740px){.home-page-tabs{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:max-content;margin:12px -18px 18px;padding:9px 18px}.home-page-tabs button,.home-page-tabs .page-nav-link{min-width:118px}.help-grid{grid-template-columns:1fr}}
+
+/* First 50 claim readiness V9. */
+.claim-top-nav{display:flex;margin:0 0 22px}
+.claim-back-button{display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:10px 14px;border:1px solid #53654b;border-radius:9px;background:#14221b;color:#e2ecd8;font-weight:700;text-decoration:none}
+.claim-funding-card{margin:16px 0;padding:16px;border:1px solid var(--line);border-radius:12px;background:#14221b}
+.claim-funding-card strong{color:var(--green)}
+.claim-funding-card .fine{margin:8px 0 0;overflow-wrap:anywhere}
+@media(max-width:560px){.claim-page{margin:18px auto}.claim-back-button{width:100%}}

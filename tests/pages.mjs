@@ -111,6 +111,25 @@ try {
       200,
       'First 50 claim page must be published'
     );
+    const claimHtml =
+      await (
+        await page.request.get(base + 'claim.html')
+      ).text();
+    assert.match(
+      claimHtml,
+      /id="claim-top-back"[^>]*href="\.\/"/,
+      'Claim page must have a top Back to PumpLite button'
+    );
+    assert.match(
+      claimHtml,
+      /Launch \+ Fund 50 PLITE/,
+      'Controller launch must clearly show the 50 PLITE funding step'
+    );
+    assert.match(
+      claimHtml,
+      /full 50 PLITE before anyone can claim/,
+      'Claim page must explain the full-funding lock'
+    );
     assert.equal(
       (await page.request.get(base + 'assets/claim.js')).status(),
       200,

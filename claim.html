@@ -8,11 +8,14 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://mainnet.base.org https://base-rpc.publicnode.com; object-src 'none'; base-uri 'none'; form-action 'none'">
 <title>PLITE  |  First 50 Holder Claim</title>
 <link rel="stylesheet" href="./assets/styles.css">
-<script type="module" src="./assets/claim.js?boot=20260930f"></script>
+<script type="module" src="./assets/claim.js?boot=20260930k"></script>
 </head>
 <body>
 <main id="main-content" tabindex="-1">
   <section class="panel holder-claim claim-page">
+    <nav class="claim-top-nav" aria-label="Claim page navigation">
+      <a id="claim-top-back" class="outline claim-back-button" href="./">&larr; Back to PumpLite</a>
+    </nav>
     <p class="eyebrow">PUMPLITE  |  BASE MAINNET</p>
     <h1>First 50 PLITE Holders</h1>
     <p class="intro">The first 50 Base wallet addresses can each claim 1 PLITE. One wallet can claim once. No purchase is required.</p>
@@ -28,9 +31,16 @@
 
     <section id="claim-owner-tools" class="claim-owner-tools" hidden>
       <h2>Controller launch</h2>
-      <p class="fine">One tap starts the launch. Your wallet will still require two separate approvals: one to deploy the fixed claim contract and one to transfer exactly 50 PLITE. PumpLite never receives your private key.</p>
-      <button id="claim-launch" class="primary full" type="button">Launch First 50 Claim</button>
-      <button id="claim-fund" class="outline full" type="button" hidden>Finish funding claim</button>
+      <div class="claim-funding-card">
+        <strong>Launch readiness</strong>
+        <p id="claim-owner-balance" class="fine">Controller PLITE balance: checking...</p>
+        <p id="claim-owner-gas" class="fine">Base ETH gas balance: checking...</p>
+        <p id="claim-funding-target" class="fine">The claim must be backed with the full 50 PLITE before anyone can claim.</p>
+      </div>
+      <p class="fine">One tap starts the launch. Your wallet will still show two separate approvals: approval 1 deploys the fixed claim contract and approval 2 transfers exactly the missing PLITE needed to back all remaining claims. Never enter a seed phrase or private key.</p>
+      <p class="fine"><strong>Important:</strong> do not manually overfund the claim contract. It deliberately has no owner withdrawal function.</p>
+      <button id="claim-launch" class="primary full" type="button">Launch + Fund 50 PLITE</button>
+      <button id="claim-fund" class="outline full" type="button" hidden>Fund remaining PLITE</button>
     </section>
 
     <button id="claim-now" class="primary full" type="button" disabled>Claim 1 PLITE</button>

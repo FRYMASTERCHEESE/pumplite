@@ -168,6 +168,51 @@ test('a fifty-first wallet cannot claim after the 50-wallet cap', async () => {
   assert.equal(await claim.claimCount(), 50n);
 });
 
+test('claim stays locked until the full remaining allocation is funded', async () => {
+  const supply = parseEther('100');
+
+  const token = await deploy(
+    tokenArtifact,
+    [
+      'PLITE Test',
+      'PLITE',
+      supply,
+      supply,
+      false
+    ]
+  );
+
+  const claim = await deploy(
+    claimArtifact,
+    [await token.getAddress()]
+  );
+
+  await (
+    await token.transfer(
+      await claim.getAddress(),
+      parseEther('49')
+    )
+  ).wait();
+
+  await assert.rejects(async () => {
+    const tx =
+      await claim.connect(signers[1]).claim();
+    await tx.wait();
+  });
+
+  assert.equal(
+    await claim.claimCount(),
+    0n
+  );
+
+  assert.equal(
+    await token.balanceOf(
+      await claim.getAddress()
+    ),
+    parseEther('49')
+  );
+});
+
 test('claim fails closed when the contract is not funded', async () => {
   const supply = parseEther('100');
 

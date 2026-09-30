@@ -31,6 +31,8 @@ let account;
 let busy = false;
 let currentClaim = null;
 let selectedProvider = null;
+let ownerPliteBalance = null;
+let ownerNativeBalance = null;
 
 const walletDiscovery =
   discoverEvm(window);
@@ -179,20 +181,61 @@ function shareUrl(address) {
   return url.toString();
 }
 
-function controls() {
-  const owner =
+function isOwnerWallet() {
+  return Boolean(
     account &&
+    config?.base?.treasury &&
     getAddress(account) ===
-      getAddress(config?.base?.treasury);
+      getAddress(config.base.treasury)
+  );
+}
+
+async function refreshOwnerBalances() {
+  if (!isOwnerWallet()) {
+    ownerPliteBalance = null;
+    ownerNativeBalance = null;
+    return;
+  }
+
+  const token =
+    new Contract(
+      expectedToken(),
+      ERC20_ABI,
+      readProvider
+    );
+
+  [
+    ownerPliteBalance,
+    ownerNativeBalance
+  ] = await Promise.all([
+    token.balanceOf(account),
+    readProvider.getBalance(account)
+  ]);
+}
+
+function controls() {
+  const owner = isOwnerWallet();
 
   const configured =
     Boolean(currentClaim);
 
+  const requiredBacking =
+    configured
+      ? currentClaim.remaining *
+        currentClaim.amount
+      : totalFunding();
+
   const fullyFunded =
     configured &&
-    currentClaim.funded +
-      currentClaim.count * currentClaim.amount ===
-      totalFunding();
+    currentClaim.funded >=
+      requiredBacking;
+
+  const ownerReady =
+    owner &&
+    ownerPliteBalance !== null &&
+    ownerNativeBalance !== null &&
+    ownerPliteBalance >= totalFunding() &&
+    ownerNativeBalance > 0n;
 
   $('claim-connect').disabled = busy;
   $('claim-connect').textContent =
@@ -205,15 +248,65 @@ function controls() {
 
   $('claim-owner-tools').hidden = !owner;
 
+  if (owner) {
+    $('claim-owner-balance').textContent =
+      'Controller PLITE balance: ' +
+      (ownerPliteBalance === null
+        ? 'checking...'
+        : formatUnits(
+            ownerPliteBalance,
+            18
+          ) + ' PLITE');
+
+    $('claim-owner-gas').textContent =
+      'Base ETH gas balance: ' +
+      (ownerNativeBalance === null
+        ? 'checking...'
+        : formatUnits(
+            ownerNativeBalance,
+            18
+          ) + ' ETH');
+
+    if (configured) {
+      const missing =
+        currentClaim.funded < requiredBacking
+          ? requiredBacking - currentClaim.funded
+          : 0n;
+
+      $('claim-funding-target').textContent =
+        formatUnits(
+          currentClaim.funded,
+          18
+        ) +
+        ' PLITE is in the claim contract. ' +
+        formatUnits(missing, 18) +
+        ' PLITE still needs funding for all remaining claims.';
+    } else {
+      $('claim-funding-target').textContent =
+        ownerPliteBalance !== null &&
+        ownerPliteBalance < totalFunding()
+          ? 'Not ready: the controller wallet needs at least 50 PLITE before launch.'
+          : ownerNativeBalance === 0n
+            ? 'Not ready: the controller wallet needs Base ETH for network gas.'
+            : ownerReady
+              ? 'Ready: 50 PLITE is available. Launch will still require two wallet approvals.'
+              : 'Checking launch readiness...';
+    }
+  }
+
   $('claim-launch').hidden =
     !owner || configured;
-  $('claim-launch').disabled = busy;
+
+  $('claim-launch').disabled =
+    busy ||
+    !ownerReady;
 
   $('claim-fund').hidden =
     !owner ||
     !configured ||
     currentClaim.funded >=
-      currentClaim.remaining * currentClaim.amount;
+      requiredBacking;
+
   $('claim-fund').disabled = busy;
 
   $('claim-now').disabled =
@@ -222,7 +315,8 @@ function controls() {
     !configured ||
     !fullyFunded ||
     currentClaim.remaining === 0n ||
-    currentClaim.funded < currentClaim.amount ||
+    currentClaim.funded <
+      currentClaim.amount ||
     currentClaim.alreadyClaimed === true;
 
   $('claim-share-box').hidden =
@@ -230,7 +324,10 @@ function controls() {
     !fullyFunded;
 
   if (configured) {
-    const url = shareUrl(currentClaim.address);
+    const url = shareUrl(
+      currentClaim.address
+    );
+
     $('claim-share-url').textContent = url;
     $('claim-contract-link').hidden = false;
     $('claim-contract-link').href =
@@ -247,25 +344,31 @@ function controls() {
     $('claim-detail').textContent =
       currentClaim.remaining +
       ' claims remaining  |  ' +
-      formatUnits(currentClaim.funded, 18) +
+      formatUnits(
+        currentClaim.funded,
+        18
+      ) +
       ' PLITE currently held by the claim contract' +
       (fullyFunded
         ? '  |  funding verified'
-        : '  |  funding is not yet at the expected level') +
+        : '  |  funding is not complete') +
       (currentClaim.alreadyClaimed === true
         ? '  |  this wallet already claimed'
         : '');
   } else {
     $('claim-progress').textContent =
       'Not launched yet';
+
     $('claim-detail').textContent =
       owner
-        ? 'Controller wallet connected. Tap Launch First 50 Claim when you are ready.'
+        ? ownerReady
+          ? 'Controller wallet is ready. Tap Launch + Fund 50 PLITE when you are ready.'
+          : 'Controller wallet connected. Complete the readiness checks shown below.'
         : 'Connect the PumpLite controller wallet to launch, or open a verified claim link.';
+
     $('claim-contract-link').hidden = true;
   }
 }
-
 async function withBusy(fn) {
   if (busy) return;
   busy = true;
@@ -409,6 +512,7 @@ async function refresh() {
 
   if (!address) {
     currentClaim = null;
+    await refreshOwnerBalances();
     controls();
     return;
   }
@@ -420,17 +524,20 @@ async function refresh() {
   currentClaim =
     await validateClaim(address);
 
+  await refreshOwnerBalances();
+
+  const requiredBacking =
+    currentClaim.remaining *
+    currentClaim.amount;
+
   setStatus(
-    currentClaim.funded +
-      currentClaim.count * currentClaim.amount ===
-      totalFunding()
+    currentClaim.funded >= requiredBacking
       ? 'Verified First 50 PLITE claim is live on Base Mainnet.'
       : 'Verified claim contract found. Funding is not complete yet.'
   );
 
   controls();
 }
-
 async function fundCurrentClaim() {
   if (!currentClaim) {
     throw Error('No verified claim contract is selected');
@@ -520,9 +627,8 @@ async function fundCurrentClaim() {
   await refresh();
 
   if (
-    currentClaim.funded +
-      currentClaim.count * currentClaim.amount !==
-      totalFunding()
+    currentClaim.funded <
+      currentClaim.remaining * currentClaim.amount
   ) {
     throw Error(
       'Funding confirmed but the claim does not contain the expected remaining PLITE amount'
@@ -674,9 +780,8 @@ async function claimOne() {
   }
 
   if (
-    currentClaim.funded +
-      currentClaim.count * currentClaim.amount !==
-      totalFunding()
+    currentClaim.funded <
+      currentClaim.remaining * currentClaim.amount
   ) {
     throw Error(
       'Claim is not fully funded with the reviewed First 50 allocation'
@@ -767,7 +872,7 @@ $('claim-copy-link').addEventListener(
 async function boot() {
   const response =
     await fetch(
-      './config.json?claim=20260930f',
+      './config.json?claim=20260930k',
       {
         cache: 'no-store',
         credentials: 'omit'
