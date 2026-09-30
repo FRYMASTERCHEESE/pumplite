@@ -132,6 +132,36 @@ test(
 
     assert.match(
       html,
+      /id="simple-buy-output"/
+    );
+
+    assert.match(
+      html,
+      /NZD \(NZ\$\)/
+    );
+
+    assert.match(
+      html,
+      /USD \(US\$\)/
+    );
+
+    assert.match(
+      app,
+      /formatSimpleTokenAmount/
+    );
+
+    assert.match(
+      app,
+      /minimumOutput\(q\.output, 100\)/
+    );
+
+    assert.match(
+      app,
+      /await connectBaseWalletFromGesture\(\)/
+    );
+
+    assert.match(
+      html,
       /owner-review-panel/
     );
 

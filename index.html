@@ -10,7 +10,7 @@
 <title>PumpLite · Token launches, kept simple</title>
 <link rel="stylesheet" href="./assets/styles.css">
 <script defer src="./assets/phantom-diagnostic.js"></script>
-<script type="module" src="./assets/app.js?boot=20260930v11a"></script>
+<script type="module" src="./assets/app.js?boot=20260930v12"></script>
 </head>
 <body>
 <a class="skip-link" id="skip-content" href="#main-content">Skip to main content</a>
@@ -315,42 +315,36 @@
         <p class="eyebrow">TRADE</p><h2>Your wallet. Your decision.</h2>
         <p id="balance" class="fine">Connect a wallet to read balances.</p>
 
-        <section id="trade-quick-buy" class="trade-helper" aria-labelledby="trade-quick-buy-title">
-          <h3 id="trade-quick-buy-title">Quick trade value</h3>
-          <p class="fine">PumpLite Base V2 settles directly in Base ETH. Use this helper to enter a buy value in NZD, USD, ETH, BTC, SOL or DOGE, or to display a sell quote in those units.</p>
+        <section id="trade-quick-buy" class="trade-helper simple-buy-card" aria-labelledby="trade-quick-buy-title">
+          <p class="eyebrow">SIMPLE BUY</p>
+          <h3 id="trade-quick-buy-title">Buy tokens simply</h3>
+          <p class="fine">Enter NZD or USD. PumpLite shows approximately how many tokens you will receive, then refreshes the real on-chain quote before your wallet asks you to approve the Base ETH transaction.</p>
 
-          <div class="trade-helper-grid">
+          <div class="simple-buy-entry">
             <div id="trade-spend-field">
-              <label for="trade-display-amount">Buy value</label>
-              <input id="trade-display-amount" inputmode="decimal" placeholder="5.00" maxlength="32" autocomplete="off">
+              <label for="trade-display-amount">I want to spend</label>
+              <input id="trade-display-amount" inputmode="decimal" placeholder="2.00" maxlength="32" autocomplete="off">
             </div>
             <div>
-              <label for="trade-display-currency">Show value in</label>
+              <label for="trade-display-currency">Currency</label>
               <select id="trade-display-currency">
-                <option value="NZD" selected>NZD</option>
-                <option value="USD">USD</option>
-                <option value="ETH">ETH</option>
-                <option value="BTC">BTC</option>
-                <option value="SOL">SOL</option>
-                <option value="DOGE">DOGE</option>
+                <option value="NZD" selected>NZD (NZ$)</option>
+                <option value="USD">USD (US$)</option>
               </select>
             </div>
           </div>
 
-          <button id="trade-use-display" type="button" class="outline full">Use Base ETH equivalent</button>
-          <p id="trade-display-estimate" class="fine" role="status" aria-live="polite">Enter a buy value to calculate an approximate Base ETH amount.</p>
+          <div class="simple-buy-preview" aria-live="polite">
+            <small>You receive approximately</small>
+            <strong id="simple-buy-output">- TOKEN</strong>
+            <span id="trade-display-estimate">Enter an amount above to see the live estimate.</span>
+          </div>
 
-          <details class="native-route-help">
-            <summary>Using native BTC, SOL or DOGE?</summary>
-            <p class="fine">Native BTC, SOL and DOGE cannot be sent directly to a Base smart contract. Convert the native asset to Base ETH before buying. After selling, PumpLite pays Base ETH; convert that Base ETH to the native asset if you want to cash out that way. Always review the live route, network, fees and destination before signing.</p>
-            <div class="native-route-links">
-              <a href="https://swap.thorchain.org/" target="_blank" rel="noopener noreferrer">Open BTC swap</a>
-              <a href="https://swap.thorchain.org/" target="_blank" rel="noopener noreferrer">Open SOL swap</a>
-              <a href="https://swap.thorchain.org/" target="_blank" rel="noopener noreferrer">Open DOGE swap</a>
-            </div>
-          </details>
+          <button id="trade-use-display" type="button" class="primary full simple-buy-button">Buy tokens</button>
+          <p id="simple-buy-note" class="fine">The final purchase uses Base ETH. Your wallet remains the final approval step and shows the Base network fee before you sign. PumpLite uses 1% slippage protection for this simple-buy button.</p>
         </section>
 
+        <h3 class="advanced-trade-title">Advanced buy / sell</h3>
         <form id="trade-form">
           <label for="side">Direction</label><select id="side"><option value="buy">Buy tokens</option><option value="sell">Sell tokens</option></select>
           <label for="amount" id="amount-label">Amount</label><input id="amount" maxlength="96" inputmode="decimal" placeholder="0.00" required autocomplete="off">

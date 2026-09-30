@@ -109,6 +109,12 @@ try {
     assert.equal(await page.locator('#create-section').isVisible(), false);
     assert.equal(await page.locator('#explore-section').isVisible(), false);
     assert.equal(await page.locator('#curve-price').count(), 1);
+    assert.equal(await page.locator('#simple-buy-output').count(), 1);
+    assert.equal(await page.locator('#trade-use-display').count(), 1);
+    assert.deepEqual(
+      await page.locator('#trade-display-currency option').allTextContents(),
+      ['NZD (NZ$)','USD (US$)']
+    );
     assert.equal(await page.locator('#market-age').count(), 1);
     assert.equal(await page.locator('#market-block').count(), 1);
     assert.equal(await page.locator('#price-chart-current').count(), 1);

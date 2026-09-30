@@ -146,7 +146,10 @@ function controls() {
   $('more').disabled = state.busy; $('verified-only').disabled = state.busy;
   $('show-home').disabled=state.busy; $('show-create').disabled=state.busy; $('show-explore').disabled=state.busy; $('show-help').disabled=state.busy;
   for (const id of ['description','image-uri','banner-uri','website','twitter','telegram','discord','name','symbol','uri','side','amount','slippage','market-address','market-filter','market-sort','initial-buy-eth','initial-buy-currency','trade-display-amount','trade-display-currency']) $(id).disabled = state.busy;
-  $('trade-use-display').disabled = state.busy || $('side').value !== 'buy';
+  $('trade-use-display').disabled =
+    state.busy ||
+    state.chain !== 'base' ||
+    state.market?.contractVersion !== 2;
   $('initial-buy-submit').disabled = state.busy;
   $('initial-buy-close').disabled = state.busy;
   $('holder-claim-refresh').disabled =
@@ -1010,6 +1013,13 @@ function renderMarket(m) {
   $('market-link').href = c.explorer + (state.chain === 'solana' ? '/account/' : '/address/') + m.id;
   $('token-link').href = c.explorer + '/token/' + m.token;
   $('amount-label').textContent = $('side').value === 'buy' ? 'Amount (' + m.unit + ')' : 'Amount (' + m.symbol + ')';
+  $('trade-quick-buy-title').textContent = 'Buy ' + m.symbol + ' simply';
+  $('trade-use-display').textContent = 'Buy ' + m.symbol;
+  if (!$('trade-display-amount').value.trim()) {
+    $('simple-buy-output').textContent = '- ' + m.symbol;
+  } else {
+    queueMicrotask(() => void updateTradeBuyEstimate());
+  }
 }
 async function reconcilePortableReview(market) {
   state.reviewProof = null;
@@ -1773,20 +1783,14 @@ $('initial-buy-currency').addEventListener(
 let tradeDisplaySequence = 0;
 
 function syncTradeHelperMode() {
-  const buying = $('side').value === 'buy';
-  $('trade-spend-field').hidden = !buying;
-  $('trade-use-display').hidden = !buying;
-  $('trade-use-display').disabled = state.busy || !buying;
-
-  if (buying) {
-    if (!$('trade-display-amount').value.trim()) {
-      $('trade-display-estimate').textContent =
-        'Enter a buy value to calculate an approximate Base ETH amount.';
-    }
-  } else {
-    $('trade-display-estimate').textContent =
-      'Get a sell quote below to see the approximate payout value. The real on-chain payout is Base ETH.';
-  }
+  const symbol = state.market?.symbol || 'tokens';
+  $('trade-use-display').hidden = false;
+  $('trade-spend-field').hidden = false;
+  $('trade-use-display').textContent = 'Buy ' + symbol;
+  $('trade-use-display').disabled =
+    state.busy ||
+    state.chain !== 'base' ||
+    state.market?.contractVersion !== 2;
 }
 
 function normalizeTradeEth(value) {
@@ -1807,20 +1811,19 @@ function normalizeTradeEth(value) {
 }
 
 function formatTradeDisplay(value, currency) {
-  if (currency === 'NZD' || currency === 'USD') {
-    return formatInitialBuyFiat(value, currency);
-  }
+  return formatInitialBuyFiat(value, currency);
+}
 
-  const max =
-    currency === 'BTC' ? 10 :
-    currency === 'SOL' ? 8 :
-    currency === 'DOGE' ? 4 :
-    8;
+function formatSimpleTokenAmount(value, decimals = 18) {
+  const text = formatUnits(value, decimals, 6);
+  const number = Number(text);
+
+  if (!Number.isFinite(number)) return text;
 
   return new Intl.NumberFormat(
-    'en-US',
-    { maximumFractionDigits: max }
-  ).format(value) + ' ' + currency;
+    'en-NZ',
+    { maximumFractionDigits: 6 }
+  ).format(number);
 }
 
 async function tradeDisplayEthAmount() {
@@ -1832,8 +1835,8 @@ async function tradeDisplayEthAmount() {
     throw Error('Enter a valid amount greater than 0');
   }
 
-  if (source === 'ETH') {
-    return normalizeTradeEth(amount);
+  if (!['NZD', 'USD'].includes(source)) {
+    throw Error('Simple buy supports NZD or USD');
   }
 
   const rates = await loadInitialBuyRates();
@@ -1850,14 +1853,15 @@ async function updateTradeBuyEstimate() {
   const sequence = ++tradeDisplaySequence;
   syncTradeHelperMode();
 
-  if ($('side').value !== 'buy') return;
-
   const output = $('trade-display-estimate');
+  const tokenOutput = $('simple-buy-output');
+  const note = $('simple-buy-note');
   const text = $('trade-display-amount').value.trim();
+  const symbol = state.market?.symbol || 'TOKEN';
 
   if (!text) {
-    output.textContent =
-      'Enter a buy value to calculate an approximate Base ETH amount.';
+    tokenOutput.textContent = '- ' + symbol;
+    output.textContent = 'Enter an amount above to see the live estimate.';
     return;
   }
 
@@ -1865,89 +1869,85 @@ async function updateTradeBuyEstimate() {
   const amount = Number(text);
 
   if (!Number.isFinite(amount) || amount <= 0) {
+    tokenOutput.textContent = '- ' + symbol;
     output.textContent = 'Enter a valid amount greater than 0.';
     return;
   }
 
+  if (
+    state.chain !== 'base' ||
+    state.market?.contractVersion !== 2
+  ) {
+    tokenOutput.textContent = '- ' + symbol;
+    output.textContent = 'Open a Base V2 market to use simple buy.';
+    return;
+  }
+
   output.textContent =
-    'Loading approximate ' + source + ' to Base ETH value...';
+    'Calculating the current ' + source + ' curve estimate...';
 
   try {
     const ethText = await tradeDisplayEthAmount();
     if (sequence !== tradeDisplaySequence) return;
 
-    const nativeNote =
-      ['BTC', 'SOL', 'DOGE'].includes(source)
-        ? ' Native ' + source + ' must be converted to Base ETH before the PumpLite transaction.'
-        : '';
+    const amountWei = parseUnits(
+      ethText,
+      state.market.nativeDecimals
+    );
+
+    const q = quoteBaseV2(state.market, 'buy', amountWei);
+
+    if (sequence !== tradeDisplaySequence) return;
+
+    tokenOutput.textContent =
+      '~ ' +
+      formatSimpleTokenAmount(q.output, state.market.decimals) +
+      ' ' +
+      state.market.symbol;
 
     output.textContent =
       formatTradeDisplay(amount, source) +
-      ' is about ' +
+      ' ~ ' +
       ethText +
-      ' Base ETH.' +
-      nativeNote;
+      ' Base ETH - current curve estimate.';
+
+    note.textContent =
+      (q.support > 0n
+        ? 'Mayhem support is included in this estimate. '
+        : '') +
+      'PumpLite refreshes the market again when you tap Buy ' +
+      state.market.symbol +
+      '. Your wallet shows the real Base ETH amount and network gas before final approval. Simple buy uses 1% slippage protection.';
   } catch (error) {
     if (sequence !== tradeDisplaySequence) return;
+    tokenOutput.textContent = '- ' + symbol;
     output.textContent =
       error?.message ||
-      'Live conversion estimate is temporarily unavailable.';
+      'Live buy estimate is temporarily unavailable.';
   }
 }
 
 async function updateTradeSellDisplay(ethOutput) {
   if ($('side').value !== 'sell') return;
 
-  const sequence = ++tradeDisplaySequence;
-  const output = $('trade-display-estimate');
   const currency = $('trade-display-currency').value;
   const eth = Number(ethOutput);
 
-  if (!Number.isFinite(eth) || eth <= 0) {
-    output.textContent =
-      'Get a sell quote below to see the approximate payout value. The real on-chain payout is Base ETH.';
-    return;
-  }
-
-  if (currency === 'ETH') {
-    output.textContent =
-      'Approximate quoted payout: ' +
-      formatTradeDisplay(eth, 'ETH') +
-      '. The real on-chain payout is Base ETH.';
-    return;
-  }
-
-  output.textContent =
-    'Loading approximate sell payout in ' + currency + '...';
+  if (!Number.isFinite(eth) || eth <= 0) return;
 
   try {
     const rates = await loadInitialBuyRates();
-    if (sequence !== tradeDisplaySequence) return;
-
     const rate = Number(rates[currency]);
-    if (!Number.isFinite(rate) || rate <= 0) {
-      throw Error('Live ' + currency + ' estimate is temporarily unavailable');
-    }
+    if (!Number.isFinite(rate) || rate <= 0) return;
 
-    const converted = eth * rate;
-    const nativeNote =
-      ['BTC', 'SOL', 'DOGE'].includes(currency)
-        ? ' To receive native ' + currency + ', convert the Base ETH after the PumpLite sale.'
-        : '';
-
-    output.textContent =
-      'Approximate quoted payout: ' +
-      formatTradeDisplay(converted, currency) +
+    status(
+      'Advanced sell quote: about ' +
+      formatTradeDisplay(eth * rate, currency) +
       ' from ' +
       normalizeTradeEth(eth) +
-      ' Base ETH.' +
-      nativeNote;
-  } catch (error) {
-    if (sequence !== tradeDisplaySequence) return;
-    output.textContent =
-      error?.message ||
-      'Live sell conversion estimate is temporarily unavailable.';
-  }
+      ' Base ETH. The real payout is Base ETH.'
+    );
+  } catch {}
 }
 
 $('trade-display-amount').addEventListener(
@@ -1957,49 +1957,77 @@ $('trade-display-amount').addEventListener(
 
 $('trade-display-currency').addEventListener(
   'change',
-  () => {
-    if ($('side').value === 'buy') {
-      void updateTradeBuyEstimate();
-    } else if (state.quote?.side === 'sell') {
-      const decimals = state.market?.nativeDecimals ?? 18;
-      const ethOutput = Number(formatUnits(state.quote.output, decimals, decimals));
-      void updateTradeSellDisplay(ethOutput);
-    }
-  }
+  () => void updateTradeBuyEstimate()
 );
 
 $('side').addEventListener(
   'change',
-  () => {
-    syncTradeHelperMode();
-    if ($('side').value === 'buy') {
-      void updateTradeBuyEstimate();
-    }
-  }
+  () => syncTradeHelperMode()
 );
 
 $('trade-use-display').addEventListener(
   'click',
   () => action(async () => {
-    if ($('side').value !== 'buy') {
-      throw Error('Quick value conversion is for buys only');
+    if (
+      state.chain !== 'base' ||
+      state.market?.contractVersion !== 2
+    ) {
+      throw Error('Simple buy is available for Base V2 markets');
+    }
+
+    const source = $('trade-display-currency').value;
+    const displayAmount = Number(
+      $('trade-display-amount').value.trim()
+    );
+
+    if (!Number.isFinite(displayAmount) || displayAmount <= 0) {
+      throw Error('Enter a valid NZD or USD amount greater than 0');
     }
 
     const ethText = await tradeDisplayEthAmount();
-    $('amount').value = ethText;
-    invalidateQuote();
+    const amountWei = parseUnits(ethText, 18);
 
-    if (state.market) {
-      renderMarket(state.market);
+    if (!state.wallet) {
+      await connectBaseWalletFromGesture();
     }
 
+    requireWrite();
+
+    const active = await getAdapter();
+    const fresh = await active.market(state.market.id);
+    state.market = fresh;
+    renderMarket(fresh);
+
+    const q = quoteBaseV2(fresh, 'buy', amountWei);
+    const min = minimumOutput(q.output, 100);
+    const expected =
+      formatSimpleTokenAmount(q.output, fresh.decimals);
+
+    $('simple-buy-output').textContent =
+      '~ ' + expected + ' ' + fresh.symbol;
+
+    $('trade-display-estimate').textContent =
+      formatTradeDisplay(displayAmount, source) +
+      ' -> about ' +
+      expected +
+      ' ' +
+      fresh.symbol +
+      '. Opening your wallet for the final Base ETH review.';
+
     status(
-      'Buy amount set to ' +
+      'Review the wallet transaction: approximately ' +
+      expected +
+      ' ' +
+      fresh.symbol +
+      ' for ' +
+      formatTradeDisplay(displayAmount, source) +
+      ' (' +
       ethText +
-      ' Base ETH. Get a current quote before signing.'
+      ' Base ETH), plus network gas.'
     );
 
-    $('amount').focus();
+    await active.trade(fresh, 'buy', amountWei, min);
+    await refreshMarketAfterAction(fresh.id);
   })
 );
 

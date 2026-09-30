@@ -322,3 +322,17 @@ footer{border-color:#20232d}
 .wallet-chart-panel>#price-chart-status,.wallet-chart-panel>.chart-history-note{margin:0;padding:11px 20px}
 .wallet-chart-panel>.chart-history-note{padding-top:0;color:#697181}
 @media(max-width:560px){.wallet-chart-top{padding:20px 17px 5px;gap:10px}.wallet-chart-top .chart-change{margin-top:24px;font-size:14px}.wallet-price-chart{min-height:275px;padding:0 4px}.wallet-price-chart svg{height:270px}.chart-range-tabs{padding:9px 10px;gap:2px}.chart-range{font-size:11px;padding:6px 2px}.chart-mini-stats>span{padding:12px 10px}.chart-mini-stats strong{font-size:10px}.wallet-chart-panel>#price-chart-status,.wallet-chart-panel>.chart-history-note{padding-left:15px;padding-right:15px}}
+
+/* PumpLite V12 simple buy. */
+.simple-buy-card{border:1px solid #2d3441;background:linear-gradient(180deg,#151921,#0e1117);padding:22px;border-radius:20px;margin-bottom:18px}
+.simple-buy-card .eyebrow{margin-bottom:7px}
+.simple-buy-card h3{font-size:22px;margin:0 0 8px}
+.simple-buy-entry{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(135px,.7fr);gap:10px;align-items:end;margin-top:18px}
+.simple-buy-entry input,.simple-buy-entry select{min-height:52px;font-size:18px;font-weight:700}
+.simple-buy-preview{display:grid;gap:6px;margin:16px 0;padding:17px;border:1px solid #29303b;border-radius:16px;background:#090c11}
+.simple-buy-preview small{color:#7f8795;font-size:10px;font-weight:800;letter-spacing:.8px;text-transform:uppercase}
+.simple-buy-preview strong{font-size:clamp(25px,5vw,38px);line-height:1.05;letter-spacing:-1px;overflow-wrap:anywhere}
+.simple-buy-preview span{color:#9ca4b4;font-size:12px;line-height:1.5}
+.simple-buy-button{min-height:56px;font-size:17px;font-weight:900}
+.advanced-trade-title{margin:26px 0 12px;color:#aeb5c2;font-size:15px}
+@media(max-width:560px){.simple-buy-card{padding:17px}.simple-buy-entry{grid-template-columns:1fr}.simple-buy-entry input,.simple-buy-entry select{min-height:50px}.simple-buy-preview{padding:14px}.simple-buy-button{min-height:54px}}
