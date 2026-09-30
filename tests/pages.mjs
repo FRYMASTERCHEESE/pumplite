@@ -186,21 +186,18 @@ try {
       'Claim page must explain the full-funding lock'
     );
 
-    assert.match(
-      claimHtml,
-      /href="./?page=create"/,
+    assert.ok(
+      claimHtml.includes('href="./?page=create"'),
       'Claim page must link to Create Token'
     );
 
-    assert.match(
-      claimHtml,
-      /href="./?page=markets"/,
+    assert.ok(
+      claimHtml.includes('href="./?page=markets"'),
       'Claim page must link to Markets & Trade'
     );
 
-    assert.match(
-      claimHtml,
-      /href="./?page=help"/,
+    assert.ok(
+      claimHtml.includes('href="./?page=help"'),
       'Claim page must link to Help & Safety'
     );
 
