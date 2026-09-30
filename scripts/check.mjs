@@ -11,6 +11,13 @@ for (const path of [...await files('web'), ...await files('scripts'), ...await f
   const result = spawnSync(process.execPath, ['--check', path], { encoding: 'utf8' });
   assert.equal(result.status, 0, result.stderr);
 }
+for (const path of ['claim.html', 'web/claim.js']) {
+  const text = await readFile(path, 'utf8');
+  assert.ok(
+    !/[^\x00-\x7F]/.test(text),
+    'Claim UI source must remain ASCII-only: ' + path
+  );
+}
 const config = JSON.parse(await readFile('config.json', 'utf8'));
 validatePublicConfig(config);
 assertSolanaMainnet(config.solana.genesisHash);

@@ -199,7 +199,7 @@ function controls() {
     account
       ? 'Connected ' +
         account.slice(0, 6) +
-        'â€¦' +
+        '...' +
         account.slice(-4)
       : 'Connect Base wallet';
 
@@ -246,14 +246,14 @@ function controls() {
 
     $('claim-detail').textContent =
       currentClaim.remaining +
-      ' claims remaining Â· ' +
+      ' claims remaining  |  ' +
       formatUnits(currentClaim.funded, 18) +
       ' PLITE currently held by the claim contract' +
       (fullyFunded
-        ? ' Â· funding verified'
-        : ' Â· funding is not yet at the expected level') +
+        ? '  |  funding verified'
+        : '  |  funding is not yet at the expected level') +
       (currentClaim.alreadyClaimed === true
-        ? ' Â· this wallet already claimed'
+        ? '  |  this wallet already claimed'
         : '');
   } else {
     $('claim-progress').textContent =
@@ -340,7 +340,7 @@ async function ensureBaseWallet() {
     );
   }
 
-  setStatus('Requesting wallet accessâ€¦');
+  setStatus('Requesting wallet access...');
 
   await selectedProvider.request({
     method: 'eth_requestAccounts'
@@ -414,7 +414,7 @@ async function refresh() {
   }
 
   setStatus(
-    'Verifying the claim contract on Base Mainnetâ€¦'
+    'Verifying the claim contract on Base Mainnet...'
   );
 
   currentClaim =
@@ -507,7 +507,7 @@ async function fundCurrentClaim() {
     );
 
   setStatus(
-    'Funding submitted. Waiting for 2 Base confirmationsâ€¦'
+    'Funding submitted. Waiting for 2 Base confirmations...'
   );
 
   const receipt =
@@ -625,7 +625,7 @@ async function launch() {
   }
 
   setStatus(
-    'Deployment submitted. Waiting for 2 Base confirmationsâ€¦'
+    'Deployment submitted. Waiting for 2 Base confirmations...'
   );
 
   const receipt =
@@ -708,7 +708,7 @@ async function claimOne() {
     });
 
   setStatus(
-    'Claim submitted. Waiting for 2 Base confirmationsâ€¦'
+    'Claim submitted. Waiting for 2 Base confirmations...'
   );
 
   const receipt =
@@ -767,7 +767,7 @@ $('claim-copy-link').addEventListener(
 async function boot() {
   const response =
     await fetch(
-      './config.json?claim=20260930e',
+      './config.json?claim=20260930f',
       {
         cache: 'no-store',
         credentials: 'omit'
