@@ -357,14 +357,14 @@ function controls() {
         : '');
   } else {
     $('claim-progress').textContent =
-      'Not launched yet';
+      'Claim contract not launched yet';
 
     $('claim-detail').textContent =
       owner
         ? ownerReady
           ? 'Controller wallet is ready. Tap Launch + Fund 50 PLITE when you are ready.'
           : 'Controller wallet connected. Complete the readiness checks shown below.'
-        : 'Connect the PumpLite controller wallet to launch, or open a verified claim link.';
+        : 'PLITE is already live on Base. The separate First 50 claim contract still needs to be deployed and fully funded by the PumpLite controller.';
 
     $('claim-contract-link').hidden = true;
   }
@@ -897,6 +897,18 @@ async function boot() {
       'Unexpected PumpLite claim configuration'
     );
   }
+
+  $('claim-token-address').textContent =
+    expectedToken();
+
+  $('claim-token-link').href =
+    config.base.explorer +
+    '/token/' +
+    expectedToken();
+
+  setStatus(
+    'PLITE configuration loaded. Connecting to Base Mainnet...'
+  );
 
   const rpcUrls =
     baseReadRpcUrls(config.base);

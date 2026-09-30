@@ -185,6 +185,30 @@ try {
       /full 50 PLITE before anyone can claim/,
       'Claim page must explain the full-funding lock'
     );
+
+    assert.match(
+      claimHtml,
+      /href="./?page=create"/,
+      'Claim page must link to Create Token'
+    );
+
+    assert.match(
+      claimHtml,
+      /href="./?page=markets"/,
+      'Claim page must link to Markets & Trade'
+    );
+
+    assert.match(
+      claimHtml,
+      /href="./?page=help"/,
+      'Claim page must link to Help & Safety'
+    );
+
+    assert.match(
+      claimHtml,
+      /0xb15A460142c77b42cDF57815b0eeFEb24b593196/,
+      'Claim page must show the PLITE token before RPC reads finish'
+    );
     assert.equal(
       (await page.request.get(base + 'assets/claim.js')).status(),
       200,

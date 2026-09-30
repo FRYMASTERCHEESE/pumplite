@@ -487,16 +487,26 @@ function renderMarketChartRange(market) {
   );
 
   if (!summary.count) {
-    $('price-chart-current').textContent = '-';
+    const spotPrice =
+      marketPriceWei(market);
+
+    $('price-chart-current').textContent =
+      spotPrice === null
+        ? '-'
+        : marketPriceText(market);
+
     $('price-chart-high').textContent = '-';
     $('price-chart-low').textContent = '-';
     $('price-chart-trades').textContent = '0';
 
     if (!chartTrades.length) {
       $('price-chart-change').textContent =
-        'No trades yet';
+        'No recent trades';
+
       $('price-chart-status').textContent =
-        'No completed buy/sell Trade events were found in the bounded recent Base history.';
+        spotPrice === null
+          ? 'No completed buy/sell Trade events were found in the recent Base history.'
+          : 'No completed buy/sell Trade events were found in the recent Base history. The value above is the current on-chain bonding-curve spot price, not an invented trade price.';
     } else {
       $('price-chart-change').textContent =
         'No trades';
@@ -1819,7 +1829,18 @@ $('show-help').addEventListener('click', () => showHomePage('help'));
 $('hero-explore').addEventListener('click', () => showHomePage('markets'));
 $('hero-create').addEventListener('click', () => showHomePage('create'));
 
-showHomePage('home', { focus: false });
+const requestedHomePage =
+  new URL(location.href).searchParams.get('page');
+
+showHomePage(
+  Object.hasOwn(
+    HOME_PAGE_TARGETS,
+    requestedHomePage
+  )
+    ? requestedHomePage
+    : 'home',
+  { focus: false }
+);
 $('verified-only').addEventListener('change',()=>action(async()=>{state.registry=null;renderDiscovery();await refreshRegistry();renderDiscovery();}));
 $('market-filter').addEventListener('input', renderDiscovery);
 $('market-sort').addEventListener('change', renderDiscovery);

@@ -8,13 +8,16 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://mainnet.base.org https://base-rpc.publicnode.com; object-src 'none'; base-uri 'none'; form-action 'none'">
 <title>PLITE  |  First 50 Holder Claim</title>
 <link rel="stylesheet" href="./assets/styles.css">
-<script type="module" src="./assets/claim.js?boot=20260930k"></script>
+<script type="module" src="./assets/claim.js?boot=20261001a"></script>
 </head>
 <body>
 <main id="main-content" tabindex="-1">
   <section class="panel holder-claim claim-page">
-    <nav class="claim-top-nav" aria-label="Claim page navigation">
-      <a id="claim-top-back" class="outline claim-back-button" href="./">&larr; Back to PumpLite</a>
+    <nav class="claim-top-nav page-nav" aria-label="PumpLite pages">
+      <a id="claim-top-back" class="outline claim-back-button" href="./">&larr; Home</a>
+      <a class="outline" href="./?page=create">Create Token</a>
+      <a class="outline" href="./?page=markets">Markets &amp; Trade</a>
+      <a class="outline" href="./?page=help">Help &amp; Safety</a>
     </nav>
     <p class="eyebrow">PUMPLITE  |  BASE MAINNET</p>
     <h1>First 50 PLITE Holders</h1>
@@ -23,8 +26,8 @@
     <div class="notice" id="claim-network" role="status">Loading Base Mainnet claim configuration...</div>
 
     <div class="claim-progress-card">
-      <strong id="claim-progress">Not launched yet</strong>
-      <p id="claim-detail" class="fine">Connect the PumpLite controller wallet to launch, or open a verified claim link.</p>
+      <strong id="claim-progress">Claim contract not launched yet</strong>
+      <p id="claim-detail" class="fine">The PLITE token is already on Base. This separate First 50 claim contract has not been deployed and funded yet.</p>
     </div>
 
     <button id="claim-connect" class="outline full" type="button">Connect Base wallet</button>
@@ -55,10 +58,10 @@
     <div class="links">
       <a href="./">Back to PumpLite</a>
       <a id="claim-contract-link" target="_blank" rel="noopener noreferrer" hidden>View claim contract -></a>
-      <a id="claim-token-link" target="_blank" rel="noopener noreferrer">View PLITE token -></a>
+      <a id="claim-token-link" href="https://basescan.org/token/0xb15A460142c77b42cDF57815b0eeFEb24b593196" target="_blank" rel="noopener noreferrer">View PLITE token -></a>
     </div>
 
-    <p class="fine">PLITE token: <code id="claim-token-address">-</code></p>
+    <p class="fine">PLITE token: <code id="claim-token-address">0xb15A460142c77b42cDF57815b0eeFEb24b593196</code></p>
     <p class="fine">A wallet address does not prove a unique human. Base network gas applies to deployment, funding and claims. The free token claim does not promise any value, profit or return.</p>
   </section>
 </main>

@@ -82,7 +82,7 @@ export function adapter(config, notify, changed = () => {}) {
         fallbackAnnounced = true;
 
         notify(
-          'Primary Base read RPC is busy. Using the backup Base Mainnet read RPC. No wallet transaction was retried.'
+          'Live Base data is connected through the backup Base Mainnet RPC. Wallet transactions are unaffected.'
         );
       }
     );
