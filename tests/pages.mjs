@@ -96,9 +96,21 @@ try {
       await page.locator('.home-page-tabs').locator('button,a').allTextContents(),
       ['Home','Create Token','Markets & Trade','PLITE Claim','Help & Safety']
     );
+    assert.equal(
+      await page.locator('.claim-header-link').getAttribute('href'),
+      './claim.html'
+    );
     assert.equal(await page.locator('#home-overview').isVisible(), true);
+    assert.equal(await page.locator('#home-markets').count(), 1);
+    assert.equal(await page.locator('#platform-market-count').count(), 1);
+    assert.equal(await page.locator('#platform-loaded-reserve').count(), 1);
+    assert.equal(await page.locator('#platform-loaded-volume').count(), 1);
+    assert.equal(await page.locator('#platform-block').count(), 1);
     assert.equal(await page.locator('#create-section').isVisible(), false);
     assert.equal(await page.locator('#explore-section').isVisible(), false);
+    assert.equal(await page.locator('#curve-price').count(), 1);
+    assert.equal(await page.locator('#market-age').count(), 1);
+    assert.equal(await page.locator('#market-block').count(), 1);
     await page.locator('#show-help').click();
     assert.equal(await page.locator('#help-section').isVisible(), true);
     await page.locator('#show-home').click();

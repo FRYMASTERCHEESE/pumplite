@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="referrer" content="no-referrer">
-<meta name="theme-color" content="#101b18">
+<meta name="theme-color" content="#090a0f">
 <meta name="description" content="PumpLite: a Base Mainnet token launchpad with fixed or permanently capped mintable supply, Mayhem support, and wallet-signed trading.">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://pumplite-rpc.coreyedge123.workers.dev https://solana-rpc.publicnode.com wss://solana-rpc.publicnode.com https://mainnet.base.org https://base-rpc.publicnode.com https://api.coinbase.com; object-src 'none'; base-uri 'none'; form-action 'none'">
 <title>PumpLite · Token launches, kept simple</title>
 <link rel="stylesheet" href="./assets/styles.css">
 <script defer src="./assets/phantom-diagnostic.js"></script>
-<script type="module" src="./assets/app.js?boot=20260930h"></script>
+<script type="module" src="./assets/app.js?boot=20260930v10"></script>
 </head>
 <body>
 <a class="skip-link" id="skip-content" href="#main-content">Skip to main content</a>
@@ -20,6 +20,7 @@
     <label class="sr-only" for="chain">Network</label>
     <select id="chain"><option value="solana">Solana Mainnet</option><option value="base">Base Mainnet</option></select>
     <label id="wallet-choice-label" hidden>Wallet <select id="wallet-choice" aria-label="EVM wallet"></select></label>
+    <a class="claim-header-link" href="./claim.html">PLITE Claim</a>
     <button id="connect" class="outline">Connect wallet</button>
   </div>
 </header>
@@ -39,19 +40,67 @@
       <a class="outline page-nav-link" href="./claim.html">PLITE Claim</a>
       <button type="button" id="show-help" class="outline" aria-pressed="false">Help &amp; Safety</button>
     </nav>
-    <div class="hero" id="home-overview" tabindex="-1">
-      <div><p class="eyebrow">YOUR IDEA. YOUR COMMUNITY.</p><h1>Create a token<br>on Base Mainnet.</h1>
-      <p class="intro">Launch a fixed or permanently capped mintable token. Trade against a public bonding curve. Keep control of your wallet.</p></div>
-      <div class="principles"><span><i>01</i><b>Supply choice</b><small>Fixed or permanently capped</small></span><span><i>02</i><b>0.25% platform fee</b><small>Rounded down per trade</small></span><span><i>03</i><b>Wallet-signed</b><small>No custodial account</small></span></div>
-    </div>
+    <section id="home-overview" class="home-dashboard" tabindex="-1">
+      <div class="launchpad-hero">
+        <div class="launchpad-hero-copy">
+          <p class="live-pill"><span aria-hidden="true"></span> BASE MAINNET LIVE</p>
+          <p class="eyebrow">PUMPLITE LAUNCHPAD</p>
+          <h1>Discover. Launch.<br>Trade on-chain.</h1>
+          <p class="intro">A fast Base launchpad with wallet-signed trading, transparent bonding curves and real on-chain market data.</p>
+          <div class="hero-actions">
+            <button id="hero-explore" class="primary compact-action" type="button">Explore tokens</button>
+            <button id="hero-create" class="outline compact-action" type="button">Create token</button>
+            <a class="outline compact-action hero-link" href="./claim.html">PLITE Claim</a>
+          </div>
+        </div>
+        <aside class="featured-token-card" aria-label="Featured PumpLite token">
+          <div class="featured-token-head">
+            <div class="token-avatar token-avatar-featured" aria-hidden="true">PL</div>
+            <div><small>FEATURED</small><strong>PumpLite</strong><span>PLITE / ETH</span></div>
+          </div>
+          <div class="featured-token-facts">
+            <span><small>Network</small><b>Base</b></span>
+            <span><small>Market</small><b>V2 curve</b></span>
+            <span><small>Claim</small><b>First 50</b></span>
+          </div>
+          <a class="featured-market-link" href="#base/0xa522A4Ef81fD31daec390ab46A32D4886e1461C7">Open PLITE market</a>
+          <a class="featured-claim-link" href="./claim.html">Open First 50 claim page</a>
+        </aside>
+      </div>
+
+      <section class="platform-live-stats" aria-label="Live PumpLite platform statistics">
+        <div class="live-stat live-stat-state"><small>Network</small><strong><span class="live-dot" aria-hidden="true"></span> Base live</strong><span id="platform-last-refresh">Waiting for chain read</span></div>
+        <div class="live-stat"><small>Markets</small><strong id="platform-market-count">-</strong><span>Factory count</span></div>
+        <div class="live-stat"><small>ETH reserve</small><strong id="platform-loaded-reserve">-</strong><span id="platform-reserve-label">Loaded markets</span></div>
+        <div class="live-stat"><small id="platform-volume-label">Volume</small><strong id="platform-loaded-volume">-</strong><span>On-chain cumulative</span></div>
+        <div class="live-stat"><small>Base block</small><strong id="platform-block">-</strong><span>Latest observed</span></div>
+      </section>
+
+      <section class="home-live-launches" aria-labelledby="home-live-title">
+        <div class="section-title">
+          <div><p class="eyebrow">LIVE LAUNCHES</p><h2 id="home-live-title">Newest on PumpLite</h2></div>
+          <button id="home-refresh-live" class="outline" type="button">Refresh live</button>
+        </div>
+        <p id="home-live-status" class="fine" role="status">Reading real Base markets. No fake prices, volume or holder counts.</p>
+        <div id="home-markets" class="market-list home-market-grid"><p class="empty">Loading the newest Base markets...</p></div>
+      </section>
+    </section>
     <div class="workspace" id="home-workspace">
       <section class="panel discovery" id="explore-section" tabindex="-1" hidden>
-        <div class="section-title"><div><p class="eyebrow">EXPLORE</p><h2>Token markets</h2></div><button id="refresh" class="outline">Refresh</button></div>
-        <p class="muted">Real factory markets, fetched on request. No invented activity.</p>
-        <label class="filter"><input type="checkbox" id="verified-only"> Verified only</label><p id="verification-list-status" class="fine" role="status">Owner-reviewed identity labels are separate from factory provenance.</p>
-        <form id="open-form" class="search"><label class="sr-only" for="market-address">Market address</label><input id="market-address" placeholder="Open a market address" required autocomplete="off"><button type="submit" class="outline">Open</button></form>
-        <div id="markets" class="market-list"><p class="empty">No verified deployment configured.<br>Markets will appear here after deployment is reviewed.</p></div>
-        <button id="more" class="outline" hidden>Load more</button>
+        <div class="section-title"><div><p class="eyebrow">EXPLORE</p><h2>Live token markets</h2></div><button id="refresh" class="outline">Refresh live</button></div>
+        <p class="muted">Newest PumpLite markets read directly from the configured Base factory. Prices, reserves and volume come from the chain.</p>
+        <div class="market-toolbar">
+          <label class="market-search-label" for="market-filter">Search tokens<input id="market-filter" placeholder="Name, ticker, token or market" autocomplete="off"></label>
+          <label class="market-sort-label" for="market-sort">Sort<select id="market-sort"><option value="newest">Newest</option><option value="volume">Volume</option><option value="reserve">ETH reserve</option><option value="distributed">Distributed</option></select></label>
+        </div>
+        <div class="market-filter-row">
+          <label class="filter"><input type="checkbox" id="verified-only"> Verified only</label>
+          <span id="market-live-status" class="live-status"><span class="live-dot" aria-hidden="true"></span> Base read-only live data</span>
+        </div>
+        <p id="verification-list-status" class="fine" role="status">Owner-reviewed identity labels are separate from factory provenance.</p>
+        <form id="open-form" class="search"><label class="sr-only" for="market-address">Market address</label><input id="market-address" placeholder="Open an exact market address" required autocomplete="off"><button type="submit" class="outline">Open market</button></form>
+        <div id="markets" class="market-list"><p class="empty">Loading Base markets...</p></div>
+        <button id="more" class="outline full-width-action" hidden>Load more markets</button>
       </section>
       <section class="panel launch" id="create-section" tabindex="-1" hidden>
         <p class="eyebrow">CREATE ON PUMPLITE</p><h2>Create your token</h2>
@@ -191,7 +240,15 @@
     <div class="workspace">
       <section class="panel">
         <p class="eyebrow">ON-CHAIN RESERVES</p>
-        <dl class="stats"><div><dt>Real native reserve</dt><dd id="native-reserve">—</dd></div><div><dt>Tokens in vault accounting</dt><dd id="token-reserve">—</dd></div><div><dt>Cumulative trade volume</dt><dd id="volume">—</dd></div><div><dt>Virtual pricing offset</dt><dd id="virtual">—</dd></div></dl>
+        <dl class="stats market-live-metrics">
+          <div><dt>Curve spot price</dt><dd id="curve-price">-</dd></div>
+          <div><dt>Real ETH reserve</dt><dd id="native-reserve">-</dd></div>
+          <div><dt>Cumulative volume</dt><dd id="volume">-</dd></div>
+          <div><dt>Tokens in market</dt><dd id="token-reserve">-</dd></div>
+          <div><dt>Launch age</dt><dd id="market-age">-</dd></div>
+          <div><dt>Base block</dt><dd id="market-block">-</dd></div>
+          <div><dt>Virtual pricing offset</dt><dd id="virtual">-</dd></div>
+        </dl>
         <label for="distribution">Supply distributed from vault</label><progress id="distribution" max="100" value="0"></progress><p id="distribution-label" class="fine"></p>
         <h3>How the curve works</h3><p class="muted">Buys add native currency and remove tokens. Sells return tokens and withdraw native currency. Quotes round down. The virtual offset sets starting pricing; it is not money available to withdraw.</p>
         <p class="fine">No scheduled graduation, liquidity migration, owner withdrawal, or price guarantee. Direct donations are excluded from quotes and cannot be recovered. Rounding can leave locked dust. Other traders may move the price within your slippage limit.</p>

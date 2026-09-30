@@ -471,6 +471,22 @@ export function adapter(config, notify, changed = () => {}) {
       return signature;
     },
 
+    async platformStats() {
+      await network();
+
+      const [marketCount, blockNumber] =
+        await Promise.all([
+          factory().marketCount(),
+          provider.getBlockNumber()
+        ]);
+
+      return {
+        marketCount: Number(marketCount),
+        blockNumber: Number(blockNumber),
+        observedAt: Date.now()
+      };
+    },
+
     async list(offset = 0) {
       await network();
       const count = Number(await factory().marketCount());

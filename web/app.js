@@ -13,7 +13,7 @@ if (window.top !== window.self) {
 }
 const $ = id => document.getElementById(id);
 $('skip-content').addEventListener('click', event => { event.preventDefault(); $('main-content').focus(); });
-const state = { config: null, chain: 'base', adapter: null, wallet: null, market: null, quote: null, busy: false, epoch: 0, next: null, markets: [], registry: null, reviewProof: null, reviewSchemaReady: false };
+const state = { config: null, chain: 'base', adapter: null, wallet: null, market: null, quote: null, busy: false, epoch: 0, next: null, markets: [], registry: null, reviewProof: null, reviewSchemaReady: false, platformStats: null };
 function status(message, href) {
   $('status-text').textContent = message;
   $('status-link').hidden = !href;
@@ -142,9 +142,10 @@ function controls() {
         : 'Create coin is ready. If needed, tapping it will request access to your Base wallet first.';
   $('get-quote').disabled = !ready() || !state.market || state.busy;
   $('refresh').disabled = !ready() || state.busy; $('refresh-market').disabled = !ready() || state.busy;
+  $('home-refresh-live').disabled = !ready() || state.busy;
   $('more').disabled = state.busy; $('verified-only').disabled = state.busy;
   $('show-home').disabled=state.busy; $('show-create').disabled=state.busy; $('show-explore').disabled=state.busy; $('show-help').disabled=state.busy;
-  for (const id of ['description','image-uri','banner-uri','website','twitter','telegram','discord','name','symbol','uri','side','amount','slippage','market-address','initial-buy-eth','initial-buy-currency','trade-display-amount','trade-display-currency']) $(id).disabled = state.busy;
+  for (const id of ['description','image-uri','banner-uri','website','twitter','telegram','discord','name','symbol','uri','side','amount','slippage','market-address','market-filter','market-sort','initial-buy-eth','initial-buy-currency','trade-display-amount','trade-display-currency']) $(id).disabled = state.busy;
   $('trade-use-display').disabled = state.busy || $('side').value !== 'buy';
   $('initial-buy-submit').disabled = state.busy;
   $('initial-buy-close').disabled = state.busy;
@@ -417,46 +418,404 @@ function requireWrite() {
   }
   if (!state.wallet) throw Error('Connect a wallet first');
 }
+function marketPriceWei(m) {
+  if (
+    !m ||
+    typeof m.tokenReserve !== 'bigint' ||
+    m.tokenReserve <= 0n
+  ) return null;
+
+  return (
+    (m.virtualNative + m.nativeReserve) *
+    10n ** BigInt(m.decimals)
+  ) / m.tokenReserve;
+}
+
+function marketPriceText(m) {
+  const value = marketPriceWei(m);
+  if (value === null) return 'Unavailable';
+  return formatUnits(value, m.nativeDecimals, 14) + ' ' + m.unit;
+}
+
+function distributedPercent(m) {
+  if (!m?.supply || m.supply <= 0n) return 0;
+  return Number(
+    (m.supply - m.tokenReserve) *
+    10_000n /
+    m.supply
+  ) / 100;
+}
+
+function launchAge(m) {
+  const launched = Number(m?.launchedAt);
+  if (!Number.isFinite(launched) || launched <= 0) return 'Unknown';
+
+  const seconds = Math.max(
+    0,
+    Math.floor(Date.now() / 1000) - launched
+  );
+
+  if (seconds < 60) return seconds + 's';
+  if (seconds < 3600) return Math.floor(seconds / 60) + 'm';
+  if (seconds < 86_400) return Math.floor(seconds / 3600) + 'h';
+  return Math.floor(seconds / 86_400) + 'd';
+}
+
+function compactAmount(value, decimals, places = 4) {
+  const number = Number(formatUnits(value, decimals, places));
+  if (!Number.isFinite(number)) return formatUnits(value, decimals, places);
+  if (number >= 1_000_000_000) return (number / 1_000_000_000).toFixed(2).replace(/\.00$/, '') + 'B';
+  if (number >= 1_000_000) return (number / 1_000_000).toFixed(2).replace(/\.00$/, '') + 'M';
+  if (number >= 1_000) return (number / 1_000).toFixed(2).replace(/\.00$/, '') + 'K';
+  return formatUnits(value, decimals, places);
+}
+
+function avatarTone(m) {
+  const text = String(m?.symbol || m?.name || 'PL');
+  let total = 0;
+  for (const char of text) total += char.charCodeAt(0);
+  return total % 5;
+}
+
 function row(m) {
-  const link = document.createElement('a'); link.className = 'market-row';
+  const link = document.createElement('a');
+  link.className = 'market-row token-market-card';
   link.href = '#' + state.chain + '/' + encodeURIComponent(m.id);
-  const title = document.createElement('b'); title.textContent = m.name + ' · ' + m.symbol;
-  const detail = document.createElement('small');
-  detail.textContent = formatUnits(m.nativeReserve, m.nativeDecimals) + ' ' + m.unit + ' reserve · ' + m.source;
-  link.append(title, badges(state.chain,state.config?.[state.chain],m,state.registry), detail); return link;
+
+  const head = document.createElement('div');
+  head.className = 'token-card-head';
+
+  const avatar = document.createElement('span');
+  avatar.className = 'token-avatar tone-' + avatarTone(m);
+  avatar.setAttribute('aria-hidden', 'true');
+  avatar.textContent = String(m.symbol || 'PL').slice(0, 2).toUpperCase();
+
+  const identity = document.createElement('span');
+  identity.className = 'token-card-identity';
+
+  const title = document.createElement('b');
+  title.textContent = m.name;
+
+  const ticker = document.createElement('span');
+  ticker.className = 'ticker';
+  ticker.textContent = m.symbol + ' / ' + m.unit;
+
+  identity.append(title, ticker);
+
+  const age = document.createElement('span');
+  age.className = 'token-age';
+  age.textContent = launchAge(m);
+
+  head.append(avatar, identity, age);
+
+  const chips = document.createElement('div');
+  chips.className = 'token-card-chips';
+  chips.append(
+    badges(
+      state.chain,
+      state.config?.[state.chain],
+      m,
+      state.registry
+    )
+  );
+
+  if (m.mayhemActive === true) {
+    const mayhem = document.createElement('span');
+    mayhem.className = 'badge mayhem';
+    mayhem.textContent = 'Mayhem';
+    chips.append(mayhem);
+  }
+
+  const metrics = document.createElement('div');
+  metrics.className = 'token-card-metrics';
+
+  const entries = [
+    ['Price', marketPriceText(m)],
+    ['Volume', compactAmount(m.volume, m.nativeDecimals, 6) + ' ' + m.unit],
+    ['Reserve', compactAmount(m.nativeReserve, m.nativeDecimals, 6) + ' ' + m.unit],
+    ['Distributed', distributedPercent(m).toFixed(2) + '%']
+  ];
+
+  for (const [label, value] of entries) {
+    const item = document.createElement('span');
+    const small = document.createElement('small');
+    const strong = document.createElement('strong');
+    small.textContent = label;
+    strong.textContent = value;
+    item.append(small, strong);
+    metrics.append(item);
+  }
+
+  const footer = document.createElement('small');
+  footer.className = 'token-card-source';
+  footer.textContent =
+    'On-chain market ' +
+    m.id.slice(0, 6) +
+    '...' +
+    m.id.slice(-4);
+
+  link.append(head, chips, metrics, footer);
+  return link;
 }
 async function refreshRegistry() {
   state.registry=null;
   try { state.registry=await loadReviewedRegistry(); $('verification-list-status').textContent='Verified is an owner identity/provenance review, not a safety or investment endorsement.'; }
   catch { $('verification-list-status').textContent='Reviewed list unavailable. Verified badges are hidden; factory provenance is separate.'; }
 }
+function renderPlatformStats() {
+  const loaded = state.markets;
+  const totalReserve = loaded.reduce(
+    (sum, m) => sum + m.nativeReserve,
+    0n
+  );
+  const totalVolume = loaded.reduce(
+    (sum, m) => sum + m.volume,
+    0n
+  );
+
+  const marketCount =
+    Number(state.platformStats?.marketCount ?? loaded.length);
+
+  $('platform-market-count').textContent =
+    Number.isFinite(marketCount)
+      ? String(marketCount)
+      : '-';
+
+  $('platform-loaded-reserve').textContent =
+    compactAmount(totalReserve, 18, 6) + ' ETH';
+
+  $('platform-loaded-volume').textContent =
+    compactAmount(totalVolume, 18, 6) + ' ETH';
+
+  const complete =
+    Number.isFinite(marketCount) &&
+    marketCount === loaded.length;
+
+  $('platform-reserve-label').textContent =
+    complete ? 'All markets' : 'Loaded markets';
+
+  $('platform-volume-label').textContent =
+    complete ? 'Total volume' : 'Loaded volume';
+
+  $('platform-block').textContent =
+    state.platformStats?.blockNumber
+      ? Number(state.platformStats.blockNumber).toLocaleString()
+      : '-';
+
+  $('platform-last-refresh').textContent =
+    loaded.length
+      ? 'Updated ' + new Date().toLocaleTimeString()
+      : 'Waiting for chain read';
+}
+
+function marketSortValue(m, mode) {
+  if (mode === 'volume') return m.volume;
+  if (mode === 'reserve') return m.nativeReserve;
+  if (mode === 'distributed') {
+    return BigInt(Math.round(distributedPercent(m) * 100));
+  }
+  return BigInt(Number(m.launchedAt || 0));
+}
+
+function visibleMarkets() {
+  const query =
+    $('market-filter').value.trim().toLowerCase();
+
+  const verifiedOnly =
+    $('verified-only').checked;
+
+  const mode = $('market-sort').value;
+
+  return state.markets
+    .filter(m => {
+      if (
+        verifiedOnly &&
+        !tokenTrust(
+          state.chain,
+          state.config[state.chain],
+          m,
+          state.registry
+        ).verified
+      ) return false;
+
+      if (!query) return true;
+
+      return [
+        m.name,
+        m.symbol,
+        m.id,
+        m.token
+      ].some(value =>
+        String(value).toLowerCase().includes(query)
+      );
+    })
+    .sort((a, b) => {
+      const left = marketSortValue(a, mode);
+      const right = marketSortValue(b, mode);
+      return left === right ? 0 : left > right ? -1 : 1;
+    });
+}
+
+function renderHomeMarkets() {
+  const root = $('home-markets');
+  root.replaceChildren();
+
+  const newest = [...state.markets]
+    .sort((a, b) =>
+      Number(b.launchedAt || 0) -
+      Number(a.launchedAt || 0)
+    )
+    .slice(0, 4);
+
+  for (const market of newest) {
+    const card = row(market);
+    // Home duplicates must not use .market-row because that selector is
+    // reserved for the active Markets & Trade results and browser tests.
+    card.classList.remove('market-row');
+    card.classList.add('home-market-card');
+    root.append(card);
+  }
+
+  if (!newest.length) {
+    const empty = document.createElement('p');
+    empty.className = 'empty';
+    empty.textContent =
+      ready()
+        ? 'No markets returned yet. Tap Refresh live to try again.'
+        : 'Base deployment is not configured.';
+    root.append(empty);
+  }
+
+  $('home-live-status').textContent =
+    newest.length
+      ? 'Showing real Base market data. Auto-refresh runs while this HTTPS page is open.'
+      : 'No invented activity is displayed.';
+}
+
 function renderDiscovery() {
   $('markets').replaceChildren();
-  const visible=state.markets.filter(m=>!$('verified-only').checked || tokenTrust(state.chain,state.config[state.chain],m,state.registry).verified);
-  for(const m of visible)$('markets').append(row(m));
-  if(!visible.length){const empty=document.createElement('p');empty.className='empty';empty.textContent=$('verified-only').checked?'No verified markets in the loaded results. Load more or refresh to check additional markets.':'No markets loaded. Refresh to read the chain.';$('markets').append(empty);}
+
+  const visible = visibleMarkets();
+
+  for (const market of visible) {
+    $('markets').append(row(market));
+  }
+
+  if (!visible.length) {
+    const empty = document.createElement('p');
+    empty.className = 'empty';
+    empty.textContent =
+      $('verified-only').checked
+        ? 'No verified markets match the current search.'
+        : state.markets.length
+          ? 'No loaded markets match your search.'
+          : 'No markets loaded. Refresh live to read the Base factory.';
+    $('markets').append(empty);
+  }
+
+  renderHomeMarkets();
+  renderPlatformStats();
+
+  $('market-live-status').replaceChildren();
+  const dot = document.createElement('span');
+  dot.className = 'live-dot';
+  dot.setAttribute('aria-hidden', 'true');
+  $('market-live-status').append(
+    dot,
+    document.createTextNode(
+      state.markets.length
+        ? ' Updated ' + new Date().toLocaleTimeString()
+        : ' Waiting for Base market data'
+    )
+  );
 }
 async function discover(append = false) {
   requireDeployment();
-  if(!append)state.markets=[];
+  if (!append) state.markets = [];
+
   // Remove old labels before any fresh read; failures cannot leave a stale Verified badge.
-  state.registry=null; renderDiscovery();
-  const result = await (await getAdapter()).list(append ? state.next : 0);
-  await refreshRegistry();
-  state.markets=append?[...state.markets,...result.markets]:result.markets;
+  state.registry = null;
   renderDiscovery();
-  state.next = result.next; $('more').hidden = result.next === null;
-  status('Read ' + result.markets.length + ' markets from ' + state.config[state.chain].name + '. Filters apply to loaded results.');
+
+  const adapter = await getAdapter();
+  const result =
+    await adapter.list(append ? state.next : 0);
+
+  try {
+    state.platformStats =
+      typeof adapter.platformStats === 'function'
+        ? await adapter.platformStats()
+        : null;
+  } catch {
+    state.platformStats = null;
+  }
+
+  await refreshRegistry();
+
+  state.markets = append
+    ? [...state.markets, ...result.markets]
+    : result.markets;
+
+  state.next = result.next;
+  $('more').hidden = result.next === null;
+
+  renderDiscovery();
+
+  status(
+    'Read ' +
+    result.markets.length +
+    ' markets from ' +
+    state.config[state.chain].name +
+    '. Live values come from the chain.'
+  );
+}
+
+async function refreshLiveData() {
+  requireDeployment();
+
+  if (!state.markets.length) {
+    await discover(false);
+    return;
+  }
+
+  const adapter = await getAdapter();
+
+  state.markets = await Promise.all(
+    state.markets.map(market =>
+      adapter.market(market.id)
+    )
+  );
+
+  try {
+    state.platformStats =
+      typeof adapter.platformStats === 'function'
+        ? await adapter.platformStats()
+        : state.platformStats;
+  } catch {
+    // Keep the most recent valid platform count/block read.
+  }
+
+  if (state.market) {
+    const fresh =
+      await adapter.market(state.market.id);
+    state.market = fresh;
+    renderMarket(fresh);
+  }
+
+  renderDiscovery();
 }
 function renderMarket(m) {
   verificationPanel(state.chain,state.config[state.chain],m,state.registry);
   $('market-metadata').textContent = m.uri ? 'Creator metadata URI (not fetched or verified): ' + m.uri : 'No creator metadata URI supplied.';
   $('market-name').textContent = m.name; $('market-symbol').textContent = m.symbol + ' / ' + m.unit;
   $('market-source').textContent = m.source + ' · fetched ' + new Date(m.observedAt).toLocaleTimeString() + ' · refresh on demand';
+  $('curve-price').textContent = marketPriceText(m) + ' / ' + m.symbol;
   $('native-reserve').textContent = formatUnits(m.nativeReserve, m.nativeDecimals) + ' ' + m.unit;
   $('token-reserve').textContent = formatUnits(m.tokenReserve, m.decimals, 2) + ' ' + m.symbol;
   $('volume').textContent = formatUnits(m.volume, m.nativeDecimals) + ' ' + m.unit;
   $('virtual').textContent = formatUnits(m.virtualNative, m.nativeDecimals) + ' ' + m.unit;
+  $('market-age').textContent = launchAge(m);
+  $('market-block').textContent = Number(m.provenance?.block || 0).toLocaleString();
   const distributed = Number((m.supply - m.tokenReserve) * 10_000n / m.supply) / 100;
   $('distribution').value = distributed;
   $('distribution-label').textContent =
@@ -650,7 +1009,7 @@ async function route() {
 }
 function switchChain(chain) {
   state.adapter?.disconnect();
-  state.chain = chain; state.epoch++; state.adapter = null; state.wallet = null; state.market = null; state.next = null; state.markets=[]; state.registry=null;
+  state.chain = chain; state.epoch++; state.adapter = null; state.wallet = null; state.market = null; state.next = null; state.markets=[]; state.registry=null; state.platformStats=null;
   $('create-network').textContent=chain==='base'?'Base Mainnet · ETH pair':'Solana Mainnet · deployment pending';
   $('chain').value = chain; $('connect').textContent = 'Connect wallet';
   const configured = ready();
@@ -1071,11 +1430,16 @@ $('show-home').addEventListener('click', () => showHomePage('home'));
 $('show-create').addEventListener('click', () => showHomePage('create'));
 $('show-explore').addEventListener('click', () => showHomePage('markets'));
 $('show-help').addEventListener('click', () => showHomePage('help'));
+$('hero-explore').addEventListener('click', () => showHomePage('markets'));
+$('hero-create').addEventListener('click', () => showHomePage('create'));
 
 showHomePage('home', { focus: false });
 $('verified-only').addEventListener('change',()=>action(async()=>{state.registry=null;renderDiscovery();await refreshRegistry();renderDiscovery();}));
+$('market-filter').addEventListener('input', renderDiscovery);
+$('market-sort').addEventListener('change', renderDiscovery);
 
 $('refresh').addEventListener('click', () => action(() => discover()));
+$('home-refresh-live').addEventListener('click', () => action(() => refreshLiveData()));
 $('more').addEventListener('click', () => action(() => discover(true)));
 $('refresh-market').addEventListener('click', () => action(() => loadMarket(state.market?.id || decodeURIComponent(location.hash.split('/')[1]))));
 $('open-form').addEventListener('submit', e => { e.preventDefault(); if (!state.busy) location.hash = state.chain + '/' + encodeURIComponent($('market-address').value.trim()); });
@@ -1902,6 +2266,31 @@ try {
 
   document.documentElement.dataset.walletAppReady =
     'ready';
+
+  // Production HTTPS pages begin read-only market discovery automatically.
+  // Local tests use HTTP, so they remain deterministic and make no external calls.
+  const productionLiveReads =
+    location.protocol === 'https:' &&
+    location.hostname !== 'localhost' &&
+    location.hostname !== '127.0.0.1';
+
+  if (productionLiveReads) {
+    queueMicrotask(() => {
+      if (!state.busy && state.chain === 'base') {
+        void action(() => refreshLiveData());
+      }
+    });
+
+    window.setInterval(() => {
+      if (
+        !document.hidden &&
+        !state.busy &&
+        state.chain === 'base'
+      ) {
+        void action(() => refreshLiveData());
+      }
+    }, 20_000);
+  }
 } catch (error) {
   $('deployment').textContent =
     'Base Mainnet configuration could not load. Trading remains disabled until this is fixed.';
