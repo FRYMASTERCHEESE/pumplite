@@ -10,13 +10,37 @@ function node(name, attrs = {}) {
   return el;
 }
 
+function priceNumber(value) {
+  return Number(formatUnits(value, 18, 18));
+}
+
+function priceLabel(value) {
+  if (!Number.isFinite(value) || value <= 0) return '-';
+  if (value >= 1) return value.toLocaleString(undefined, { maximumFractionDigits: 8 });
+  if (value >= 0.000001) return value.toPrecision(7);
+  return value.toExponential(5);
+}
+
+function timeLabel(point) {
+  if (Number.isFinite(point.timestamp) && point.timestamp > 0) {
+    return new Date(point.timestamp * 1000).toLocaleString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
+  return 'Block ' + Number(point.blockNumber).toLocaleString();
+}
+
 export function renderPriceChart(container, trades, symbol = 'TOKEN') {
   container.replaceChildren();
 
   if (!Array.isArray(trades) || trades.length === 0) {
     const empty = document.createElement('p');
     empty.className = 'price-chart-empty';
-    empty.textContent = 'No on-chain trades yet. The chart will appear after the first completed buy or sell.';
+    empty.textContent = 'No real on-chain trades in this range yet.';
     container.append(empty);
     return { count: 0, changePct: null, latestPrice: null };
   }
@@ -24,24 +48,28 @@ export function renderPriceChart(container, trades, symbol = 'TOKEN') {
   const points = trades
     .map((trade, index) => ({
       index,
-      price: Number(formatUnits(trade.price, 18, 18)),
+      price: priceNumber(trade.price),
       side: trade.isBuy ? 'buy' : 'sell',
-      blockNumber: trade.blockNumber
+      blockNumber: Number(trade.blockNumber),
+      timestamp: Number(trade.timestamp || 0),
+      transactionHash: trade.transactionHash
     }))
     .filter(point => Number.isFinite(point.price) && point.price > 0);
 
   if (!points.length) {
     const empty = document.createElement('p');
     empty.className = 'price-chart-empty';
-    empty.textContent = 'Recent trades could not be converted into display prices.';
+    empty.textContent = 'Trade events were found, but no valid execution prices could be displayed.';
     container.append(empty);
     return { count: 0, changePct: null, latestPrice: null };
   }
 
-  const width = 720;
-  const height = 250;
-  const padX = 38;
-  const padY = 24;
+  const width = 760;
+  const height = 300;
+  const padLeft = 18;
+  const padRight = 18;
+  const padTop = 24;
+  const padBottom = 34;
   const values = points.map(point => point.price);
   let min = Math.min(...values);
   let max = Math.max(...values);
@@ -52,14 +80,24 @@ export function renderPriceChart(container, trades, symbol = 'TOKEN') {
     max += pad;
   }
 
+  const first = points[0].price;
+  const latest = points[points.length - 1].price;
+  const changePct = first > 0 ? (latest - first) / first * 100 : 0;
+  const direction = changePct > 0 ? 'up' : changePct < 0 ? 'down' : 'flat';
+
   const x = index =>
     points.length === 1
       ? width / 2
-      : padX + index * (width - padX * 2) / (points.length - 1);
+      : padLeft +
+        index * (width - padLeft - padRight) /
+        (points.length - 1);
 
   const y = value =>
-    height - padY -
-    (value - min) * (height - padY * 2) / (max - min);
+    height -
+    padBottom -
+    (value - min) *
+      (height - padTop - padBottom) /
+      (max - min);
 
   const svg = node('svg', {
     viewBox: `0 0 ${width} ${height}`,
@@ -68,10 +106,13 @@ export function renderPriceChart(container, trades, symbol = 'TOKEN') {
   });
 
   for (const fraction of [0.25, 0.5, 0.75]) {
-    const gy = padY + (height - padY * 2) * fraction;
+    const gy =
+      padTop +
+      (height - padTop - padBottom) * fraction;
+
     svg.append(node('line', {
-      x1: padX,
-      x2: width - padX,
+      x1: padLeft,
+      x2: width - padRight,
       y1: gy,
       y2: gy,
       class: 'grid'
@@ -79,54 +120,119 @@ export function renderPriceChart(container, trades, symbol = 'TOKEN') {
   }
 
   if (points.length === 1) {
-    svg.append(node('circle', {
+    const dot = node('circle', {
       cx: x(0),
       cy: y(points[0].price),
       r: 5,
-      class: points[0].side === 'buy' ? 'point-buy' : 'point-sell'
-    }));
-  } else {
-    for (let index = 1; index < points.length; index++) {
-      const previous = points[index - 1];
-      const current = points[index];
-      svg.append(node('line', {
-        x1: x(index - 1),
-        y1: y(previous.price),
-        x2: x(index),
-        y2: y(current.price),
-        class: current.price >= previous.price ? 'up-line' : 'down-line'
-      }));
-    }
+      class: 'trend-dot trend-' + direction
+    });
 
-    for (let index = 0; index < points.length; index++) {
-      svg.append(node('circle', {
+    const title = node('title');
+    title.textContent =
+      priceLabel(points[0].price) +
+      ' ETH/' +
+      symbol +
+      ' - ' +
+      timeLabel(points[0]);
+    dot.append(title);
+    svg.append(dot);
+  } else {
+    const coords = points.map((point, index) =>
+      [x(index), y(point.price)]
+    );
+
+    const linePath =
+      'M ' +
+      coords.map(([px, py]) => px + ' ' + py).join(' L ');
+
+    const areaPath =
+      linePath +
+      ' L ' +
+      coords[coords.length - 1][0] +
+      ' ' +
+      (height - padBottom) +
+      ' L ' +
+      coords[0][0] +
+      ' ' +
+      (height - padBottom) +
+      ' Z';
+
+    svg.append(node('path', {
+      d: areaPath,
+      class: 'trend-area trend-area-' + direction
+    }));
+
+    svg.append(node('path', {
+      d: linePath,
+      class: 'trend-line trend-' + direction
+    }));
+
+    points.forEach((point, index) => {
+      const dot = node('circle', {
         cx: x(index),
-        cy: y(points[index].price),
-        r: 3.2,
-        class: points[index].side === 'buy' ? 'point-buy' : 'point-sell'
-      }));
-    }
+        cy: y(point.price),
+        r: index === points.length - 1 ? 4.8 : 2.5,
+        class:
+          'trade-point ' +
+          (point.side === 'buy' ? 'point-buy' : 'point-sell')
+      });
+
+      const title = node('title');
+      title.textContent =
+        (point.side === 'buy' ? 'Buy - ' : 'Sell - ') +
+        priceLabel(point.price) +
+        ' ETH/' +
+        symbol +
+        ' - ' +
+        timeLabel(point);
+      dot.append(title);
+      svg.append(dot);
+    });
   }
 
-  const maxLabel = node('text', { x: 4, y: 16, class: 'axis-label' });
-  maxLabel.textContent = max.toPrecision(4) + ' ETH/' + symbol;
-  svg.append(maxLabel);
+  const highLabel = node('text', {
+    x: padLeft,
+    y: 16,
+    class: 'axis-label'
+  });
+  highLabel.textContent =
+    'High ' + priceLabel(Math.max(...values));
+  svg.append(highLabel);
 
-  const minLabel = node('text', { x: 4, y: height - 5, class: 'axis-label' });
-  minLabel.textContent = min.toPrecision(4) + ' ETH/' + symbol;
-  svg.append(minLabel);
+  const lowLabel = node('text', {
+    x: padLeft,
+    y: height - 7,
+    class: 'axis-label'
+  });
+  lowLabel.textContent =
+    points.length > 1
+      ? timeLabel(points[0])
+      : 'Execution price';
+  svg.append(lowLabel);
+
+  if (points.length > 1) {
+    const endLabel = node('text', {
+      x: width - padRight,
+      y: height - 7,
+      class: 'axis-label axis-label-end'
+    });
+    endLabel.textContent =
+      timeLabel(points[points.length - 1]);
+    svg.append(endLabel);
+  }
 
   container.append(svg);
-
-  const first = points[0].price;
-  const latest = points[points.length - 1].price;
-  const changePct = first > 0 ? (latest - first) / first * 100 : 0;
 
   return {
     count: points.length,
     changePct,
     latestPrice: latest,
+    highPrice: Math.max(...values),
+    lowPrice: Math.min(...values),
+    direction,
     firstBlock: points[0].blockNumber,
-    lastBlock: points[points.length - 1].blockNumber
+    lastBlock: points[points.length - 1].blockNumber,
+    firstTimestamp: points[0].timestamp || null,
+    lastTimestamp: points[points.length - 1].timestamp || null
   };
 }

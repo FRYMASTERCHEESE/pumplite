@@ -171,6 +171,21 @@ export async function verifyBrowser(browser, base) {
    'No trades yet',
    'Empty on-chain Trade history must produce an honest empty chart'
   );
+  assert.equal(await page.locator('[data-chart-range]').count(),6);
+  assert.equal(
+   await page.locator('[data-chart-range="LIVE"]').getAttribute('aria-pressed'),
+   'true'
+  );
+  await page.locator('[data-chart-range="1D"]').click();
+  assert.equal(
+   await page.locator('[data-chart-range="1D"]').getAttribute('aria-pressed'),
+   'true'
+  );
+  assert.equal(
+   await page.locator('#price-chart-change').textContent(),
+   'No trades yet',
+   'Changing range must not invent price history'
+  );
   assert.equal(await page.locator('#verification-details img').count(),0,'Notes rendered as inert text');
   assert.match(await page.locator('#verification-details').textContent(),/onerror/);
   assert.equal(await page.locator('body').evaluate(e=>e.scrollWidth<=innerWidth),true);

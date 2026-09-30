@@ -111,6 +111,18 @@ try {
     assert.equal(await page.locator('#curve-price').count(), 1);
     assert.equal(await page.locator('#market-age').count(), 1);
     assert.equal(await page.locator('#market-block').count(), 1);
+    assert.equal(await page.locator('#price-chart-current').count(), 1);
+    assert.equal(await page.locator('#price-chart-high').count(), 1);
+    assert.equal(await page.locator('#price-chart-low').count(), 1);
+    assert.equal(await page.locator('#price-chart-trades').count(), 1);
+    assert.deepEqual(
+      await page.locator('[data-chart-range]').allTextContents(),
+      ['LIVE','1D','1W','1M','1Y','ALL']
+    );
+    assert.equal(
+      await page.locator('[data-chart-range="LIVE"]').getAttribute('aria-pressed'),
+      'true'
+    );
     await page.locator('#show-help').click();
     assert.equal(await page.locator('#help-section').isVisible(), true);
     await page.locator('#show-home').click();

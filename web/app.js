@@ -293,6 +293,58 @@ async function refreshMarketAfterAction(id) {
 }
 
 let chartRequest = 0;
+let chartTrades = [];
+let chartMarketId = null;
+let chartRange = 'LIVE';
+
+const CHART_RANGES = Object.freeze({
+  LIVE: null,
+  '1D': 86_400,
+  '1W': 604_800,
+  '1M': 2_592_000,
+  '1Y': 31_536_000,
+  ALL: null
+});
+
+function chartPriceText(value, symbol) {
+  if (!Number.isFinite(value) || value <= 0) return '-';
+
+  const text =
+    value >= 1
+      ? value.toLocaleString(undefined, { maximumFractionDigits: 8 })
+      : value >= 0.000001
+        ? value.toPrecision(7)
+        : value.toExponential(5);
+
+  return text + ' ETH/' + symbol;
+}
+
+function setChartRangeButtons() {
+  for (const button of document.querySelectorAll('[data-chart-range]')) {
+    const active = button.dataset.chartRange === chartRange;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-pressed', String(active));
+  }
+}
+
+function tradesForChartRange() {
+  if (chartRange === 'LIVE') {
+    // LIVE means the latest available real trades, up to 30 executions.
+    return chartTrades.slice(-30);
+  }
+
+  if (chartRange === 'ALL') {
+    return [...chartTrades];
+  }
+
+  const seconds = CHART_RANGES[chartRange];
+  const cutoff = Math.floor(Date.now() / 1000) - seconds;
+
+  return chartTrades.filter(trade =>
+    Number.isFinite(Number(trade.timestamp)) &&
+    Number(trade.timestamp) >= cutoff
+  );
+}
 
 function clearMarketChart(message) {
   $('price-chart').replaceChildren();
@@ -300,13 +352,114 @@ function clearMarketChart(message) {
   empty.className = 'price-chart-empty';
   empty.textContent = message;
   $('price-chart').append(empty);
+
+  $('price-chart-current').textContent = '-';
+  $('price-chart-pair').textContent = 'ETH / TOKEN';
   $('price-chart-change').textContent = 'No trades yet';
   $('price-chart-change').className = 'chart-change';
+  $('price-chart-high').textContent = '-';
+  $('price-chart-low').textContent = '-';
+  $('price-chart-trades').textContent = '0';
   $('price-chart-status').textContent = message;
+}
+
+function renderMarketChartRange(market) {
+  setChartRangeButtons();
+
+  $('price-chart-pair').textContent =
+    'ETH / ' + market.symbol;
+
+  const visible = tradesForChartRange();
+
+  const summary = renderPriceChart(
+    $('price-chart'),
+    visible,
+    market.symbol
+  );
+
+  if (!summary.count) {
+    $('price-chart-current').textContent = '-';
+    $('price-chart-high').textContent = '-';
+    $('price-chart-low').textContent = '-';
+    $('price-chart-trades').textContent = '0';
+
+    if (!chartTrades.length) {
+      $('price-chart-change').textContent =
+        'No trades yet';
+      $('price-chart-status').textContent =
+        'No completed buy/sell Trade events were found in the bounded recent Base history.';
+    } else {
+      $('price-chart-change').textContent =
+        'No trades';
+      $('price-chart-status').textContent =
+        'No timestamped real trades were found in the selected ' +
+        chartRange +
+        ' range. Try LIVE or ALL.';
+    }
+
+    $('price-chart-change').className =
+      'chart-change';
+    return;
+  }
+
+  const change = summary.changePct;
+  const direction = summary.direction;
+
+  $('price-chart-current').textContent =
+    chartPriceText(summary.latestPrice, market.symbol);
+
+  $('price-chart-high').textContent =
+    chartPriceText(summary.highPrice, market.symbol);
+
+  $('price-chart-low').textContent =
+    chartPriceText(summary.lowPrice, market.symbol);
+
+  $('price-chart-trades').textContent =
+    String(summary.count);
+
+  $('price-chart-change').className =
+    'chart-change' +
+    (direction === 'up'
+      ? ' up'
+      : direction === 'down'
+        ? ' down'
+        : '');
+
+  $('price-chart-change').textContent =
+    (change > 0 ? '+' : '') +
+    change.toFixed(2) +
+    '%';
+
+  const rangeDescription =
+    chartRange === 'LIVE'
+      ? 'latest available real trades'
+      : chartRange === 'ALL'
+        ? 'all trades in the loaded bounded history'
+        : chartRange + ' real trades';
+
+  $('price-chart-status').textContent =
+    summary.count +
+    ' ' +
+    rangeDescription +
+    ' - latest execution ' +
+    chartPriceText(summary.latestPrice, market.symbol) +
+    '. The line is ' +
+    (direction === 'up'
+      ? 'green because the range ended higher.'
+      : direction === 'down'
+        ? 'red because the range ended lower.'
+        : 'neutral because the first and last displayed prices match.');
 }
 
 async function loadMarketChart(market) {
   const request = ++chartRequest;
+
+  if (chartMarketId !== market.id) {
+    chartMarketId = market.id;
+    chartTrades = [];
+    chartRange = 'LIVE';
+    setChartRangeButtons();
+  }
 
   if (
     state.chain !== 'base' ||
@@ -319,7 +472,7 @@ async function loadMarketChart(market) {
   }
 
   $('price-chart-status').textContent =
-    'Loading recent real Trade events from Base Mainnet…';
+    'Loading recent real Trade events from Base Mainnet...';
 
   try {
     const trades =
@@ -335,47 +488,8 @@ async function loadMarketChart(market) {
       return;
     }
 
-    const summary =
-      renderPriceChart(
-        $('price-chart'),
-        trades,
-        market.symbol
-      );
-
-    if (!summary.count) {
-      $('price-chart-change').textContent =
-        'No trades yet';
-      $('price-chart-change').className =
-        'chart-change';
-      $('price-chart-status').textContent =
-        'No completed buy/sell Trade events were found in the bounded recent Base history.';
-      return;
-    }
-
-    const change = summary.changePct;
-    const direction =
-      change > 0
-        ? 'up'
-        : change < 0
-          ? 'down'
-          : '';
-
-    $('price-chart-change').className =
-      'chart-change' +
-      (direction ? ' ' + direction : '');
-
-    $('price-chart-change').textContent =
-      (change > 0 ? '+' : '') +
-      change.toFixed(2) +
-      '%';
-
-    $('price-chart-status').textContent =
-      summary.count +
-      ' recent on-chain trades · latest execution price ' +
-      summary.latestPrice.toPrecision(6) +
-      ' ETH/' +
-      market.symbol +
-      '. Green segments moved up; red segments moved down.';
+    chartTrades = trades;
+    renderMarketChartRange(market);
   } catch (error) {
     if (
       request !== chartRequest ||
@@ -384,11 +498,28 @@ async function loadMarketChart(market) {
       return;
     }
 
+    chartTrades = [];
+
     clearMarketChart(
       'Recent trade history is temporarily unavailable: ' +
       (error?.message || 'read failed')
     );
   }
+}
+
+for (const button of document.querySelectorAll('[data-chart-range]')) {
+  button.addEventListener('click', () => {
+    const selected = button.dataset.chartRange;
+    if (!Object.hasOwn(CHART_RANGES, selected)) return;
+
+    chartRange = selected;
+
+    if (state.market) {
+      renderMarketChartRange(state.market);
+    } else {
+      setChartRangeButtons();
+    }
+  });
 }
 async function getAdapter() {
   if (state.adapter) return state.adapter;

@@ -10,7 +10,7 @@
 <title>PumpLite · Token launches, kept simple</title>
 <link rel="stylesheet" href="./assets/styles.css">
 <script defer src="./assets/phantom-diagnostic.js"></script>
-<script type="module" src="./assets/app.js?boot=20260930v10"></script>
+<script type="module" src="./assets/app.js?boot=20260930v11"></script>
 </head>
 <body>
 <a class="skip-link" id="skip-content" href="#main-content">Skip to main content</a>
@@ -229,13 +229,36 @@
         <p class="fine">A Base EAS attestation is publicly and independently verifiable. Other wallets, explorers and markets can read it if they choose to integrate PumpLite’s schema; PumpLite cannot force another service to display its own verification badge.</p>
       </div>
     </section>
-    <section class="panel market-chart-panel" aria-labelledby="price-chart-title">
-      <div class="chart-heading">
-        <div><p class="eyebrow">PRICE CHART</p><h2 id="price-chart-title">Recent on-chain trades</h2></div>
+    <section class="panel market-chart-panel wallet-chart-panel" aria-labelledby="price-chart-title">
+      <div class="wallet-chart-top">
+        <div>
+          <p class="eyebrow">REAL ON-CHAIN PRICE</p>
+          <h2 id="price-chart-title">Trade price history</h2>
+          <strong id="price-chart-current" class="chart-current-price">-</strong>
+          <span id="price-chart-pair" class="chart-pair">ETH / TOKEN</span>
+        </div>
         <strong id="price-chart-change" class="chart-change">No trades yet</strong>
       </div>
-      <div id="price-chart" class="price-chart" role="img" aria-label="Recent PLITE market trade price chart"></div>
-      <p id="price-chart-status" class="fine">Loading recent on-chain trade history…</p>
+
+      <div id="price-chart" class="price-chart wallet-price-chart" role="img" aria-label="Real PumpLite market trade price chart"></div>
+
+      <div class="chart-range-tabs" role="group" aria-label="Chart time range">
+        <button type="button" class="chart-range active" data-chart-range="LIVE" aria-pressed="true">LIVE</button>
+        <button type="button" class="chart-range" data-chart-range="1D" aria-pressed="false">1D</button>
+        <button type="button" class="chart-range" data-chart-range="1W" aria-pressed="false">1W</button>
+        <button type="button" class="chart-range" data-chart-range="1M" aria-pressed="false">1M</button>
+        <button type="button" class="chart-range" data-chart-range="1Y" aria-pressed="false">1Y</button>
+        <button type="button" class="chart-range" data-chart-range="ALL" aria-pressed="false">ALL</button>
+      </div>
+
+      <div class="chart-mini-stats" aria-label="Selected chart range statistics">
+        <span><small>High</small><strong id="price-chart-high">-</strong></span>
+        <span><small>Low</small><strong id="price-chart-low">-</strong></span>
+        <span><small>Trades</small><strong id="price-chart-trades">0</strong></span>
+      </div>
+
+      <p id="price-chart-status" class="fine">Loading real on-chain Trade events from Base Mainnet...</p>
+      <p class="fine chart-history-note">Green means the selected range finished above its first displayed trade; red means it finished below. LIVE shows the latest available real trades. Longer ranges only use real trades found by PumpLite&apos;s bounded on-chain history scan - no price points are invented.</p>
     </section>
     <div class="workspace">
       <section class="panel">

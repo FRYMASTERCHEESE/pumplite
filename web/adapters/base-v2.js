@@ -975,8 +975,8 @@ export function adapter(config, notify, changed = () => {}) {
       let to = latest;
       let logs = [];
 
-      // Recent chart history only. Read-only log queries are deliberately
-      // bounded so a chart can never create an unbounded RPC scan.
+      // Bounded recent history only. This prevents a public chart from
+      // triggering an unbounded RPC scan. No older points are fabricated.
       for (
         let chunk = 0;
         chunk < 20 && to >= 0 && logs.length < limit;
@@ -1005,6 +1005,40 @@ export function adapter(config, notify, changed = () => {}) {
         logs = logs.slice(-limit);
       }
 
+      // Time-range tabs use exact block timestamps. Read each unique trade
+      // block once, in small batches, and keep charting available even if
+      // a timestamp lookup fails.
+      const blockTimes = new Map();
+      const blockNumbers = [
+        ...new Set(
+          logs.map(log => Number(log.blockNumber))
+        )
+      ];
+
+      for (let index = 0; index < blockNumbers.length; index += 8) {
+        const batch = blockNumbers.slice(index, index + 8);
+
+        const blocks = await Promise.all(
+          batch.map(async blockNumber => {
+            try {
+              return await provider.getBlock(blockNumber);
+            } catch {
+              return null;
+            }
+          })
+        );
+
+        for (let offset = 0; offset < batch.length; offset++) {
+          const block = blocks[offset];
+          if (block && Number.isFinite(Number(block.timestamp))) {
+            blockTimes.set(
+              batch[offset],
+              Number(block.timestamp)
+            );
+          }
+        }
+      }
+
       return logs.map(log => {
         const isBuy = Boolean(log.args.isBuy);
         const input = BigInt(log.args.input);
@@ -1017,6 +1051,8 @@ export function adapter(config, notify, changed = () => {}) {
 
         return {
           blockNumber: Number(log.blockNumber),
+          timestamp:
+            blockTimes.get(Number(log.blockNumber)) ?? null,
           transactionHash: log.transactionHash,
           isBuy,
           input,
@@ -1025,7 +1061,6 @@ export function adapter(config, notify, changed = () => {}) {
         };
       });
     },
-
     async trade(m, side, amount, min) {
       if (!['buy', 'sell'].includes(side) || amount <= 0n || min <= 0n) throw Error('Invalid trade parameters');
       const s = await wallet();

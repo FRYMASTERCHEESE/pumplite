@@ -74,6 +74,12 @@ test(
         'utf8'
       );
 
+    const styles =
+      await readFile(
+        'web/styles.css',
+        'utf8'
+      );
+
     assert.match(
       app,
       /refreshMarketAfterAction/
@@ -126,12 +132,27 @@ test(
 
     assert.match(
       chart,
-      /up-line/
+      /trend-line/
     );
 
     assert.match(
       chart,
-      /down-line/
+      /trend-area/
+    );
+
+    assert.match(
+      chart,
+      /trend-' \+ direction/
+    );
+
+    assert.match(
+      styles,
+      /\.trend-up/
+    );
+
+    assert.match(
+      styles,
+      /\.trend-down/
     );
   }
 );
