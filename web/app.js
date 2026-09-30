@@ -501,7 +501,7 @@ function renderMarketChartRange(market) {
 
     if (!chartTrades.length) {
       $('price-chart-change').textContent =
-        'No recent trades';
+        'No trades yet';
 
       $('price-chart-status').textContent =
         spotPrice === null
