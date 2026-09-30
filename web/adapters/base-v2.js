@@ -975,21 +975,62 @@ export function adapter(config, notify, changed = () => {}) {
       let to = latest;
       let logs = [];
 
-      // Bounded recent history only. This prevents a public chart from
-      // triggering an unbounded RPC scan. No older points are fabricated.
+      // Public Base RPCs can reject wide eth_getLogs windows with HTTP 413.
+      // Start below the common public-node range ceiling and shrink only when
+      // a provider explicitly rejects the range. This remains bounded and
+      // read-only; it never retries or submits a wallet transaction.
+      let logWindow = 999;
+      const minimumLogWindow = 31;
+
+      const rangeRejected = error => {
+        const message = String(
+          error?.shortMessage ||
+          error?.message ||
+          error?.cause?.message ||
+          ''
+        );
+
+        return (
+          /HTTP 413/i.test(message) ||
+          /request too large/i.test(message) ||
+          /response too large/i.test(message) ||
+          /block range/i.test(message) ||
+          /range limit/i.test(message) ||
+          /too many results/i.test(message)
+        );
+      };
+
       for (
         let chunk = 0;
         chunk < 20 && to >= 0 && logs.length < limit;
-        chunk++
       ) {
-        const from = Math.max(0, to - 4_999);
-        const batch = await curve.queryFilter(
-          curve.filters.Trade(),
-          from,
-          to
-        );
+        const from = Math.max(0, to - logWindow);
+        let batch;
+
+        try {
+          batch = await curve.queryFilter(
+            curve.filters.Trade(),
+            from,
+            to
+          );
+        } catch (error) {
+          if (
+            !rangeRejected(error) ||
+            logWindow <= minimumLogWindow
+          ) {
+            throw error;
+          }
+
+          logWindow = Math.max(
+            minimumLogWindow,
+            Math.floor(logWindow / 2)
+          );
+
+          continue;
+        }
 
         logs.push(...batch);
+        chunk++;
 
         if (from === 0) break;
         to = from - 1;

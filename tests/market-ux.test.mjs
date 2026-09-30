@@ -107,6 +107,21 @@ test(
 
     assert.match(
       adapter,
+      /let logWindow = 999/
+    );
+
+    assert.match(
+      adapter,
+      /HTTP 413/
+    );
+
+    assert.match(
+      adapter,
+      /Math\.floor\(logWindow \/ 2\)/
+    );
+
+    assert.match(
+      adapter,
       /Manual Mayhem unlocks 24 hours/
     );
 
