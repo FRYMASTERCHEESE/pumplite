@@ -10,7 +10,7 @@
 <title>PumpLite · Token launches, kept simple</title>
 <link rel="stylesheet" href="./assets/styles.css">
 <script defer src="./assets/phantom-diagnostic.js"></script>
-<script type="module" src="./assets/app.js?boot=20260930v13"></script>
+<script type="module" src="./assets/app.js?boot=20260930v14"></script>
 </head>
 <body>
 <a class="skip-link" id="skip-content" href="#main-content">Skip to main content</a>
@@ -189,35 +189,48 @@
     <div id="market-badges" class="badges"></div>
     <p id="market-source" class="muted"></p>
       <p id="market-metadata" class="fine"></p>
-    <section id="verification-panel" class="panel verification-panel" aria-labelledby="verification-title">
-      <h2 id="verification-title">Token verification</h2><p id="verification-state">Identity has not been checked.</p>
-      <dl id="verification-details" class="identity-details"></dl>
-      <p class="fine">Verified means PumpLite reviewed the token’s identity/provenance. It is not an endorsement, safety guarantee, price promise, or investment recommendation. It is not a security audit.</p>
-      <div id="owner-review-panel" class="owner-review" hidden>
+    <section id="verification-panel" class="panel verification-panel verification-panel-compact" aria-labelledby="verification-title">
+      <p class="eyebrow">VERIFICATION</p>
+      <h2 id="verification-title">Token verification</h2>
+      <p id="verification-state" class="verification-state">Identity has not been checked.</p>
+
+      <details id="verification-details-toggle" class="clean-details verification-details-toggle">
+        <summary>View verification details</summary>
+        <dl id="verification-details" class="identity-details"></dl>
+        <p class="fine">Verified means PumpLite reviewed the token's identity/provenance. It is not an endorsement, safety guarantee, price promise, investment recommendation, or security audit.</p>
+      </details>
+
+      <details id="owner-review-panel" class="owner-review clean-details" hidden>
+        <summary>Owner verification tools</summary>
         <h3>Owner review + portable Base verification</h3>
-        <p class="fine">New PumpLite coins start Pending review. The PumpLite controller wallet can publish a public Ethereum Attestation Service (EAS) review on Base, then mirror that proof into PumpLite’s protected GitHub review registry. No admin password, GitHub token, private key or seed phrase is stored in this public page.</p>
+        <p class="fine">New PumpLite coins start Pending review. The PumpLite controller wallet can publish a public Ethereum Attestation Service (EAS) review on Base, then mirror that proof into PumpLite's protected GitHub review registry. No admin password, GitHub token, private key or seed phrase is stored in this public page.</p>
         <code id="owner-review-market"></code>
-        <p id="eas-schema-status" class="fine">Checking the PumpLite EAS review schema…</p>
+        <p id="eas-schema-status" class="fine">Checking the PumpLite EAS review schema...</p>
         <button id="eas-register-schema" type="button" class="outline full">Register PumpLite review schema on Base</button>
+
         <div class="review-actions">
           <button id="eas-verify" type="button" class="primary">Publish Verified attestation</button>
           <button id="eas-decline" type="button" class="outline">Publish Declined attestation</button>
         </div>
+
         <p id="eas-review-status" class="fine">No owner attestation has been selected for this review yet.</p>
+
         <div id="eas-proof" hidden>
           <code id="eas-review-uid"></code>
           <div class="links">
             <button id="copy-review-uid" type="button" class="outline">Copy EAS UID</button>
-            <a id="eas-review-link" target="_blank" rel="noopener noreferrer">View Base EAS proof ↗</a>
+            <a id="eas-review-link" target="_blank" rel="noopener noreferrer">View Base EAS proof</a>
             <button id="eas-revoke" type="button" class="outline">Revoke proof</button>
           </div>
         </div>
+
         <div class="links">
           <button id="copy-review-market" type="button" class="outline">Copy market address</button>
-          <a id="owner-review-link" href="https://github.com/FRYMASTERCHEESE/pumplite/actions/workflows/review-token.yml" target="_blank" rel="noopener noreferrer">Mirror proof in GitHub review workflow ↗</a>
+          <a id="owner-review-link" href="https://github.com/FRYMASTERCHEESE/pumplite/actions/workflows/review-token.yml" target="_blank" rel="noopener noreferrer">Mirror proof in GitHub review workflow</a>
         </div>
-        <p class="fine">A Base EAS attestation is publicly and independently verifiable. Other wallets, explorers and markets can read it if they choose to integrate PumpLite’s schema; PumpLite cannot force another service to display its own verification badge.</p>
-      </div>
+
+        <p class="fine">A Base EAS attestation is publicly and independently verifiable. Other wallets, explorers and markets can read it if they choose to integrate PumpLite's schema; PumpLite cannot force another service to display its own verification badge.</p>
+      </details>
     </section>
     <section class="panel market-chart-panel wallet-chart-panel" aria-labelledby="price-chart-title">
       <div class="wallet-chart-top">

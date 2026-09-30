@@ -37,12 +37,12 @@ export function verificationPanel(chain, config, market, registry) {
   document.getElementById('market-badges').replaceChildren(badges(chain, config, market, registry));
   document.getElementById('verification-state').textContent =
     trust.verified
-      ? 'Verified by PumpLite ✅ · owner-reviewed identity/provenance · portable Base EAS proof'
+      ? 'Verified by PumpLite \u2705 - identity/provenance reviewed'
       : trust.declined
-        ? 'PumpLite verification declined · no Verified badge'
+        ? 'Verification declined - no Verified badge'
         : trust.created
-          ? 'Pending PumpLite owner identity/provenance review'
-          : 'Factory provenance not established. No verification badge.';
+          ? 'Pending identity/provenance review'
+          : 'Factory provenance not established.';
 
   details.replaceChildren();
   const values = {

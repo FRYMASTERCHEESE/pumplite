@@ -358,3 +358,14 @@ footer{border-color:#20232d}
   .clean-market-metrics{grid-template-columns:1fr 1fr}
   .mayhem-summary{padding:12px}
 }
+
+/* PumpLite V14 compact verification. */
+.verification-panel-compact{padding-top:20px;padding-bottom:20px}
+.verification-panel-compact>.eyebrow{margin-bottom:5px}
+.verification-panel-compact>h2{margin:0 0 6px}
+.verification-state{margin:0;font-weight:800;color:#dce5ee}
+.verification-details-toggle{margin-top:14px}
+.verification-details-toggle .identity-details{margin:6px 0 14px}
+.verification-details-toggle .fine{margin-bottom:2px}
+#owner-review-panel{margin-top:12px}
+#owner-review-panel>summary{font-size:13px}
