@@ -99,6 +99,8 @@ export function adapter(config, notify, changed = () => {}) {
     provider
   );
 
+  const marketStats24hCache = new Map();
+
   async function batchRead(calls, blockTag) {
     if (!calls.length) return [];
 
@@ -1084,6 +1086,285 @@ export function adapter(config, notify, changed = () => {}) {
       const after = await this.reviewAttestation(uid);
       if (after.revocationTime === 0n) throw Error('EAS revocation was not visible after confirmation');
       return after;
+    },
+
+    async marketStats24h(m) {
+      await network();
+
+      const id = getAddress(m.id);
+      const cacheKey = id.toLowerCase();
+      const cached =
+        marketStats24hCache.get(cacheKey);
+
+      if (
+        cached &&
+        Date.now() - cached.cachedAt < 120_000
+      ) {
+        return cached.value;
+      }
+
+      if (!await factory().isMarket(id)) {
+        throw Error(
+          'Market is not in the configured factory'
+        );
+      }
+
+      const curve = new Contract(
+        id,
+        abis.CurveMarketV2,
+        provider
+      );
+
+      const latestBlock =
+        await provider.getBlock('latest');
+
+      if (!latestBlock) {
+        throw Error('Latest Base block is unavailable');
+      }
+
+      const latestNumber =
+        Number(latestBlock.number);
+
+      const cutoffTimestamp =
+        Number(latestBlock.timestamp) - 86_400;
+
+      // Base normally produces blocks quickly. Start roughly 50k blocks
+      // back, then expand only when needed so this also remains correct if
+      // observed block cadence changes.
+      let span =
+        Math.min(latestNumber, 50_000);
+
+      let low =
+        Math.max(
+          0,
+          latestNumber - span
+        );
+
+      let lowBlock =
+        await provider.getBlock(low);
+
+      while (
+        low > 0 &&
+        lowBlock &&
+        Number(lowBlock.timestamp) >=
+          cutoffTimestamp
+      ) {
+        const nextSpan =
+          Math.min(
+            latestNumber,
+            Math.max(
+              span + 1,
+              span * 2
+            )
+          );
+
+        if (nextSpan === span) break;
+
+        span = nextSpan;
+
+        low =
+          Math.max(
+            0,
+            latestNumber - span
+          );
+
+        lowBlock =
+          await provider.getBlock(low);
+      }
+
+      if (!lowBlock) {
+        throw Error(
+          'Unable to locate the 24h Base boundary'
+        );
+      }
+
+      let startBlock;
+
+      if (
+        low === 0 &&
+        Number(lowBlock.timestamp) >=
+          cutoffTimestamp
+      ) {
+        startBlock = 0;
+      } else {
+        let left = low;
+        let right = latestNumber;
+
+        // Find the first Base block whose timestamp is inside the rolling
+        // 24h window. This avoids estimating 24h volume from block counts.
+        while (right - left > 1) {
+          const middle =
+            Math.floor(
+              (left + right) / 2
+            );
+
+          const block =
+            await provider.getBlock(middle);
+
+          if (!block) {
+            throw Error(
+              'Unable to read Base block ' +
+              middle
+            );
+          }
+
+          if (
+            Number(block.timestamp) <
+            cutoffTimestamp
+          ) {
+            left = middle;
+          } else {
+            right = middle;
+          }
+        }
+
+        startBlock = right;
+      }
+
+      const tradeTopic =
+        curve.interface.getEvent(
+          'Trade'
+        ).topicHash;
+
+      const burnTopic =
+        curve.interface.getEvent(
+          'BuyAndBurn'
+        ).topicHash;
+
+      let from = startBlock;
+      let volume = 0n;
+      let trades = 0;
+      let buyAndBurns = 0;
+      let logWindow = 999;
+
+      const minimumLogWindow = 31;
+
+      const rangeRejected = error => {
+        const message = String(
+          error?.shortMessage ||
+          error?.message ||
+          error?.cause?.message ||
+          ''
+        );
+
+        return (
+          /HTTP 413/i.test(message) ||
+          /request too large/i.test(message) ||
+          /response too large/i.test(message) ||
+          /block range/i.test(message) ||
+          /range limit/i.test(message) ||
+          /too many results/i.test(message)
+        );
+      };
+
+      while (from <= latestNumber) {
+        const to =
+          Math.min(
+            latestNumber,
+            from + logWindow
+          );
+
+        let batch;
+
+        try {
+          batch =
+            await provider.getLogs({
+              address: id,
+              fromBlock: from,
+              toBlock: to,
+              topics: [[
+                tradeTopic,
+                burnTopic
+              ]]
+            });
+        } catch (error) {
+          if (
+            !rangeRejected(error) ||
+            logWindow <= minimumLogWindow
+          ) {
+            throw error;
+          }
+
+          logWindow =
+            Math.max(
+              minimumLogWindow,
+              Math.floor(logWindow / 2)
+            );
+
+          continue;
+        }
+
+        for (const log of batch) {
+          const parsed =
+            curve.interface.parseLog(log);
+
+          if (!parsed) continue;
+
+          if (parsed.name === 'Trade') {
+            const isBuy =
+              Boolean(parsed.args.isBuy);
+
+            const input =
+              BigInt(parsed.args.input);
+
+            const output =
+              BigInt(parsed.args.output);
+
+            const platformFee =
+              BigInt(parsed.args.platformFee);
+
+            const mayhemSupport =
+              BigInt(parsed.args.mayhemSupport);
+
+            volume +=
+              isBuy
+                ? input
+                : output +
+                  platformFee +
+                  mayhemSupport;
+
+            trades++;
+          } else if (
+            parsed.name === 'BuyAndBurn'
+          ) {
+            volume +=
+              BigInt(parsed.args.input);
+
+            buyAndBurns++;
+          }
+        }
+
+        from = to + 1;
+
+        // Keep public RPC reads deliberately paced rather than sending a
+        // large burst of log requests.
+        if (from <= latestNumber) {
+          await new Promise(
+            resolve =>
+              setTimeout(resolve, 35)
+          );
+        }
+      }
+
+      const value = {
+        volume,
+        trades,
+        buyAndBurns,
+        fromBlock: startBlock,
+        toBlock: latestNumber,
+        cutoffTimestamp,
+        observedAt: Date.now()
+      };
+
+      marketStats24hCache.set(
+        cacheKey,
+        {
+          cachedAt: Date.now(),
+          value
+        }
+      );
+
+      return value;
     },
 
     async tradeHistory(m, limit = 120) {

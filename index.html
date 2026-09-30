@@ -65,7 +65,8 @@
             <span><small>Network</small><b>Base</b></span>
             <span><small>Market</small><b>V2 curve</b></span>
             <span><small>Live price</small><b id="plite-featured-price">-</b></span>
-            <span><small>Curve reserve</small><b id="plite-featured-reserve">-</b></span>
+            <span><small>Curve market cap</small><b id="plite-featured-market-cap">-</b></span>
+            <span><small>Curve backing</small><b id="plite-featured-reserve">-</b></span>
             <span><small>Current supply</small><b id="plite-featured-supply">-</b></span>
             <span><small>Curve volume</small><b id="plite-featured-volume">-</b></span>
           </div>
@@ -296,10 +297,15 @@
 
         <dl class="stats market-live-metrics clean-market-metrics">
           <div><dt>Price</dt><dd id="curve-price">-</dd></div>
-          <div><dt>ETH reserve</dt><dd id="native-reserve">-</dd></div>
-          <div><dt>Volume</dt><dd id="volume">-</dd></div>
+          <div><dt>Curve-implied market cap</dt><dd id="market-cap">-</dd></div>
+          <div><dt>Curve backing</dt><dd id="native-reserve">-</dd></div>
+          <div><dt>24h curve volume</dt><dd id="volume-24h">-</dd></div>
+          <div><dt>24h trades</dt><dd id="trades-24h">-</dd></div>
+          <div><dt>Cumulative curve volume</dt><dd id="volume">-</dd></div>
           <div><dt>Tokens in market</dt><dd id="token-reserve">-</dd></div>
         </dl>
+        <p id="market-24h-status" class="fine">Rolling 24h Base activity has not been loaded yet.</p>
+        <p class="fine">Curve backing is real ETH held by the PumpLite market contract. It is not the same as external DEX LP liquidity. Curve-implied market cap uses the current PumpLite curve price and current on-chain token supply.</p>
 
         <div id="base-v2-market" hidden>
           <div class="mayhem-summary">

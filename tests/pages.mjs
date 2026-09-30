@@ -138,6 +138,11 @@ try {
     assert.equal(await page.locator('#market-age').count(), 1);
     assert.equal(await page.locator('#market-block').count(), 1);
     assert.equal(await page.locator('#price-chart-current').count(), 1);
+    assert.equal(await page.locator('#market-cap').count(), 1);
+    assert.equal(await page.locator('#volume-24h').count(), 1);
+    assert.equal(await page.locator('#trades-24h').count(), 1);
+    assert.equal(await page.locator('#market-24h-status').count(), 1);
+    assert.equal(await page.locator('#plite-featured-market-cap').count(), 1);
     assert.equal(await page.locator('#price-chart-high').count(), 1);
     assert.equal(await page.locator('#price-chart-low').count(), 1);
     assert.equal(await page.locator('#price-chart-trades').count(), 1);

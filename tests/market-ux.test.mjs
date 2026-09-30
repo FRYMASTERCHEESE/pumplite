@@ -153,6 +153,41 @@ test(
     );
 
     assert.match(
+      html,
+      /id="market-cap"/
+    );
+
+    assert.match(
+      html,
+      /id="volume-24h"/
+    );
+
+    assert.match(
+      html,
+      /id="trades-24h"/
+    );
+
+    assert.match(
+      html,
+      /id="plite-featured-market-cap"/
+    );
+
+    assert.match(
+      app,
+      /marketCapWei/
+    );
+
+    assert.match(
+      app,
+      /loadMarket24hStats/
+    );
+
+    assert.match(
+      adapter,
+      /async marketStats24h/
+    );
+
+    assert.match(
       app,
       /renderFeaturedPlite/
     );

@@ -392,6 +392,86 @@ function renderRecentTrades(market) {
   }
 }
 
+let marketStats24hRequest = 0;
+
+async function loadMarket24hStats(market) {
+  const request = ++marketStats24hRequest;
+
+  const production =
+    location.protocol === 'https:' &&
+    location.hostname !== 'localhost' &&
+    location.hostname !== '127.0.0.1';
+
+  if (!production) {
+    $('volume-24h').textContent =
+      'Production live read';
+
+    $('trades-24h').textContent =
+      'Production live read';
+
+    $('market-24h-status').textContent =
+      'Rolling 24h statistics are read from Base Mainnet on the production HTTPS site.';
+
+    return;
+  }
+
+  $('volume-24h').textContent = 'Loading…';
+  $('trades-24h').textContent = 'Loading…';
+
+  $('market-24h-status').textContent =
+    'Reading the exact rolling 24h PumpLite curve window from Base Mainnet…';
+
+  try {
+    const stats =
+      await (await getAdapter()).marketStats24h(
+        market
+      );
+
+    if (
+      request !== marketStats24hRequest ||
+      state.market?.id !== market.id
+    ) {
+      return;
+    }
+
+    $('volume-24h').textContent =
+      compactAmount(
+        stats.volume,
+        market.nativeDecimals,
+        8
+      ) +
+      ' ' +
+      market.unit;
+
+    $('trades-24h').textContent =
+      Number(stats.trades).toLocaleString();
+
+    $('market-24h-status').textContent =
+      'Rolling 24h curve activity through Base block ' +
+      Number(stats.toBlock).toLocaleString() +
+      '. Volume follows the deployed PumpLite market accounting; the trade count contains real Buy/Sell Trade events only.' +
+      (stats.buyAndBurns
+        ? ' ' +
+          Number(stats.buyAndBurns).toLocaleString() +
+          ' Buy & Burn execution(s) are included in curve volume but not the trade count.'
+        : '');
+  } catch (error) {
+    if (
+      request !== marketStats24hRequest ||
+      state.market?.id !== market.id
+    ) {
+      return;
+    }
+
+    $('volume-24h').textContent = 'Unavailable';
+    $('trades-24h').textContent = 'Unavailable';
+
+    $('market-24h-status').textContent =
+      '24h Base activity is temporarily unavailable: ' +
+      (error?.message || 'read failed');
+  }
+}
+
 function renderMarketChartRange(market) {
   setChartRangeButtons();
 
@@ -602,6 +682,42 @@ function marketPriceText(m) {
   return formatUnits(value, m.nativeDecimals, 14) + ' ' + m.unit;
 }
 
+function marketCapWei(m) {
+  const price = marketPriceWei(m);
+
+  if (
+    price === null ||
+    typeof m?.supply !== 'bigint' ||
+    m.supply < 0n
+  ) {
+    return null;
+  }
+
+  return (
+    price *
+    m.supply /
+    (10n ** BigInt(m.decimals))
+  );
+}
+
+function marketCapText(m) {
+  const value = marketCapWei(m);
+
+  if (value === null) {
+    return 'Unavailable';
+  }
+
+  return (
+    compactAmount(
+      value,
+      m.nativeDecimals,
+      8
+    ) +
+    ' ' +
+    m.unit
+  );
+}
+
 function distributedPercent(m) {
   if (!m?.supply || m.supply <= 0n) return 0;
   return Number(
@@ -696,8 +812,9 @@ function row(m) {
 
   const entries = [
     ['Price', marketPriceText(m)],
-    ['Volume', compactAmount(m.volume, m.nativeDecimals, 6) + ' ' + m.unit],
-    ['Reserve', compactAmount(m.nativeReserve, m.nativeDecimals, 6) + ' ' + m.unit],
+    ['Curve cap', marketCapText(m)],
+    ['Curve volume', compactAmount(m.volume, m.nativeDecimals, 6) + ' ' + m.unit],
+    ['Curve backing', compactAmount(m.nativeReserve, m.nativeDecimals, 6) + ' ' + m.unit],
     ['Distributed', distributedPercent(m).toFixed(2) + '%']
   ];
 
@@ -784,6 +901,7 @@ function renderFeaturedPlite() {
 
   const fields = [
     'plite-featured-price',
+    'plite-featured-market-cap',
     'plite-featured-reserve',
     'plite-featured-supply',
     'plite-featured-volume'
@@ -808,6 +926,9 @@ function renderFeaturedPlite() {
 
   $('plite-featured-price').textContent =
     marketPriceText(market);
+
+  $('plite-featured-market-cap').textContent =
+    marketCapText(market);
 
   $('plite-featured-reserve').textContent =
     compactAmount(
@@ -1077,6 +1198,7 @@ async function refreshLiveData() {
       await adapter.market(state.market.id);
     state.market = fresh;
     renderMarket(fresh);
+    void loadMarket24hStats(fresh);
   }
 
   renderDiscovery();
@@ -1087,9 +1209,14 @@ function renderMarket(m) {
   $('market-name').textContent = m.name; $('market-symbol').textContent = m.symbol + ' / ' + m.unit;
   $('market-source').textContent = m.source + ' · fetched ' + new Date(m.observedAt).toLocaleTimeString() + ' · refresh on demand';
   $('curve-price').textContent = marketPriceText(m) + ' / ' + m.symbol;
+  $('market-cap').textContent = marketCapText(m);
   $('native-reserve').textContent = formatUnits(m.nativeReserve, m.nativeDecimals) + ' ' + m.unit;
   $('token-reserve').textContent = formatUnits(m.tokenReserve, m.decimals, 2) + ' ' + m.symbol;
   $('volume').textContent = formatUnits(m.volume, m.nativeDecimals) + ' ' + m.unit;
+  $('volume-24h').textContent = 'Loading…';
+  $('trades-24h').textContent = 'Loading…';
+  $('market-24h-status').textContent =
+    'Preparing the rolling 24h Base activity read…';
   $('virtual').textContent = formatUnits(m.virtualNative, m.nativeDecimals) + ' ' + m.unit;
   $('market-age').textContent = launchAge(m);
   $('market-block').textContent = Number(m.provenance?.block || 0).toLocaleString();
@@ -1275,6 +1402,7 @@ async function loadMarket(id) {
   }
 
   void loadMarketChart(m);
+  void loadMarket24hStats(m);
   void loadOwnerReviewTools(m).catch(error => {
     $('eas-schema-status').textContent =
       'Portable review tools are temporarily unavailable: ' +
@@ -1293,7 +1421,7 @@ async function route() {
   $('home').hidden = Boolean(id); $('market-page').hidden = !id;
   if (id) {
     $('market-name').textContent = 'Loading market…';
-    for (const field of ['market-source','market-metadata','native-reserve','token-reserve','volume','virtual','distribution-label']) $(field).textContent = '—';
+    for (const field of ['market-source','market-metadata','market-cap','native-reserve','token-reserve','volume','volume-24h','trades-24h','market-24h-status','virtual','distribution-label']) $(field).textContent = '—';
     $('distribution').value = 0;
     $('market-link').removeAttribute('href'); $('token-link').removeAttribute('href');
     await loadMarket(id);
