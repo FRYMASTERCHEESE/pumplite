@@ -336,3 +336,25 @@ footer{border-color:#20232d}
 .simple-buy-button{min-height:56px;font-size:17px;font-weight:900}
 .advanced-trade-title{margin:26px 0 12px;color:#aeb5c2;font-size:15px}
 @media(max-width:560px){.simple-buy-card{padding:17px}.simple-buy-entry{grid-template-columns:1fr}.simple-buy-entry input,.simple-buy-entry select{min-height:50px}.simple-buy-preview{padding:14px}.simple-buy-button{min-height:54px}}
+
+/* PumpLite V13 clean UI. */
+.clean-market-metrics{margin-bottom:14px}
+.mayhem-summary{display:flex;align-items:center;justify-content:space-between;margin:12px 0;padding:13px 15px;border:1px solid #29303b;border-radius:14px;background:#0b0e13}
+.mayhem-summary span{display:flex;align-items:center;gap:10px}
+.mayhem-summary small{color:#8c95a4;font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase}
+.mayhem-summary strong{font-size:14px}
+.clean-details{margin-top:14px;border:1px solid #29303b;border-radius:14px;background:#0b0e13;padding:0 14px}
+.clean-details>summary{cursor:pointer;list-style:none;padding:14px 0;font-weight:800;color:#c5cbd6}
+.clean-details>summary::-webkit-details-marker{display:none}
+.clean-details>summary::after{content:"+";float:right;color:#8d96a6}
+.clean-details[open]>summary::after{content:"-"}
+.clean-details[open]{padding-bottom:14px}
+.simple-sell-card{margin-top:18px;padding-top:18px;border-top:1px solid #252b35}
+.simple-sell-card h3{margin-top:4px}
+.trading-advanced-tools{margin-top:18px}
+.market-admin-tools>div+div{margin-top:20px;padding-top:18px;border-top:1px solid #252b35}
+#wallet-troubleshooting .notice{margin-top:12px}
+@media(max-width:560px){
+  .clean-market-metrics{grid-template-columns:1fr 1fr}
+  .mayhem-summary{padding:12px}
+}

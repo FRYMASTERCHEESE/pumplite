@@ -8,7 +8,7 @@ import {
 } from '../web/math.js';
 
 test(
-  'buy UX has no PumpLite hardcoded positive minimum',
+  'trade UX has no PumpLite hardcoded positive minimum',
   async () => {
     assert.equal(
       parseUnits(
@@ -42,7 +42,19 @@ test(
 
     assert.match(
       html,
-      /No PumpLite minimum/
+      /Enter how many tokens you want to sell/
+    );
+
+    const simpleBuyAmount =
+      html.match(
+        /<input id="trade-display-amount"[^>]*>/
+      )?.[0];
+
+    assert.ok(simpleBuyAmount);
+
+    assert.doesNotMatch(
+      simpleBuyAmount,
+      /\smin=/
     );
   }
 );
@@ -158,6 +170,50 @@ test(
     assert.match(
       app,
       /await connectBaseWalletFromGesture\(\)/
+    );
+
+    const mainClaimLinks =
+      html.match(/href="\.\/claim\.html"/g) || [];
+
+    assert.equal(
+      mainClaimLinks.length,
+      1,
+      'Main page should expose one PLITE Claim link'
+    );
+
+    assert.doesNotMatch(
+      html,
+      /holder-claim-section/
+    );
+
+    assert.doesNotMatch(
+      app,
+      /holderClaimConfigured/
+    );
+
+    assert.doesNotMatch(
+      html,
+      /<option value="buy">Buy tokens<\/option>/
+    );
+
+    assert.match(
+      html,
+      /<option value="sell" selected>Sell tokens<\/option>/
+    );
+
+    assert.match(
+      html,
+      /Advanced market details/
+    );
+
+    assert.match(
+      html,
+      /id="market-admin-tools"/
+    );
+
+    assert.match(
+      html,
+      /Wallet troubleshooting/
     );
 
     assert.match(

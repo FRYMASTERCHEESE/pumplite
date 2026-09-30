@@ -94,7 +94,7 @@ try {
     assert.equal(await page.locator('#create').isDisabled(), false, 'Base create button stays actionable before wallet access; wallet access is requested only after click');
     assert.deepEqual(
       await page.locator('.home-page-tabs').locator('button,a').allTextContents(),
-      ['Home','Create Token','Markets & Trade','PLITE Claim','Help & Safety']
+      ['Home','Create Token','Markets & Trade','Help & Safety']
     );
     assert.equal(
       await page.locator('.claim-header-link').getAttribute('href'),
@@ -111,6 +111,26 @@ try {
     assert.equal(await page.locator('#curve-price').count(), 1);
     assert.equal(await page.locator('#simple-buy-output').count(), 1);
     assert.equal(await page.locator('#trade-use-display').count(), 1);
+    assert.equal(
+      await page.locator('a[href="./claim.html"]').count(),
+      1
+    );
+    assert.equal(
+      await page.locator('#holder-claim-section').count(),
+      0
+    );
+    assert.equal(
+      await page.locator('#market-admin-tools').count(),
+      1
+    );
+    assert.equal(
+      await page.locator('#wallet-troubleshooting').count(),
+      1
+    );
+    assert.equal(
+      await page.locator('#side').inputValue(),
+      'sell'
+    );
     assert.deepEqual(
       await page.locator('#trade-display-currency option').allTextContents(),
       ['NZD (NZ$)','USD (US$)']

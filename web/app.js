@@ -152,64 +152,6 @@ function controls() {
     state.market?.contractVersion !== 2;
   $('initial-buy-submit').disabled = state.busy;
   $('initial-buy-close').disabled = state.busy;
-  $('holder-claim-refresh').disabled =
-    state.busy ||
-    state.chain !== 'base' ||
-    !holderClaimConfigured();
-
-  $('holder-claim-button').disabled =
-    state.busy ||
-    state.chain !== 'base' ||
-    !holderClaimConfigured() ||
-    !state.wallet;
-}
-function holderClaimConfigured() {
-  const value = state.config?.base?.holderClaim;
-
-  return Boolean(
-    value?.enabled === true &&
-    typeof value.contract === 'string' &&
-    /^0x[0-9a-fA-F]{40}$/.test(value.contract) &&
-    typeof value.token === 'string' &&
-    /^0x[0-9a-fA-F]{40}$/.test(value.token)
-  );
-}
-
-async function refreshHolderClaim() {
-  const progress = $('holder-claim-progress');
-
-  if (
-    state.chain !== 'base' ||
-    !holderClaimConfigured()
-  ) {
-    progress.textContent =
-      'Claim contract is prepared but is not deployed and funded yet. No claim transaction is available.';
-    controls();
-    return;
-  }
-
-  progress.textContent =
-    'Reading the live PLITE claim contract from Base Mainnet...';
-
-  const result =
-    await (await getAdapter()).holderClaimStatus();
-
-  const count = Number(result.claimCount);
-  const max = Number(result.maxClaims);
-  const remaining = Number(result.remaining);
-
-  progress.textContent =
-    count +
-    '/' +
-    max +
-    ' wallet claims completed - ' +
-    remaining +
-    ' remaining.' +
-    (result.claimed === true
-      ? ' This connected wallet already claimed.'
-      : '');
-
-  controls();
 }
 function invalidateQuote() {
   state.quote = null;
@@ -982,16 +924,24 @@ function renderMarket(m) {
 
     const walletAddress = state.wallet?.toLowerCase();
 
-    $('base-v2-creator').hidden =
-      !walletAddress ||
-      walletAddress !== String(m.creator).toLowerCase();
+    const isCreator =
+      Boolean(walletAddress) &&
+      walletAddress ===
+        String(m.creator).toLowerCase();
 
-    $('base-v2-controller').hidden =
-      !walletAddress ||
-      walletAddress !== String(m.mayhemController).toLowerCase();
+    const isController =
+      Boolean(walletAddress) &&
+      walletAddress ===
+        String(m.mayhemController).toLowerCase();
+
+    $('base-v2-creator').hidden = !isCreator;
+    $('base-v2-controller').hidden = !isController;
+    $('market-admin-tools').hidden =
+      !isCreator && !isController;
   } else {
     $('base-v2-creator').hidden = true;
     $('base-v2-controller').hidden = true;
+    $('market-admin-tools').hidden = true;
   }
 
   const ownerWallet =
@@ -1204,11 +1154,6 @@ async function connectBaseWalletFromGesture() {
 
   status('Wallet connected: ' + address);
 
-  void refreshHolderClaim().catch(error => {
-    $('holder-claim-progress').textContent =
-      'Claim status unavailable: ' + (error?.message || 'read failed');
-  });
-
   if (
     state.market ||
     location.hash.startsWith('#base/')
@@ -1220,34 +1165,6 @@ async function connectBaseWalletFromGesture() {
   return address;
 }
 
-$('holder-claim-refresh').addEventListener(
-  'click',
-  () => action(refreshHolderClaim)
-);
-
-$('holder-claim-button').addEventListener(
-  'click',
-  () => action(async () => {
-    if (!state.wallet) {
-      await connectBaseWalletFromGesture();
-    }
-
-    requireWrite();
-
-    const result =
-      await (await getAdapter()).claimHolderToken();
-
-    $('holder-claim-progress').textContent =
-      Number(result.claimCount) +
-      '/' +
-      Number(result.maxClaims) +
-      ' wallet claims completed - ' +
-      Number(result.remaining) +
-      ' remaining. This wallet has claimed 1 PLITE.';
-
-    controls();
-  })
-);
 $('connect').addEventListener('click', () => action(async () => {
   if (state.wallet) {
     state.adapter?.disconnect();
@@ -1548,7 +1465,6 @@ function showHomePage(page, { focus = true } = {}) {
   $('home-workspace').hidden = !['create', 'markets'].includes(selected);
   $('create-section').hidden = selected !== 'create';
   $('explore-section').hidden = selected !== 'markets';
-  $('holder-claim-section').hidden = true;
   $('help-section').hidden = selected !== 'help';
 
   for (const [id, name] of [
@@ -2360,10 +2276,6 @@ function walletChanged() {
   phantomPrepared = false;
   state.wallet = null; $('connect').textContent = 'Connect wallet'; invalidateQuote();
   $('balance').textContent = 'Wallet changed. Reconnect to read balances.';
-  $('holder-claim-progress').textContent =
-    holderClaimConfigured()
-      ? 'Claim status will refresh after reconnect.'
-      : 'Claim contract is prepared but is not deployed and funded yet. No claim transaction is available.';
 }
 const wallets = discoverEvm(window, () => queueMicrotask(renderWalletChoices));
 function renderWalletChoices() {

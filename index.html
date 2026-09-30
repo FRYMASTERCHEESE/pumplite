@@ -10,7 +10,7 @@
 <title>PumpLite · Token launches, kept simple</title>
 <link rel="stylesheet" href="./assets/styles.css">
 <script defer src="./assets/phantom-diagnostic.js"></script>
-<script type="module" src="./assets/app.js?boot=20260930v12"></script>
+<script type="module" src="./assets/app.js?boot=20260930v13"></script>
 </head>
 <body>
 <a class="skip-link" id="skip-content" href="#main-content">Skip to main content</a>
@@ -26,18 +26,16 @@
 </header>
 <main id="main-content" tabindex="-1">
   <div id="phantom-diagnostics" class="notice" role="status" aria-live="polite">
-    <b>Phantom connection diagnostic v2</b>
-    <p id="phantom-tap">Waiting for the page to start. If this remains, the diagnostic script did not load.</p>
-    <p id="wallet-diagnostic">Main app has not started. Reload if this remains.</p>
+    <b>Wallet connection diagnostic</b>
+    <p id="phantom-tap">Tap monitor loaded. No wallet request sent.</p>
+    <p id="wallet-diagnostic">Wallet diagnostics are available if a connection problem occurs.</p>
   </div>
   <div class="notice" id="deployment" role="status">Loading verified Base Mainnet configuration… Trading remains disabled until verification completes.</div>
-  <p class="fine" id="mobile-help"><a id="mobile-coinbase" rel="noopener noreferrer" hidden>Open in Coinbase Wallet</a> <a id="mobile-open" rel="noopener noreferrer" hidden>Open in wallet browser</a> Mobile: choose a wallet browser above, then tap Connect wallet there. If handoff fails, open this site from the wallet’s browser. Disconnect clears this site’s session; revoke permissions in your wallet to remove access. Opening this page does not connect or sign.</p>
   <section id="home">
     <nav class="page-nav home-page-tabs" aria-label="PumpLite pages">
       <button type="button" id="show-home" class="outline" aria-pressed="true">Home</button>
       <button type="button" id="show-create" class="outline" aria-pressed="false">Create Token</button>
       <button type="button" id="show-explore" class="outline" aria-pressed="false">Markets &amp; Trade</button>
-      <a class="outline page-nav-link" href="./claim.html">PLITE Claim</a>
       <button type="button" id="show-help" class="outline" aria-pressed="false">Help &amp; Safety</button>
     </nav>
     <section id="home-overview" class="home-dashboard" tabindex="-1">
@@ -50,7 +48,6 @@
           <div class="hero-actions">
             <button id="hero-explore" class="primary compact-action" type="button">Explore tokens</button>
             <button id="hero-create" class="outline compact-action" type="button">Create token</button>
-            <a class="outline compact-action hero-link" href="./claim.html">PLITE Claim</a>
           </div>
         </div>
         <aside class="featured-token-card" aria-label="Featured PumpLite token">
@@ -61,10 +58,8 @@
           <div class="featured-token-facts">
             <span><small>Network</small><b>Base</b></span>
             <span><small>Market</small><b>V2 curve</b></span>
-            <span><small>Claim</small><b>First 50</b></span>
           </div>
           <a class="featured-market-link" href="#base/0xa522A4Ef81fD31daec390ab46A32D4886e1461C7">Open PLITE market</a>
-          <a class="featured-claim-link" href="./claim.html">Open First 50 claim page</a>
         </aside>
       </div>
 
@@ -169,28 +164,23 @@
 
       </section>
     </div>
-    <section id="holder-claim-section" class="panel holder-claim" aria-labelledby="holder-claim-title" hidden>
-      <p class="eyebrow">PLITE COMMUNITY</p>
-      <h2 id="holder-claim-title">First 50 opt-in PLITE holders</h2>
-      <p class="muted">When the claim opens, the first 50 different Base wallet addresses can each claim 1 PLITE. No purchase is required. One wallet can claim once; a wallet address does not prove a unique human.</p>
-      <p id="holder-claim-progress" class="fine" role="status" aria-live="polite">Claim setup is being prepared. No claim transaction is available yet.</p>
-      <div class="holder-claim-actions">
-        <button id="holder-claim-refresh" type="button" class="outline" disabled>Refresh claim status</button>
-        <button id="holder-claim-button" type="button" class="primary" disabled>Claim 1 PLITE</button>
-      </div>
-      <p class="fine">Claiming is a free token distribution, not a promise of value or return. Base network gas may still apply to the claim transaction.</p>
-      <p><a class="outline claim-page-link" href="./claim.html">Open First 50 claim page</a></p>
-    </section>
     <section id="help-section" class="panel home-page-panel" tabindex="-1" hidden>
       <p class="eyebrow">HELP &amp; SAFETY</p>
       <h2>Using PumpLite safely</h2>
-      <p class="muted">Choose a page above instead of scrolling through the whole site.</p>
+
       <div class="help-grid">
         <article><h3>Create Token</h3><p class="fine">Create a Base Mainnet token, publish metadata and review the wallet transaction before approving it.</p></article>
-        <article><h3>Markets &amp; Trade</h3><p class="fine">Browse PumpLite markets. Open a market to see its on-chain data and buy or sell through your connected wallet.</p></article>
-        <article><h3>PLITE Claim</h3><p class="fine">Open the separate First 50 PLITE claim page. A wallet can claim once after the claim contract is deployed and fully funded.</p></article>
+        <article><h3>Markets &amp; Trade</h3><p class="fine">Browse real PumpLite markets, buy with the simple NZD/USD helper, or sell through your connected wallet.</p></article>
+        <article><h3>PLITE Claim</h3><p class="fine">Use the single PLITE Claim link in the header to open the separate First 50 claim page.</p></article>
         <article><h3>Wallet Safety</h3><p class="fine">Never enter a seed phrase or private key into PumpLite. Check Base Mainnet, the address and the amount before approving a transaction.</p></article>
       </div>
+
+      <details id="wallet-troubleshooting" class="clean-details">
+        <summary>Wallet troubleshooting</summary>
+
+
+        <p class="fine" id="mobile-help"><a id="mobile-coinbase" rel="noopener noreferrer" hidden>Open in Coinbase Wallet</a> <a id="mobile-open" rel="noopener noreferrer" hidden>Open in wallet browser</a> On mobile, choose a wallet browser and tap Connect wallet. If handoff fails, open PumpLite from the wallet browser. Disconnect clears this site's session; revoke permissions inside your wallet to remove wallet access.</p>
+      </details>
     </section>
   </section>
   <section id="market-page" hidden>
@@ -261,58 +251,84 @@
       <p class="fine chart-history-note">Green means the selected range finished above its first displayed trade; red means it finished below. LIVE shows the latest available real trades. Longer ranges only use real trades found by PumpLite&apos;s bounded on-chain history scan - no price points are invented.</p>
     </section>
     <div class="workspace">
-      <section class="panel">
-        <p class="eyebrow">ON-CHAIN RESERVES</p>
-        <dl class="stats market-live-metrics">
-          <div><dt>Curve spot price</dt><dd id="curve-price">-</dd></div>
-          <div><dt>Real ETH reserve</dt><dd id="native-reserve">-</dd></div>
-          <div><dt>Cumulative volume</dt><dd id="volume">-</dd></div>
+      <section class="panel clean-market-panel">
+        <p class="eyebrow">MARKET</p>
+        <h2>Live market</h2>
+
+        <dl class="stats market-live-metrics clean-market-metrics">
+          <div><dt>Price</dt><dd id="curve-price">-</dd></div>
+          <div><dt>ETH reserve</dt><dd id="native-reserve">-</dd></div>
+          <div><dt>Volume</dt><dd id="volume">-</dd></div>
           <div><dt>Tokens in market</dt><dd id="token-reserve">-</dd></div>
-          <div><dt>Launch age</dt><dd id="market-age">-</dd></div>
-          <div><dt>Base block</dt><dd id="market-block">-</dd></div>
-          <div><dt>Virtual pricing offset</dt><dd id="virtual">-</dd></div>
         </dl>
-        <label for="distribution">Supply distributed from vault</label><progress id="distribution" max="100" value="0"></progress><p id="distribution-label" class="fine"></p>
-        <h3>How the curve works</h3><p class="muted">Buys add native currency and remove tokens. Sells return tokens and withdraw native currency. Quotes round down. The virtual offset sets starting pricing; it is not money available to withdraw.</p>
-        <p class="fine">No scheduled graduation, liquidity migration, owner withdrawal, or price guarantee. Direct donations are excluded from quotes and cannot be recovered. Rounding can leave locked dust. Other traders may move the price within your slippage limit.</p>
 
         <div id="base-v2-market" hidden>
-          <h3>Base V2 status</h3>
-
-          <dl class="stats">
-            <div><dt>Supply</dt><dd id="v2-supply-status">—</dd></div>
-            <div><dt>Mayhem</dt><dd id="v2-mayhem-status">—</dd></div>
-            <div><dt>Market support</dt><dd id="v2-support-total">—</dd></div>
-            <div><dt>Tokens burned</dt><dd id="v2-burned-total">—</dd></div>
-          </dl>
-
-          <div id="base-v2-creator" hidden>
-            <h3>Creator controls</h3>
-            <form id="v2-mint-form">
-              <label for="v2-mint-amount">Mint inventory into market</label>
-              <input id="v2-mint-amount" inputmode="decimal" placeholder="0" maxlength="32">
-              <button id="v2-mint-submit" type="submit" class="outline full">Review mint in wallet</button>
-            </form>
-            <button id="v2-lock-minting" type="button" class="outline full">Permanently lock minting</button>
+          <div class="mayhem-summary">
+            <span><small>Mayhem</small><strong id="v2-mayhem-status">-</strong></span>
           </div>
 
-          <div id="base-v2-controller" hidden>
-            <h3>Mayhem controller</h3>
-            <button id="v2-mayhem-on" type="button" class="outline">Turn Mayhem ON</button>
-            <button id="v2-mayhem-off" type="button" class="outline">Turn Mayhem OFF</button>
-            <p id="v2-mayhem-help" class="fine">Manual Mayhem status is loading…</p>
+          <details class="clean-details market-advanced-details">
+            <summary>Advanced market details</summary>
 
-            <form id="v2-support-form">
-              <label for="v2-support-amount">Add ETH market support</label>
-              <input id="v2-support-amount" inputmode="decimal" placeholder="0.00" maxlength="32">
-              <button id="v2-support-submit" type="submit" class="outline full">Review support in wallet</button>
-            </form>
-          </div>
+            <dl class="stats">
+              <div><dt>Supply</dt><dd id="v2-supply-status">-</dd></div>
+              <div><dt>Market support</dt><dd id="v2-support-total">-</dd></div>
+              <div><dt>Tokens burned</dt><dd id="v2-burned-total">-</dd></div>
+              <div><dt>Launch age</dt><dd id="market-age">-</dd></div>
+              <div><dt>Base block</dt><dd id="market-block">-</dd></div>
+              <div><dt>Virtual pricing offset</dt><dd id="virtual">-</dd></div>
+            </dl>
+
+            <label for="distribution">Supply distributed from vault</label>
+            <progress id="distribution" max="100" value="0"></progress>
+            <p id="distribution-label" class="fine"></p>
+
+            <h3>How the curve works</h3>
+            <p class="muted">Buys add native currency and remove tokens. Sells return tokens and withdraw native currency. Quotes round down. The virtual offset sets starting pricing; it is not money available to withdraw.</p>
+            <p class="fine">No scheduled graduation, liquidity migration, owner withdrawal, or price guarantee. Direct donations are excluded from quotes and cannot be recovered. Rounding can leave locked dust. Other traders may move the price within your slippage limit.</p>
+          </details>
+
+          <details id="market-admin-tools" class="clean-details market-admin-tools" hidden>
+            <summary>Creator / controller tools</summary>
+
+            <div id="base-v2-creator" hidden>
+              <h3>Creator controls</h3>
+
+              <form id="v2-mint-form">
+                <label for="v2-mint-amount">Mint inventory into market</label>
+                <input id="v2-mint-amount" inputmode="decimal" placeholder="0" maxlength="32">
+                <button id="v2-mint-submit" type="submit" class="outline full">Review mint in wallet</button>
+              </form>
+
+              <button id="v2-lock-minting" type="button" class="outline full">Permanently lock minting</button>
+            </div>
+
+            <div id="base-v2-controller" hidden>
+              <h3>Mayhem controller</h3>
+
+              <button id="v2-mayhem-on" type="button" class="outline">Turn Mayhem ON</button>
+              <button id="v2-mayhem-off" type="button" class="outline">Turn Mayhem OFF</button>
+
+              <p id="v2-mayhem-help" class="fine">Manual Mayhem status is loading...</p>
+
+              <form id="v2-support-form">
+                <label for="v2-support-amount">Add ETH market support</label>
+                <input id="v2-support-amount" inputmode="decimal" placeholder="0.00" maxlength="32">
+                <button id="v2-support-submit" type="submit" class="outline full">Review support in wallet</button>
+              </form>
+            </div>
+          </details>
         </div>
-        <div class="links"><a id="market-link" target="_blank" rel="noopener noreferrer">Market ↗</a><a id="token-link" target="_blank" rel="noopener noreferrer">Token ↗</a></div>
+
+        <div class="links">
+          <a id="market-link" target="_blank" rel="noopener noreferrer">Market</a>
+          <a id="token-link" target="_blank" rel="noopener noreferrer">Token</a>
+        </div>
       </section>
-      <section class="panel">
-        <p class="eyebrow">TRADE</p><h2>Your wallet. Your decision.</h2>
+      <section class="panel clean-trade-panel">
+        <p class="eyebrow">TRADE</p>
+        <h2>Buy or sell</h2>
+
         <p id="balance" class="fine">Connect a wallet to read balances.</p>
 
         <section id="trade-quick-buy" class="trade-helper simple-buy-card" aria-labelledby="trade-quick-buy-title">
@@ -325,6 +341,7 @@
               <label for="trade-display-amount">I want to spend</label>
               <input id="trade-display-amount" inputmode="decimal" placeholder="2.00" maxlength="32" autocomplete="off">
             </div>
+
             <div>
               <label for="trade-display-currency">Currency</label>
               <select id="trade-display-currency">
@@ -344,30 +361,54 @@
           <p id="simple-buy-note" class="fine">The final purchase uses Base ETH. Your wallet remains the final approval step and shows the Base network fee before you sign. PumpLite uses 1% slippage protection for this simple-buy button.</p>
         </section>
 
-        <h3 class="advanced-trade-title">Advanced buy / sell</h3>
-        <form id="trade-form">
-          <label for="side">Direction</label><select id="side"><option value="buy">Buy tokens</option><option value="sell">Sell tokens</option></select>
-          <label for="amount" id="amount-label">Amount</label><input id="amount" maxlength="96" inputmode="decimal" placeholder="0.00" required autocomplete="off">
-          <p id="trade-minimum-note" class="fine">No PumpLite minimum. Any positive amount that produces a nonzero on-chain quote is allowed. Base network gas still applies.</p>
-          <label for="slippage">Slippage tolerance (%)</label><input id="slippage" type="number" min="0.01" max="5" step="0.01" value="1" required>
-          <button id="get-quote" type="button" class="outline full">Get current quote</button>
-          <dl class="quote"><div><dt>Expected output</dt><dd id="quote-output">—</dd></div><div><dt>Minimum received</dt><dd id="quote-min">—</dd></div><div><dt>Platform fee</dt><dd id="quote-fee">—</dd></div><div id="quote-support-row" hidden><dt>Mayhem support</dt><dd id="quote-support">—</dd></div></dl>
-          <p id="quote-age" class="fine">Quotes use chain reserves. Refresh before signing.</p>
-          <button id="trade" type="submit" class="primary" disabled>Review in wallet</button>
-        </form>
+        <section class="simple-sell-card" aria-labelledby="simple-sell-title">
+          <p class="eyebrow">SELL</p>
+          <h3 id="simple-sell-title">Sell tokens</h3>
 
-        <form id="base-v2-burn-form" hidden>
-          <h3>Buy & Burn</h3>
-          <p class="fine">Spend ETH through the real curve and permanently burn the purchased V2 tokens.</p>
+          <form id="trade-form">
+            <label class="sr-only" for="side">Direction</label>
+            <select id="side" hidden aria-label="Trade direction">
+              <option value="sell" selected>Sell tokens</option>
+            </select>
 
-          <label for="v2-burn-amount">Amount (ETH)</label>
-          <input id="v2-burn-amount" inputmode="decimal" placeholder="0.00" maxlength="32">
+            <label for="amount" id="amount-label">Amount (TOKEN)</label>
+            <input id="amount" maxlength="96" inputmode="decimal" placeholder="0.00" required autocomplete="off">
 
-          <label for="v2-burn-slippage">Slippage tolerance (%)</label>
-          <input id="v2-burn-slippage" type="number" min="0.01" max="5" step="0.01" value="1">
+            <p id="trade-minimum-note" class="fine">Enter how many tokens you want to sell. Your live quote shows the Base ETH you would receive before you approve anything.</p>
 
-          <button id="base-v2-buy-burn-submit" type="submit" class="outline full">Review Buy & Burn in wallet</button>
-        </form>
+            <label for="slippage">Slippage tolerance (%)</label>
+            <input id="slippage" type="number" min="0.01" max="5" step="0.01" value="1" required>
+
+            <button id="get-quote" type="button" class="outline full">Preview sale</button>
+
+            <dl class="quote">
+              <div><dt>Expected Base ETH</dt><dd id="quote-output">-</dd></div>
+              <div><dt>Minimum Base ETH</dt><dd id="quote-min">-</dd></div>
+              <div><dt>Platform fee</dt><dd id="quote-fee">-</dd></div>
+              <div id="quote-support-row" hidden><dt>Mayhem support</dt><dd id="quote-support">-</dd></div>
+            </dl>
+
+            <p id="quote-age" class="fine">Preview a fresh on-chain quote before selling.</p>
+            <button id="trade" type="submit" class="primary" disabled>Review sale in wallet</button>
+          </form>
+        </section>
+
+        <details class="clean-details trading-advanced-tools">
+          <summary>Advanced trading tools</summary>
+
+          <form id="base-v2-burn-form" hidden>
+            <h3>Buy &amp; Burn</h3>
+            <p class="fine">Spend ETH through the real curve and permanently burn the purchased V2 tokens.</p>
+
+            <label for="v2-burn-amount">Amount (ETH)</label>
+            <input id="v2-burn-amount" inputmode="decimal" placeholder="0.00" maxlength="32">
+
+            <label for="v2-burn-slippage">Slippage tolerance (%)</label>
+            <input id="v2-burn-slippage" type="number" min="0.01" max="5" step="0.01" value="1">
+
+            <button id="base-v2-buy-burn-submit" type="submit" class="outline full">Review Buy &amp; Burn in wallet</button>
+          </form>
+        </details>
       </section>
     </div>
   </section>
