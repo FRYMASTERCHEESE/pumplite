@@ -107,6 +107,10 @@ test('Base V2 frontend contains gated V2 features', async () => {
   assert.doesNotMatch(adapter, /createMarketV2\.estimateGas/);
   assert.match(adapter, /baseReadRpcUrls/);
   assert.match(adapter, /baseReadTransport/);
+  assert.match(adapter, /MULTICALL3_ADDRESS/);
+  assert.match(adapter, /aggregate3\.staticCall/);
+  assert.match(adapter, /async function batchRead/);
+  assert.match(adapter, /Avoid burst-loading dozens of JSON-RPC calls in parallel/);
   assert.match(adapter, /tradeHistory/);
   assert.match(app, /routeMarketId/);
   assert.match(app, /Loading Base market and token balances/);

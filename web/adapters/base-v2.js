@@ -7,6 +7,10 @@ import { assertReceipt } from '../math.js';
 
 export const EAS_ADDRESS = '0x4200000000000000000000000000000000000021';
 export const EAS_SCHEMA_REGISTRY_ADDRESS = '0x4200000000000000000000000000000000000020';
+export const MULTICALL3_ADDRESS = '0xcA11bde05977b3631167028862bE2a173976CA11';
+const MULTICALL3_ABI = [
+  'function aggregate3((address target,bool allowFailure,bytes callData)[] calls) payable returns ((bool success,bytes returnData)[] returnData)'
+];
 export const PUMPLITE_REVIEW_SCHEMA = 'address market,address token,address creator,address factory,uint8 decision,bytes32 metadataHash,uint64 reviewedAt';
 export const PUMPLITE_REVIEW_SCHEMA_UID = keccak256(
   solidityPacked(
@@ -88,6 +92,57 @@ export function adapter(config, notify, changed = () => {}) {
     undefined,
     { batchMaxCount: 1 }
   );
+
+  const multicall = new Contract(
+    MULTICALL3_ADDRESS,
+    MULTICALL3_ABI,
+    provider
+  );
+
+  async function batchRead(calls, blockTag) {
+    if (!calls.length) return [];
+
+    const encoded = calls.map(
+      ({ contract, method, args = [] }) => ({
+        target: getAddress(String(contract.target)),
+        allowFailure: false,
+        callData: contract.interface.encodeFunctionData(
+          method,
+          args
+        )
+      })
+    );
+
+    const results =
+      await multicall.aggregate3.staticCall(
+        encoded,
+        { blockTag }
+      );
+
+    if (results.length !== calls.length) {
+      throw Error('Unexpected Base multicall response');
+    }
+
+    return results.map((result, index) => {
+      if (!result.success) {
+        throw Error(
+          'Base multicall read failed: ' +
+          calls[index].method
+        );
+      }
+
+      const decoded =
+        calls[index].contract.interface
+          .decodeFunctionResult(
+            calls[index].method,
+            result.returnData
+          );
+
+      return decoded.length === 1
+        ? decoded[0]
+        : decoded;
+    });
+  }
   let walletProvider, signer, connectedAddress, selected, revision = 0, unwatch = () => {};
   function disconnect() {
     revision++; unwatch(); unwatch = () => {}; walletProvider?.destroy();
@@ -116,11 +171,48 @@ export function adapter(config, notify, changed = () => {}) {
     return signer;
   }
   const settle = tx => settleBase(tx, notify, config.explorer);
-  async function market(id) {
-    await network();
-    const blockTag = await provider.getBlockNumber();
-    if (!await factory().isMarket(id, { blockTag })) throw Error('Market is not in the configured factory');
-    const curve = new Contract(id, abis.CurveMarketV2, provider);
+  async function marketAtBlock(id, blockTag) {
+    const marketId = getAddress(id);
+    const readFactory = factory();
+
+    if (
+      !await readFactory.isMarket(
+        marketId,
+        { blockTag }
+      )
+    ) {
+      throw Error(
+        'Market is not in the configured factory'
+      );
+    }
+
+    const curve = new Contract(
+      marketId,
+      abis.CurveMarketV2,
+      provider
+    );
+
+    const curveValues = await batchRead(
+      [
+        { contract: curve, method: 'token' },
+        { contract: curve, method: 'nativeReserve' },
+        { contract: curve, method: 'tokenReserve' },
+        { contract: curve, method: 'volume' },
+        { contract: curve, method: 'creator' },
+        { contract: curve, method: 'treasury' },
+        { contract: curve, method: 'metadataURI' },
+        { contract: curve, method: 'initialSupply' },
+        { contract: curve, method: 'initialMayhem' },
+        { contract: curve, method: 'manualMayhem' },
+        { contract: curve, method: 'mayhemActive' },
+        { contract: curve, method: 'launchedAt' },
+        { contract: curve, method: 'totalMarketSupport' },
+        { contract: curve, method: 'totalBurned' },
+        { contract: curve, method: 'mayhemController' }
+      ],
+      blockTag
+    );
+
     const [
       tokenAddress,
       nativeReserve,
@@ -137,29 +229,34 @@ export function adapter(config, notify, changed = () => {}) {
       totalMarketSupport,
       totalBurned,
       mayhemController
-    ] = await Promise.all([
-      curve.token({ blockTag }),
-      curve.nativeReserve({ blockTag }),
-      curve.tokenReserve({ blockTag }),
-      curve.volume({ blockTag }),
-      curve.creator({ blockTag }),
-      curve.treasury({ blockTag }),
-      curve.metadataURI({ blockTag }),
-      curve.initialSupply({ blockTag }),
-      curve.initialMayhem({ blockTag }),
-      curve.manualMayhem({ blockTag }),
-      curve.mayhemActive({ blockTag }),
-      curve.launchedAt({ blockTag }),
-      curve.totalMarketSupport({ blockTag }),
-      curve.totalBurned({ blockTag }),
-      curve.mayhemController({ blockTag })
-    ]);
+    ] = curveValues;
 
-    if (getAddress(treasury) !== getAddress(config.treasury)) {
+    if (
+      getAddress(treasury) !==
+      getAddress(config.treasury)
+    ) {
       throw Error('Unexpected platform treasury');
     }
 
-    const token = new Contract(tokenAddress, abis.LaunchTokenV2, provider);
+    const token = new Contract(
+      tokenAddress,
+      abis.LaunchTokenV2,
+      provider
+    );
+
+    const tokenValues = await batchRead(
+      [
+        { contract: token, method: 'name' },
+        { contract: token, method: 'symbol' },
+        { contract: token, method: 'totalSupply' },
+        { contract: token, method: 'maxSupply' },
+        { contract: token, method: 'mintableAtLaunch' },
+        { contract: token, method: 'mintingLocked' },
+        { contract: token, method: 'totalMinted' },
+        { contract: token, method: 'remainingMintAllowance' }
+      ],
+      blockTag
+    );
 
     const [
       name,
@@ -170,19 +267,10 @@ export function adapter(config, notify, changed = () => {}) {
       mintingLocked,
       totalMinted,
       remainingMintAllowance
-    ] = await Promise.all([
-      token.name({ blockTag }),
-      token.symbol({ blockTag }),
-      token.totalSupply({ blockTag }),
-      token.maxSupply({ blockTag }),
-      token.mintableAtLaunch({ blockTag }),
-      token.mintingLocked({ blockTag }),
-      token.totalMinted({ blockTag }),
-      token.remainingMintAllowance({ blockTag })
-    ]);
+    ] = tokenValues;
 
     return {
-      id: getAddress(id),
+      id: marketId,
       token: getAddress(tokenAddress),
       creator: getAddress(creator),
       mayhemController: getAddress(mayhemController),
@@ -210,17 +298,28 @@ export function adapter(config, notify, changed = () => {}) {
         registered: true,
         chainId: 8453,
         factory: getAddress(config.factory),
-        market: getAddress(id),
+        market: marketId,
         block: blockTag
       },
       decimals: 18,
       nativeDecimals: 18,
       unit: 'ETH',
       virtualNative: 10n ** 18n,
-      source: 'Base V2 block ' + blockTag,
+      source:
+        'Base V2 block ' + blockTag,
       observedAt: Date.now()
     };
   }
+
+  async function market(id) {
+    await network();
+
+    return marketAtBlock(
+      id,
+      await provider.getBlockNumber()
+    );
+  }
+
   function holderClaimConfig() {
     const value = config.holderClaim;
 
@@ -489,11 +588,52 @@ export function adapter(config, notify, changed = () => {}) {
 
     async list(offset = 0) {
       await network();
-      const count = Number(await factory().marketCount());
-      const end = Math.max(0, count - offset);
-      const start = Math.max(0, end - 8);
-      const ids = await Promise.all(Array.from({ length: end - start }, (_, i) => factory().markets(end - i - 1)));
-      return { markets: await Promise.all(ids.map(market)), next: start > 0 ? offset + 8 : null };
+
+      const readFactory = factory();
+      const count =
+        Number(await readFactory.marketCount());
+
+      const end =
+        Math.max(0, count - offset);
+      const start =
+        Math.max(0, end - 8);
+
+      const blockTag =
+        await provider.getBlockNumber();
+
+      const idCalls =
+        Array.from(
+          { length: end - start },
+          (_, index) => ({
+            contract: readFactory,
+            method: 'markets',
+            args: [end - index - 1]
+          })
+        );
+
+      const ids =
+        await batchRead(
+          idCalls,
+          blockTag
+        );
+
+      // Avoid burst-loading dozens of JSON-RPC calls in parallel.
+      // Each market now uses bounded Multicall3 reads at the same Base block.
+      const markets = [];
+
+      for (const id of ids) {
+        markets.push(
+          await marketAtBlock(id, blockTag)
+        );
+      }
+
+      return {
+        markets,
+        next:
+          start > 0
+            ? offset + 8
+            : null
+      };
     },
     market,
     async balances(m) {

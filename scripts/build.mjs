@@ -40,6 +40,9 @@ for (const output of Object.values(result.metafile.outputs)) {
 const files = new Map(result.outputFiles.map(file => [file.path, file.contents]));
 files.set(resolve(assets, 'phantom-diagnostic.js'), await readFile('web/phantom-diagnostic.js'));
 files.set(resolve(assets, 'styles.css'), await readFile('web/styles.css'));
+files.set(resolve(assets, 'plite-icon-48.svg'), await readFile('web/plite-icon-48.svg'));
+files.set(resolve(assets, 'plite-logo-200.png'), await readFile('web/plite-logo-200.png'));
+files.set(resolve(assets, 'plite-info.json'), await readFile('web/plite-info.json'));
 const registry=await readFile('web/verified-tokens.json');
 validateRegistry(JSON.parse(registry));
 files.set(resolve(assets,'verified-tokens.json'),registry);

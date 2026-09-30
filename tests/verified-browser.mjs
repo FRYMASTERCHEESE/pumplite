@@ -55,52 +55,7 @@ export async function verifyBrowser(browser, base) {
    else if(req.method==='eth_getLogs')result=[];
    else if(req.method==='eth_call') {
     const tx=req.params[0],address=tx.to.toLowerCase();
-    const iface=
-     address===OFFICIAL_BASE_FACTORY
-      ? f
-      : address===market
-       ? c
-       : address===token
-        ? t
-        : address===EAS_ADDRESS
-         ? eas
-         : null;
 
-    assert.ok(iface,'Unexpected target');
-
-    const call=
-     iface.parseTransaction({
-      data:tx.data
-     });
-
-    if(address===EAS_ADDRESS){
-     assert.equal(
-      call.name,
-      'getAttestation'
-     );
-
-     assert.equal(
-      call.args[0],
-      easUid
-     );
-
-     result=
-      eas.encodeFunctionResult(
-       'getAttestation',
-       [[
-        easUid,
-        PUMPLITE_REVIEW_SCHEMA_UID,
-        1n,
-        0n,
-        0n,
-        ZeroHash,
-        token,
-        treasury,
-        true,
-        reviewData
-       ]]
-      );
-    } else {
     const values={
       marketCount:1n,
       markets:market,
@@ -131,16 +86,117 @@ export async function verifyBrowser(browser, base) {
       totalMinted:supply,
       remainingMintAllowance:0n
     };
-    assert.ok(
-     Object.hasOwn(values,call.name),
-     'Unexpected V2 call '+call.name
-    );
 
-    result=
-     iface.encodeFunctionResult(
+    const encodeSingleCall=(target,data)=>{
+     const targetAddress=String(target).toLowerCase();
+     const iface=
+      targetAddress===OFFICIAL_BASE_FACTORY.toLowerCase()
+       ? f
+       : (
+          targetAddress===market ||
+          targetAddress==='0xa522a4ef81fd31daec390ab46a32d4886e1461c7'
+         )
+        ? c
+        : targetAddress===token
+         ? t
+         : targetAddress===EAS_ADDRESS.toLowerCase()
+          ? eas
+          : null;
+
+     assert.ok(iface,'Unexpected target '+targetAddress);
+
+     const call=
+      iface.parseTransaction({
+       data
+      });
+
+     if(targetAddress===EAS_ADDRESS.toLowerCase()){
+      assert.equal(
+       call.name,
+       'getAttestation'
+      );
+
+      assert.equal(
+       call.args[0],
+       easUid
+      );
+
+      return eas.encodeFunctionResult(
+       'getAttestation',
+       [[
+        easUid,
+        PUMPLITE_REVIEW_SCHEMA_UID,
+        1n,
+        0n,
+        0n,
+        ZeroHash,
+        token,
+        treasury,
+        true,
+        reviewData
+       ]]
+      );
+     }
+
+     assert.ok(
+      Object.hasOwn(values,call.name),
+      'Unexpected V2 call '+call.name
+     );
+
+     return iface.encodeFunctionResult(
       call.name,
       [values[call.name]]
      );
+    };
+
+    const multicallAddress=
+     '0xca11bde05977b3631167028862be2a173976ca11';
+
+    if(address===multicallAddress){
+     const multicall=
+      new Interface([
+       'function aggregate3((address target,bool allowFailure,bytes callData)[] calls) payable returns ((bool success,bytes returnData)[] returnData)'
+      ]);
+
+     const call=
+      multicall.parseTransaction({
+       data:tx.data
+      });
+
+     assert.equal(
+      call.name,
+      'aggregate3'
+     );
+
+     const rows=
+      call.args[0].map(item=>{
+       try {
+        return [
+         true,
+         encodeSingleCall(
+          item.target,
+          item.callData
+         )
+        ];
+       } catch(error) {
+        if(item.allowFailure){
+         return [false,'0x'];
+        }
+        throw error;
+       }
+      });
+
+     result=
+      multicall.encodeFunctionResult(
+       'aggregate3',
+       [rows]
+      );
+    } else {
+     result=
+      encodeSingleCall(
+       address,
+       tx.data
+      );
     }
    } else throw Error('Forbidden/unexpected RPC '+req.method);
    return r.fulfill({json:{jsonrpc:'2.0',id:req.id,result}});

@@ -13,7 +13,9 @@ if (window.top !== window.self) {
 }
 const $ = id => document.getElementById(id);
 $('skip-content').addEventListener('click', event => { event.preventDefault(); $('main-content').focus(); });
-const state = { config: null, chain: 'base', adapter: null, wallet: null, market: null, quote: null, busy: false, epoch: 0, next: null, markets: [], registry: null, reviewProof: null, reviewSchemaReady: false, platformStats: null };
+const PLITE_MARKET_ADDRESS = '0xa522A4Ef81fD31daec390ab46A32D4886e1461C7';
+const PLITE_MARKET_ID = PLITE_MARKET_ADDRESS.toLowerCase();
+const state = { config: null, chain: 'base', adapter: null, wallet: null, market: null, quote: null, busy: false, epoch: 0, next: null, markets: [], featuredPlite: null, registry: null, reviewProof: null, reviewSchemaReady: false, platformStats: null };
 function status(message, href) {
   $('status-text').textContent = message;
   $('status-link').hidden = !href;
@@ -306,6 +308,88 @@ function clearMarketChart(message) {
   $('price-chart-low').textContent = '-';
   $('price-chart-trades').textContent = '0';
   $('price-chart-status').textContent = message;
+  clearRecentTrades(message);
+}
+
+function clearRecentTrades(message) {
+  const root = $('recent-trades-list');
+  if (!root) return;
+
+  root.replaceChildren();
+
+  const empty = document.createElement('p');
+  empty.className = 'fine';
+  empty.textContent = message;
+  root.append(empty);
+}
+
+function renderRecentTrades(market) {
+  const root = $('recent-trades-list');
+  if (!root) return;
+
+  root.replaceChildren();
+
+  const recent =
+    chartTrades
+      .slice(-5)
+      .reverse();
+
+  if (!recent.length) {
+    clearRecentTrades(
+      'No completed buy/sell Trade events were found in the loaded Base history.'
+    );
+    return;
+  }
+
+  for (const trade of recent) {
+    const link = document.createElement('a');
+    link.className = 'recent-trade-row';
+    link.href =
+      state.config.base.explorer +
+      '/tx/' +
+      trade.transactionHash;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+
+    const side = document.createElement('strong');
+    side.textContent =
+      trade.isBuy ? 'Buy' : 'Sell';
+
+    const amount = document.createElement('span');
+    amount.textContent =
+      trade.isBuy
+        ? formatUnits(
+            trade.input,
+            market.nativeDecimals,
+            6
+          ) + ' ETH'
+        : formatUnits(
+            trade.input,
+            market.decimals,
+            2
+          ) + ' ' + market.symbol;
+
+    const price = document.createElement('span');
+    price.textContent =
+      formatUnits(
+        trade.price,
+        market.nativeDecimals,
+        14
+      ) +
+      ' ETH / ' +
+      market.symbol;
+
+    const time = document.createElement('small');
+    time.textContent =
+      Number.isFinite(Number(trade.timestamp))
+        ? new Date(
+            Number(trade.timestamp) * 1000
+          ).toLocaleString()
+        : 'Base block ' + trade.blockNumber;
+
+    link.append(side, amount, price, time);
+    root.append(link);
+  }
 }
 
 function renderMarketChartRange(market) {
@@ -419,6 +503,10 @@ async function loadMarketChart(market) {
   $('price-chart-status').textContent =
     'Loading recent real Trade events from Base Mainnet...';
 
+  clearRecentTrades(
+    'Loading recent real Trade events from Base Mainnet...'
+  );
+
   try {
     const trades =
       await (await getAdapter()).tradeHistory(
@@ -434,6 +522,7 @@ async function loadMarketChart(market) {
     }
 
     chartTrades = trades;
+    renderRecentTrades(market);
     renderMarketChartRange(market);
   } catch (error) {
     if (
@@ -684,6 +773,69 @@ function renderPlatformStats() {
       : 'Waiting for chain read';
 }
 
+function renderFeaturedPlite() {
+  const market =
+    state.featuredPlite ||
+    state.markets.find(
+      value =>
+        String(value.id).toLowerCase() ===
+        PLITE_MARKET_ID
+    );
+
+  const fields = [
+    'plite-featured-price',
+    'plite-featured-reserve',
+    'plite-featured-supply',
+    'plite-featured-volume'
+  ];
+
+  if (
+    state.chain !== 'base' ||
+    !market
+  ) {
+    for (const id of fields) {
+      const node = $(id);
+      if (node) node.textContent = '-';
+    }
+
+    const note = $('plite-featured-status');
+    if (note) {
+      note.textContent =
+        'Waiting for the live PLITE Base market read.';
+    }
+    return;
+  }
+
+  $('plite-featured-price').textContent =
+    marketPriceText(market);
+
+  $('plite-featured-reserve').textContent =
+    compactAmount(
+      market.nativeReserve,
+      market.nativeDecimals,
+      6
+    ) + ' ETH';
+
+  $('plite-featured-supply').textContent =
+    compactAmount(
+      market.supply,
+      market.decimals,
+      2
+    ) + ' PLITE';
+
+  $('plite-featured-volume').textContent =
+    compactAmount(
+      market.volume,
+      market.nativeDecimals,
+      6
+    ) + ' ETH';
+
+  $('plite-featured-status').textContent =
+    'Live bonding-curve data from ' +
+    market.source +
+    '. DEX LP liquidity is separate and is never invented.';
+}
+
 function marketSortValue(m, mode) {
   if (mode === 'volume') return m.volume;
   if (mode === 'reserve') return m.nativeReserve;
@@ -791,6 +943,7 @@ function renderDiscovery() {
 
   renderHomeMarkets();
   renderPlatformStats();
+  renderFeaturedPlite();
 
   $('market-live-status').replaceChildren();
   const dot = document.createElement('span');
@@ -832,6 +985,29 @@ async function discover(append = false) {
     ? [...state.markets, ...result.markets]
     : result.markets;
 
+  const listedPlite =
+    state.markets.find(
+      market =>
+        String(market.id).toLowerCase() ===
+        PLITE_MARKET_ID
+    );
+
+  if (listedPlite) {
+    state.featuredPlite = listedPlite;
+  } else if (
+    !append ||
+    !state.featuredPlite
+  ) {
+    try {
+      state.featuredPlite =
+        await adapter.market(
+          PLITE_MARKET_ADDRESS
+        );
+    } catch {
+      state.featuredPlite = null;
+    }
+  }
+
   state.next = result.next;
   $('more').hidden = result.next === null;
 
@@ -856,11 +1032,36 @@ async function refreshLiveData() {
 
   const adapter = await getAdapter();
 
-  state.markets = await Promise.all(
-    state.markets.map(market =>
-      adapter.market(market.id)
-    )
-  );
+  const refreshedMarkets = [];
+
+  // Keep public-RPC reads bounded instead of refreshing every market at once.
+  for (const market of state.markets) {
+    refreshedMarkets.push(
+      await adapter.market(market.id)
+    );
+  }
+
+  state.markets = refreshedMarkets;
+
+  const listedPlite =
+    state.markets.find(
+      market =>
+        String(market.id).toLowerCase() ===
+        PLITE_MARKET_ID
+    );
+
+  if (listedPlite) {
+    state.featuredPlite = listedPlite;
+  } else {
+    try {
+      state.featuredPlite =
+        await adapter.market(
+          PLITE_MARKET_ADDRESS
+        );
+    } catch {
+      state.featuredPlite = null;
+    }
+  }
 
   try {
     state.platformStats =

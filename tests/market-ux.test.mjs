@@ -144,6 +144,26 @@ test(
 
     assert.match(
       html,
+      /id="plite-featured-price"/
+    );
+
+    assert.match(
+      html,
+      /id="recent-trades-list"/
+    );
+
+    assert.match(
+      app,
+      /renderFeaturedPlite/
+    );
+
+    assert.match(
+      app,
+      /renderRecentTrades/
+    );
+
+    assert.match(
+      html,
       /id="simple-buy-output"/
     );
 

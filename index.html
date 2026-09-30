@@ -6,6 +6,12 @@
 <meta name="referrer" content="no-referrer">
 <meta name="theme-color" content="#090a0f">
 <meta name="description" content="PumpLite: a Base Mainnet token launchpad with fixed or permanently capped mintable supply, Mayhem support, and wallet-signed trading.">
+<link rel="canonical" href="https://frymastercheese.github.io/pumplite/">
+<link rel="icon" type="image/svg+xml" href="./assets/plite-icon-48.svg">
+<meta property="og:title" content="PumpLite Â· Base Mainnet token launchpad">
+<meta property="og:description" content="Launch and trade Base tokens with wallet-signed transactions and transparent on-chain bonding-curve data.">
+<meta property="og:url" content="https://frymastercheese.github.io/pumplite/">
+<meta property="og:image" content="https://frymastercheese.github.io/pumplite/assets/plite-logo-200.png">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://pumplite-rpc.coreyedge123.workers.dev https://solana-rpc.publicnode.com wss://solana-rpc.publicnode.com https://mainnet.base.org https://base-rpc.publicnode.com https://api.coinbase.com; object-src 'none'; base-uri 'none'; form-action 'none'">
 <title>PumpLite · Token launches, kept simple</title>
 <link rel="stylesheet" href="./assets/styles.css">
@@ -58,8 +64,18 @@
           <div class="featured-token-facts">
             <span><small>Network</small><b>Base</b></span>
             <span><small>Market</small><b>V2 curve</b></span>
+            <span><small>Live price</small><b id="plite-featured-price">-</b></span>
+            <span><small>Curve reserve</small><b id="plite-featured-reserve">-</b></span>
+            <span><small>Current supply</small><b id="plite-featured-supply">-</b></span>
+            <span><small>Curve volume</small><b id="plite-featured-volume">-</b></span>
           </div>
-          <a class="featured-market-link" href="#base/0xa522A4Ef81fD31daec390ab46A32D4886e1461C7">Open PLITE market</a>
+          <p id="plite-featured-status" class="fine featured-token-status">Waiting for the live PLITE Base market read.</p>
+          <div class="featured-token-links">
+            <a href="https://basescan.org/token/0xb15A460142c77b42cDF57815b0eeFEb24b593196" target="_blank" rel="noopener noreferrer">BaseScan</a>
+            <a href="https://base.blockscout.com/token/0xb15A460142c77b42cDF57815b0eeFEb24b593196" target="_blank" rel="noopener noreferrer">Blockscout</a>
+            <a href="https://coinstats.app/coins/0xb15A460142c77b42cDF57815b0eeFEb24b593196_base/" target="_blank" rel="noopener noreferrer">CoinStats</a>
+          </div>
+          <a class="featured-market-link" href="#base/0xa522A4Ef81fD31daec390ab46A32D4886e1461C7">Buy PLITE / view market</a>
         </aside>
       </div>
 
@@ -258,6 +274,16 @@
         <span><small>High</small><strong id="price-chart-high">-</strong></span>
         <span><small>Low</small><strong id="price-chart-low">-</strong></span>
         <span><small>Trades</small><strong id="price-chart-trades">0</strong></span>
+      </div>
+
+      <div class="recent-trades">
+        <div>
+          <p class="eyebrow">RECENT ACTIVITY</p>
+          <h3>On-chain trades</h3>
+        </div>
+        <div id="recent-trades-list" class="recent-trades-list" aria-live="polite">
+          <p class="fine">Loading recent real Trade events from Base Mainnet...</p>
+        </div>
       </div>
 
       <p id="price-chart-status" class="fine">Loading real on-chain Trade events from Base Mainnet...</p>

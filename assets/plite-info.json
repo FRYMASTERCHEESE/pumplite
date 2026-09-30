@@ -1,0 +1,19 @@
+{
+  "name": "PumpLite",
+  "symbol": "PLITE",
+  "network": "Base",
+  "chainId": 8453,
+  "token": "0xb15A460142c77b42cDF57815b0eeFEb24b593196",
+  "market": "0xa522A4Ef81fD31daec390ab46A32D4886e1461C7",
+  "factory": "0xdA8c34819ae397FD4bE3C95947DEA64f4A3278f4",
+  "website": "https://frymastercheese.github.io/pumplite/",
+  "source": "https://github.com/FRYMASTERCHEESE/pumplite",
+  "logo": "https://frymastercheese.github.io/pumplite/assets/plite-logo-200.png",
+  "icon": "https://frymastercheese.github.io/pumplite/assets/plite-icon-48.svg",
+  "description": "PumpLite (PLITE) is a Base Mainnet token used within the PumpLite token launch and on-chain trading platform.",
+  "marketType": "PumpLite V2 bonding curve",
+  "explorers": {
+    "basescan": "https://basescan.org/token/0xb15A460142c77b42cDF57815b0eeFEb24b593196",
+    "blockscout": "https://base.blockscout.com/token/0xb15A460142c77b42cDF57815b0eeFEb24b593196"
+  }
+}

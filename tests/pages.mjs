@@ -185,6 +185,21 @@ try {
       200,
       'First 50 claim browser bundle must be published'
     );
+    assert.equal(
+      (await page.request.get(base + 'assets/plite-icon-48.svg')).status(),
+      200,
+      'PLITE tracker icon must be published'
+    );
+    assert.equal(
+      (await page.request.get(base + 'assets/plite-logo-200.png')).status(),
+      200,
+      'PLITE 200x200 PNG logo must be published'
+    );
+    assert.equal(
+      (await page.request.get(base + 'assets/plite-info.json')).status(),
+      200,
+      'PLITE public metadata record must be published'
+    );
     assert.ok(!requests.some(url => /\/(solana|base)-/.test(url)), 'No wallet SDK is fetched initially');
     assert.equal(await page.locator('body').evaluate(el => el.scrollWidth <= innerWidth), true);
     // Force both production lazy-module graphs to resolve without calling connect or signing.
