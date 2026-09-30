@@ -8,7 +8,7 @@ pub mod math;
 pub mod metadata;
 
 // Final program identity selected locally. The website remains deployment-locked until verified Mainnet deployment.
-declare_id!("3CHqrdJzwWQj1QikCzpjBhC8iQ3paaMtD1x9kwoW1rku");
+declare_id!("Y7kugrkxDgMV8GxrkcY95LzCPMvmzcCfhYzhuCWrGd9");
 pub const TREASURY: Pubkey = pubkey!("BNpFPPuy2h12dryy4dayemjA4YS17ccVaF82jBDuiwct");
 pub const DECIMALS: u8 = 6;
 
