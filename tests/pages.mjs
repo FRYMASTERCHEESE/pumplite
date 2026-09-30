@@ -92,6 +92,17 @@ try {
     assert.equal(page.url(), base);
     await page.waitForFunction(() => document.querySelector('#deployment').textContent.includes('Base Mainnet'));
     assert.equal(await page.locator('#create').isDisabled(), false, 'Base create button stays actionable before wallet access; wallet access is requested only after click');
+    assert.deepEqual(
+      await page.locator('.home-page-tabs').locator('button,a').allTextContents(),
+      ['Home','Create Token','Markets & Trade','PLITE Claim','Help & Safety']
+    );
+    assert.equal(await page.locator('#home-overview').isVisible(), true);
+    assert.equal(await page.locator('#create-section').isVisible(), false);
+    assert.equal(await page.locator('#explore-section').isVisible(), false);
+    await page.locator('#show-help').click();
+    assert.equal(await page.locator('#help-section').isVisible(), true);
+    await page.locator('#show-home').click();
+    assert.equal(await page.locator('#home-overview').isVisible(), true);
     assert.ok(requests.some(url => url.startsWith(base + 'config.json?boot=')));
     assert.ok(requests.some(url => url.startsWith(base + 'assets/app.js?boot=')));
     assert.ok(requests.includes(base + 'assets/styles.css'));
@@ -127,6 +138,8 @@ try {
     await page.keyboard.press('Enter');
     assert.equal(await page.evaluate(() => document.activeElement.id), 'main-content');
     assert.equal(await page.locator('#amount').getAttribute('maxlength'), '96');
+    await page.locator('#show-create').click();
+    assert.equal(await page.locator('#create-section').isVisible(), true);
     await page.locator('#name').fill('Local document');
     await page.locator('#symbol').fill('DOC');
     await page.locator('#advanced-metadata summary').click();

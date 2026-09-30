@@ -175,3 +175,15 @@ textarea{font:inherit;width:100%;max-width:100%;background:#111e17;color:#fff;bo
 .claim-owner-tools .full,.claim-page .full{width:100%;margin-top:10px}
 #claim-share-url{display:block;overflow-wrap:anywhere;padding:12px 0}
 .claim-page-link{display:inline-block;text-decoration:none}
+/* Named home pages V7. */
+.home-page-tabs{position:sticky;top:0;z-index:6;display:grid;grid-template-columns:repeat(5,minmax(130px,1fr));gap:8px;margin:16px 0 24px;padding:10px 0;overflow-x:auto;background:#101b18f2;backdrop-filter:blur(8px)}
+.home-page-tabs button,.home-page-tabs .page-nav-link{display:flex;align-items:center;justify-content:center;min-height:46px;margin:0;padding:10px 14px;border:1px solid #53654b;border-radius:9px;background:#14221b;color:#e2ecd8;font-size:13px;font-weight:700;text-align:center;text-decoration:none;white-space:nowrap}
+.home-page-tabs button[aria-pressed="true"]{border-color:var(--green);background:var(--green);color:#16230f}
+#home-workspace{grid-template-columns:minmax(0,1fr)}
+#home-workspace .launch,#home-workspace .discovery{grid-column:1;grid-row:1;width:100%}
+.home-page-panel{scroll-margin-top:82px}
+#help-section{max-width:900px;margin:0 auto}
+.help-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px}
+.help-grid article{border:1px solid var(--line);border-radius:12px;padding:16px;background:#14221b}
+.help-grid h3{margin:0 0 8px}
+@media(max-width:740px){.home-page-tabs{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:max-content;margin:12px -18px 18px;padding:9px 18px}.home-page-tabs button,.home-page-tabs .page-nav-link{min-width:118px}.help-grid{grid-template-columns:1fr}}

@@ -148,6 +148,9 @@ export async function verifyBrowser(browser, base) {
   await page.goto(base,{waitUntil:'networkidle'});
   await page.waitForFunction(()=>document.querySelector('#chain')?.value==='base');
   assert.equal(await page.locator('#chain').inputValue(),'base');
+  await page.locator('#show-explore').click();
+  assert.equal(await page.locator('#explore-section').isVisible(),true);
+  assert.equal(await page.locator('#create-section').isVisible(),false);
   await page.locator('#refresh').click();await page.waitForFunction(()=>document.querySelectorAll('.market-row').length===1);
   assert.equal(await page.locator('.market-row .badge').count(),2);
   await page.locator('#verified-only').check();await page.waitForFunction(()=>!document.querySelector('#verified-only').disabled);
@@ -189,6 +192,8 @@ export async function verifyBrowser(browser, base) {
   assert.equal(await page.locator('#market-badges .badge').count(),0);
   assert.equal(await page.locator('#create').isDisabled(),true);
   await page.goto(base,{waitUntil:'networkidle'});
+  await page.locator('#show-create').click();
+  assert.equal(await page.locator('#create-section').isVisible(),true);
   await page.locator('#name').fill('Social token');await page.locator('#symbol').fill('SOC');
   await page.locator('#description').fill('Synthetic local project');
   await page.locator('#website').fill('https://example.com');await page.locator('#twitter').fill('https://x.com/example');

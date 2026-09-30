@@ -10,7 +10,7 @@
 <title>PumpLite · Token launches, kept simple</title>
 <link rel="stylesheet" href="./assets/styles.css">
 <script defer src="./assets/phantom-diagnostic.js"></script>
-<script type="module" src="./assets/app.js?boot=20260930e"></script>
+<script type="module" src="./assets/app.js?boot=20260930h"></script>
 </head>
 <body>
 <a class="skip-link" id="skip-content" href="#main-content">Skip to main content</a>
@@ -32,14 +32,20 @@
   <div class="notice" id="deployment" role="status">Loading verified Base Mainnet configuration… Trading remains disabled until verification completes.</div>
   <p class="fine" id="mobile-help"><a id="mobile-coinbase" rel="noopener noreferrer" hidden>Open in Coinbase Wallet</a> <a id="mobile-open" rel="noopener noreferrer" hidden>Open in wallet browser</a> Mobile: choose a wallet browser above, then tap Connect wallet there. If handoff fails, open this site from the wallet’s browser. Disconnect clears this site’s session; revoke permissions in your wallet to remove access. Opening this page does not connect or sign.</p>
   <section id="home">
-    <nav class="page-nav" aria-label="Page sections"><button type="button" id="show-create" class="outline">Create a token</button><button type="button" id="show-explore" class="outline">Explore markets</button></nav>
-    <div class="hero">
+    <nav class="page-nav home-page-tabs" aria-label="PumpLite pages">
+      <button type="button" id="show-home" class="outline" aria-pressed="true">Home</button>
+      <button type="button" id="show-create" class="outline" aria-pressed="false">Create Token</button>
+      <button type="button" id="show-explore" class="outline" aria-pressed="false">Markets &amp; Trade</button>
+      <a class="outline page-nav-link" href="./claim.html">PLITE Claim</a>
+      <button type="button" id="show-help" class="outline" aria-pressed="false">Help &amp; Safety</button>
+    </nav>
+    <div class="hero" id="home-overview" tabindex="-1">
       <div><p class="eyebrow">YOUR IDEA. YOUR COMMUNITY.</p><h1>Create a token<br>on Base Mainnet.</h1>
       <p class="intro">Launch a fixed or permanently capped mintable token. Trade against a public bonding curve. Keep control of your wallet.</p></div>
       <div class="principles"><span><i>01</i><b>Supply choice</b><small>Fixed or permanently capped</small></span><span><i>02</i><b>0.25% platform fee</b><small>Rounded down per trade</small></span><span><i>03</i><b>Wallet-signed</b><small>No custodial account</small></span></div>
     </div>
-    <div class="workspace">
-      <section class="panel discovery" id="explore-section" tabindex="-1">
+    <div class="workspace" id="home-workspace">
+      <section class="panel discovery" id="explore-section" tabindex="-1" hidden>
         <div class="section-title"><div><p class="eyebrow">EXPLORE</p><h2>Token markets</h2></div><button id="refresh" class="outline">Refresh</button></div>
         <p class="muted">Real factory markets, fetched on request. No invented activity.</p>
         <label class="filter"><input type="checkbox" id="verified-only"> Verified only</label><p id="verification-list-status" class="fine" role="status">Owner-reviewed identity labels are separate from factory provenance.</p>
@@ -47,7 +53,7 @@
         <div id="markets" class="market-list"><p class="empty">No verified deployment configured.<br>Markets will appear here after deployment is reviewed.</p></div>
         <button id="more" class="outline" hidden>Load more</button>
       </section>
-      <section class="panel launch" id="create-section" tabindex="-1">
+      <section class="panel launch" id="create-section" tabindex="-1" hidden>
         <p class="eyebrow">CREATE ON PUMPLITE</p><h2>Create your token</h2>
         <p id="create-network" class="network-pill">Base Mainnet · ETH pair</p>
         <div class="launch-facts"><span><b id="create-supply-fact">1 billion</b><small id="create-supply-mode-fact">Fixed supply</small></span><span><b>0%</b>PumpLite creation fee</span><span><b>0.25%</b>Trading fee</span></div>
@@ -114,7 +120,7 @@
 
       </section>
     </div>
-    <section id="holder-claim-section" class="panel holder-claim" aria-labelledby="holder-claim-title">
+    <section id="holder-claim-section" class="panel holder-claim" aria-labelledby="holder-claim-title" hidden>
       <p class="eyebrow">PLITE COMMUNITY</p>
       <h2 id="holder-claim-title">First 50 opt-in PLITE holders</h2>
       <p class="muted">When the claim opens, the first 50 different Base wallet addresses can each claim 1 PLITE. No purchase is required. One wallet can claim once; a wallet address does not prove a unique human.</p>
@@ -125,7 +131,19 @@
       </div>
       <p class="fine">Claiming is a free token distribution, not a promise of value or return. Base network gas may still apply to the claim transaction.</p>
       <p><a class="outline claim-page-link" href="./claim.html">Open First 50 claim page</a></p>
-    </section>  </section>
+    </section>
+    <section id="help-section" class="panel home-page-panel" tabindex="-1" hidden>
+      <p class="eyebrow">HELP &amp; SAFETY</p>
+      <h2>Using PumpLite safely</h2>
+      <p class="muted">Choose a page above instead of scrolling through the whole site.</p>
+      <div class="help-grid">
+        <article><h3>Create Token</h3><p class="fine">Create a Base Mainnet token, publish metadata and review the wallet transaction before approving it.</p></article>
+        <article><h3>Markets &amp; Trade</h3><p class="fine">Browse PumpLite markets. Open a market to see its on-chain data and buy or sell through your connected wallet.</p></article>
+        <article><h3>PLITE Claim</h3><p class="fine">Open the separate First 50 PLITE claim page. A wallet can claim once after the claim contract is deployed and fully funded.</p></article>
+        <article><h3>Wallet Safety</h3><p class="fine">Never enter a seed phrase or private key into PumpLite. Check Base Mainnet, the address and the amount before approving a transaction.</p></article>
+      </div>
+    </section>
+  </section>
   <section id="market-page" hidden>
     <a id="back" class="back" href="#">← All markets</a>
     <div class="section-title market-heading"><div><p class="eyebrow" id="market-symbol">TOKEN MARKET</p><h1 id="market-name">Loading market…</h1></div><button id="refresh-market" class="outline">Refresh market</button></div>

@@ -143,7 +143,7 @@ function controls() {
   $('get-quote').disabled = !ready() || !state.market || state.busy;
   $('refresh').disabled = !ready() || state.busy; $('refresh-market').disabled = !ready() || state.busy;
   $('more').disabled = state.busy; $('verified-only').disabled = state.busy;
-  $('show-create').disabled=state.busy; $('show-explore').disabled=state.busy;
+  $('show-home').disabled=state.busy; $('show-create').disabled=state.busy; $('show-explore').disabled=state.busy; $('show-help').disabled=state.busy;
   for (const id of ['description','image-uri','banner-uri','website','twitter','telegram','discord','name','symbol','uri','side','amount','slippage','market-address','initial-buy-eth','initial-buy-currency','trade-display-amount','trade-display-currency']) $(id).disabled = state.busy;
   $('trade-use-display').disabled = state.busy || $('side').value !== 'buy';
   $('initial-buy-submit').disabled = state.busy;
@@ -1034,8 +1034,45 @@ $('publish-metadata').addEventListener('click', () => action(async () => {
   }
 }));
 
-$('show-create').addEventListener('click',()=>{$('create-section').scrollIntoView({block:'start'});$('name').focus();});
-$('show-explore').addEventListener('click',()=>{$('explore-section').scrollIntoView({block:'start'});$('explore-section').focus();});
+const HOME_PAGE_TARGETS = Object.freeze({
+  home: 'home-overview',
+  create: 'create-section',
+  markets: 'explore-section',
+  help: 'help-section'
+});
+
+function showHomePage(page, { focus = true } = {}) {
+  const selected = Object.hasOwn(HOME_PAGE_TARGETS, page) ? page : 'home';
+
+  $('home-overview').hidden = selected !== 'home';
+  $('home-workspace').hidden = !['create', 'markets'].includes(selected);
+  $('create-section').hidden = selected !== 'create';
+  $('explore-section').hidden = selected !== 'markets';
+  $('holder-claim-section').hidden = true;
+  $('help-section').hidden = selected !== 'help';
+
+  for (const [id, name] of [
+    ['show-home', 'home'],
+    ['show-create', 'create'],
+    ['show-explore', 'markets'],
+    ['show-help', 'help']
+  ]) {
+    $(id).setAttribute('aria-pressed', String(selected === name));
+  }
+
+  if (focus) {
+    const target = $(HOME_PAGE_TARGETS[selected]);
+    target.focus({ preventScroll: true });
+    target.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }
+}
+
+$('show-home').addEventListener('click', () => showHomePage('home'));
+$('show-create').addEventListener('click', () => showHomePage('create'));
+$('show-explore').addEventListener('click', () => showHomePage('markets'));
+$('show-help').addEventListener('click', () => showHomePage('help'));
+
+showHomePage('home', { focus: false });
 $('verified-only').addEventListener('change',()=>action(async()=>{state.registry=null;renderDiscovery();await refreshRegistry();renderDiscovery();}));
 
 $('refresh').addEventListener('click', () => action(() => discover()));
