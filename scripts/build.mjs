@@ -39,6 +39,7 @@ for (const output of Object.values(result.metafile.outputs)) {
 }
 const files = new Map(result.outputFiles.map(file => [file.path, file.contents]));
 files.set(resolve(assets, 'phantom-diagnostic.js'), await readFile('web/phantom-diagnostic.js'));
+files.set(resolve(assets, 'mayhem-playground.js'), await readFile('web/mayhem-playground.js'));
 files.set(resolve(assets, 'styles.css'), await readFile('web/styles.css'));
 files.set(resolve(assets, 'plite-icon-48.svg'), await readFile('web/plite-icon-48.svg'));
 files.set(resolve(assets, 'plite-logo-200.png'), await readFile('web/plite-logo-200.png'));
@@ -84,7 +85,7 @@ if (checkOnly) {
     await mkdir(dirname(path), { recursive: true }); await writeFile(path, bytes);
   }
   await mkdir(dist, { recursive: true });
-  for (const path of ['index.html', 'claim.html', 'verification.html', 'terms.html', 'privacy.html', 'risk.html', 'config.json', '.nojekyll', '_headers']) await copyFile(path, resolve(dist, path));
+  for (const path of ['index.html', 'claim.html', 'verification.html', 'status.html', 'mayhem-playground.html', 'terms.html', 'privacy.html', 'risk.html', 'config.json', '.nojekyll', '_headers']) await copyFile(path, resolve(dist, path));
   await cp(assets, resolve(dist, 'assets'), { recursive: true });
   await mkdir('build', { recursive: true });
   await writeFile('build/frontend-metafile.json', JSON.stringify(result.metafile, null, 2) + '\n');

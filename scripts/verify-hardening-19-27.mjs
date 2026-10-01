@@ -1021,10 +1021,36 @@ async function step27LivePublicParity() {
         ).href
       );
 
+    let observed = live;
+    let matched =
+      sha256Text(observed) ===
+      sha256Text(local);
+
+    for (
+      let parityAttempt = 1;
+      !matched &&
+      parityAttempt <= 12;
+      parityAttempt++
+    ) {
+      await sleep(5_000);
+
+      observed =
+        await fetchText(
+          new URL(
+            item.live,
+            root
+          ).href
+        );
+
+      matched =
+        sha256Text(observed) ===
+        sha256Text(local);
+    }
+
     assert.equal(
-      sha256Text(live),
-      sha256Text(local),
-      'Live public file differs from checked-out repository: ' +
+      matched,
+      true,
+      'Live public file differs from checked-out repository after bounded Pages propagation retry: ' +
         item.local +
         ' -> ' +
         item.live

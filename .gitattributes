@@ -28,3 +28,6 @@ web/generated/base-v3-abi.json text eol=lf
 tests/base-v3*-candidate.mjs text eol=lf
 docs/MAYHEM_V3.md text eol=lf
 .github/workflows/base-v3-candidate.yml text eol=lf
+mayhem-playground.html text eol=lf
+web/mayhem-playground.js text eol=lf
+tests/mayhem-playground.test.mjs text eol=lf
