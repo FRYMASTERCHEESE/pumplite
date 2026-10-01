@@ -155,7 +155,7 @@ test('browser entrypoint cache keys were advanced together', async () => {
     ['v3', v3]
   ]) {
     assert.ok(
-      html.includes('boot=20261002bugs2'),
+      html.includes('boot=20261002bugs3'),
       name + ' did not receive the current release cache key'
     );
   }

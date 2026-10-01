@@ -193,3 +193,28 @@ test(
     );
   }
 );
+test(
+  "wallet discovery cannot run before assignment completes",
+  async () => {
+    const source =
+      await readFile(
+        "web/v3-deploy.js",
+        "utf8"
+      );
+
+    assert.match(
+      source,
+      /function fillWallets\(\)\s*\{\s*if \(!wallets\)/
+    );
+
+    assert.match(
+      source,
+      /discoverEvm\([\s\S]*?queueMicrotask/
+    );
+
+    assert.match(
+      source,
+      /if \(wallets\)\s*\{\s*fillWallets\(\)/
+    );
+  }
+);

@@ -189,7 +189,7 @@ async function verifyOnce() {
       'PLITE verification &amp; discovery'
     ) &&
     statusPage.includes(
-      'src="./status.js?boot=20261002bugs2"'
+      'src="./status.js?boot=20261002bugs3"'
     ),
     'Live status page or status script reference is stale'
   );
@@ -199,7 +199,7 @@ async function verifyOnce() {
       'Deploy PumpLite V3'
     ) &&
     v3DeployPage.includes(
-      'src="./assets/v3-deploy.js?boot=20261002bugs2"'
+      'src="./assets/v3-deploy.js?boot=20261002bugs3"'
     ) &&
     v3DeployPage.includes(
       'REAL BASE MAINNET'
@@ -260,6 +260,7 @@ async function verifyOnce() {
     'Mayhem controller cannot be the zero address',
     'Wallet account changed',
     'Embedded PumpLite V3 deployment is disabled',
+    'queueMicrotask',
     'mayhemLimits',
     'accountsChanged',
     'chainChanged'

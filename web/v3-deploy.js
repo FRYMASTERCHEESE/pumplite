@@ -199,6 +199,10 @@ async function copyText(text) {
 }
 
 function fillWallets() {
+  if (!wallets) {
+    return;
+  }
+
   wallets.refresh();
 
   const select =
@@ -1101,7 +1105,12 @@ async function start() {
   wallets =
     discoverEvm(
       window,
-      fillWallets
+      () =>
+        queueMicrotask(() => {
+          if (wallets) {
+            fillWallets();
+          }
+        })
     );
 
   fillWallets();

@@ -92,6 +92,107 @@ try {
   assert.equal(chunks.filter(name => /^base-v3-/.test(name)).length, 1, 'Base V3 Classic/Mayhem bundle must exist exactly once');
   browser = await chromium.launch({ headless: true, ...(process.env.BROWSER_EXECUTABLE ? { executablePath: process.env.BROWSER_EXECUTABLE } : {}) });
   await verifyBrowser(browser,base);
+
+  // V3 injected-wallet boot does not race wallet discovery.
+  // discoverEvm performs an immediate refresh, so an already-injected
+  // provider reproduces the real browser startup condition that caused:
+  // "Cannot read properties of undefined (reading 'refresh')".
+  const v3Boot =
+    await browser.newPage({
+      viewport: {
+        width: 390,
+        height: 844
+      }
+    });
+
+  const v3BootErrors = [];
+
+  v3Boot.on(
+    'pageerror',
+    error =>
+      v3BootErrors.push(
+        error.message
+      )
+  );
+
+  await v3Boot.addInitScript(() => {
+    const listeners = new Map();
+
+    window.ethereum = {
+      isMetaMask: true,
+
+      async request({ method }) {
+        if (method === 'eth_chainId') {
+          return '0x2105';
+        }
+
+        if (method === 'eth_accounts') {
+          return [];
+        }
+
+        throw Error(
+          'Unexpected wallet request during V3 boot: ' +
+            method
+        );
+      },
+
+      on(event, fn) {
+        if (!listeners.has(event)) {
+          listeners.set(
+            event,
+            new Set()
+          );
+        }
+
+        listeners
+          .get(event)
+          .add(fn);
+      },
+
+      removeListener(event, fn) {
+        listeners
+          .get(event)
+          ?.delete(fn);
+      }
+    };
+  });
+
+  await v3Boot.goto(
+    base + 'v3-deploy.html',
+    {
+      waitUntil: 'networkidle'
+    }
+  );
+
+  await v3Boot.waitForFunction(
+    () =>
+      document
+        .querySelector(
+          '#v3-page-status'
+        )
+        ?.textContent
+        ?.includes(
+          'Ready. Connect the published PumpLite treasury wallet.'
+        )
+  );
+
+  assert.deepEqual(
+    v3BootErrors,
+    [],
+    'V3 deployment page must boot without wallet-discovery runtime errors'
+  );
+
+  assert.ok(
+    await v3Boot
+      .locator(
+        '#v3-wallet-choice option'
+      )
+      .count() >= 1,
+    'V3 deployment page should render discovered wallet choices'
+  );
+
+  await v3Boot.close();
+
   const broken = await browser.newPage({ viewport: { width: 390, height: 844 } });
   await broken.route('**/assets/app.js*', route => route.abort());
   await broken.goto(base);
