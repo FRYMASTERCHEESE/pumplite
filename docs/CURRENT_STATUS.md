@@ -123,3 +123,8 @@ PumpLite now performs live Base Mainnet `eth_call` simulations of important stat
 ## Base event/accounting reconciliation
 
 PumpLite now reconstructs live Base V2 accounting from the chain's own factory and market event history. The monitor checks that factory market order/configuration agrees with creation events and that event-derived reserves, volume, market support, burns, inventory minting, mint-lock state and manual Mayhem state reconcile with current contract/token state at the same Base block. Historical log requests are bounded and can split automatically for public RPC range limits.
+
+
+## PLITE Uniswap V2 provenance health
+
+PumpLite now independently verifies the external PLITE/WETH Uniswap V2 pool against the canonical Base Uniswap V2 factory. The monitor checks factory-to-pair and pair-to-factory provenance, exact PLITE/WETH token identities, live non-zero reserves, LP supply/minimum locked liquidity, the canonical PairCreated record and latest Sync-to-reserve consistency. This external DEX pool remains separate from PumpLite curve backing and its reserve-ratio price is not a guaranteed execution price or oracle.

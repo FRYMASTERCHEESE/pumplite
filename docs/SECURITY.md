@@ -125,3 +125,8 @@ The `Base write simulation` workflow uses `eth_call` against live Base Mainnet c
 ## Event/accounting reconciliation monitoring
 
 The `Base event accounting` workflow reconstructs V2 accounting from immutable Mainnet logs and compares it with current on-chain state. This provides a separate consistency path from direct state reads: trades, explicit market support, Buy & Burn, inventory minting, mint locking and manual Mayhem changes must reconcile with the corresponding cumulative state. The check is read-only and bounded for public RPC use. It detects inconsistencies but cannot repair them and does not replace an independent audit.
+
+
+## PLITE DEX provenance monitoring
+
+The `PLITE DEX health` workflow confirms that the published PLITE/WETH external pool is the pair registered by the canonical Uniswap V2 factory on Base and that the pair reports that same factory and exact token identities. It also verifies non-empty reserves, LP minimum-liquidity locking and current reserve agreement with the latest Sync event. These checks detect provenance/configuration drift but do not make the small external pool an oracle, guarantee liquidity depth or protect a trader from slippage/MEV.
