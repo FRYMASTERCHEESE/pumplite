@@ -4,6 +4,9 @@ A token launchpad targeting **Solana Mainnet and Base Mainnet**.
 **Base Mainnet V2 is deployed and enabled for real transactions** through LaunchFactoryV2 `0xdA8c34819ae397FD4bE3C95947DEA64f4A3278f4`. V2 includes fixed or permanently capped mintable supply, Mayhem market support, Buy & Burn, and wallet-signed bonding-curve trading. **Solana Mainnet remains undeployed and transaction-locked.** Independent security/economic review remains appropriate for production financial software.
 No admin panel, owner withdrawals, mutable fees, proxies, or market-edit controls are provided.
 
+For the current live/deployment status, PLITE addresses, DEX pair, metadata state and historical-document boundary,
+see [Current status](docs/CURRENT_STATUS.md).
+
 ## Run locally
 
 Requirements: Node.js 22+ and pnpm 10.11.0.
@@ -94,8 +97,9 @@ validator, RPC endpoint, deployment, or secrets. Downloads are versioned and che
 The build wrapper prevents Agave from automatically generating a deployment keypair.
 Anchor's required provider configuration names a deliberately nonexistent wallet path; verification never reads it.
 
-Local Windows verification passed the SBF build, IDL generation/schema check, 4 host tests and 24 compiled-program
-SVM integration tests. The GitHub-hosted workflow has not been run. A passing build is not Mainnet approval.
+Local Windows verification passed the SBF build, IDL generation/schema check, host tests and compiled-program
+SVM integration tests. The GitHub-hosted Solana verification workflow is active and has passed on current Main.
+A passing Solana build is not proof of a Solana Mainnet deployment.
 See [test instructions](tests/solana/README.md) and the [exact verification report](docs/SOLANA_VERIFICATION.md).
 The program identity remains build configuration only; transactions are still disabled.
 
@@ -134,11 +138,16 @@ Treasuries are public constants:
 The frontend includes network selection, injected-wallet connection, creation, discovery, address-based market pages,
 balance reads, integer quotes, slippage, signing/submission, confirmation checks, and explorer links.
 With the current configuration it shows honest unavailable states rather than fabricated market activity.
-No wallet signing flow was exercised against Mainnet.
+Base Mainnet wallet signing has now been exercised with real user-approved transactions, including the live
+PLITE launch and the separately approved PLITE/WETH Uniswap V2 liquidity position. This does not convert local
+test fixtures into Mainnet tests and does not claim that every wallet, trade path or failure mode has been exercised.
 
 Discovery reads actual accounts or factory registrations, eight markets at a time.
 Solana key enumeration still scales with total market count; a bounded, verifiable indexer is needed for large deployments.
-There is no continuous chart/history service, external price feed, automatic polling, image upload, or custodial backend.
+Base market pages now provide bounded on-chain trade history and rolling 24-hour curve reads, and the PLITE page reads
+the verified Uniswap V2 PLITE/WETH pair directly from Base for reserves and reserve-ratio spot data. These are on-demand
+chain reads, not a custodial market-data backend or a guaranteed oracle. Wallet-authorized token image/JSON publishing
+is available through the configured metadata/IPFS service.
 
 Solana name/symbol/URI are stored immutably in the market account. Metaplex wallet metadata is **not published yet**.
 Base tokens expose standard ERC-20 names/symbols; optional metadata URI remains on the market.

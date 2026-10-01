@@ -1,6 +1,12 @@
 # Architecture and accounting
 
-## Shared economics
+> Current deployment note (1 October 2026): Base Mainnet uses V2 at `0xdA8c34819ae397FD4bE3C95947DEA64f4A3278f4`.
+> Base V2 can retain an additional 75 bps of trade value as Mayhem market backing while Mayhem is active,
+> and supports permanently capped mintable inventory. The formulas below describe the shared/legacy curve
+> baseline; the deployed Base V2 contract is authoritative for V2 fee/support accounting. See
+> [CURRENT_STATUS.md](CURRENT_STATUS.md) and [SECURITY.md](SECURITY.md).
+
+## Shared/legacy curve baseline
 
 Let N be accounted real native reserves, T accounted vault token reserves, V the fixed native pricing offset,
 A gross native buy input, and Q sell token input. All values are integers in smallest units.

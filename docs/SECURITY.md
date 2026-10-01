@@ -1,83 +1,94 @@
-# Security boundaries and release gates
+# Security boundaries and current release gates
 
-PumpLite remains unaudited. Base Mainnet is deployed and enabled for real transactions at `0xf722BeD94c4A41B2C71cDCDEB5EEA062352aEe44`; Solana Mainnet remains undeployed and transaction-locked.
+Status date: 1 October 2026.
 
-## No privileged fund controls
+PumpLite Base V2 is deployed and enabled for real transactions at
+`0xdA8c34819ae397FD4bE3C95947DEA64f4A3278f4`. The older Base V1 factory at `0xf722BeD94c4A41B2C71cDCDEB5EEA062352aEe44`
+is separate and is not the active public V2 factory. Solana Mainnet remains undeployed and
+transaction-locked.
 
-No owner/admin, mutable treasury/fees, mint-after-launch, freeze, pause, upgrade proxy,
-market editing, reserve withdrawal, or donation-rescue function exists.
-The Solana loader's deployment authority is separate from program instructions:
-a future deployment must use an explicitly reviewed immutable deployment/finalization policy.
-Do not leave a retained upgrade authority able to replace the fund-handling program.
-The Base LaunchFactory has been deployed at `0xf722BeD94c4A41B2C71cDCDEB5EEA062352aEe44`. No Solana deployment or Solana authority-change transaction has been submitted.
+PumpLite has not received an independent third-party smart-contract/economic audit. Automated,
+integration, adversarial and browser testing reduces known implementation risk but is not a substitute
+for an independent audit.
 
-Never request, export, log, store, or commit wallet seed phrases or private keys.
-Public treasury addresses are intentionally present. Test signing material stays inside the ephemeral test VM.
-Ignore patterns are defense in depth, not a replacement for reviewing staged files.
+## Base V2 privilege boundaries
+
+Base V2 deliberately has no arbitrary owner reserve withdrawal, mutable treasury, mutable platform fee,
+proxy upgrade, blacklist or pause function.
+
+The important privileged roles that do exist are explicit:
+
+- The fixed Mayhem controller can switch manual Mayhem after the initial 24-hour window and can call
+  market support with real ETH.
+- A creator who launched a token as mintable can call market inventory minting up to that token's
+  immutable lifetime maximum until minting is permanently locked.
+- Newly minted inventory goes directly to the token's PumpLite market; there is no arbitrary
+  creator mint-to-wallet function.
+- Fixed / No Mint launches start with their final supply and cannot later enable minting.
+
+The token market contract is the token's mint/burn authority. Burned tokens do not restore lifetime
+mint allowance.
+
+## Funds and transaction safety
+
+Base V2 trade paths use reentrancy protection, positive minimum output, a maximum five-minute
+on-chain deadline and checked reserve/backing conditions. The 25 bps platform fee is routed to the
+immutable treasury. When Mayhem is active, the additional 75 bps support amount stays in the market
+as real backing rather than being paid to the treasury.
+
+Wallet approval is always required for transactions. Never request, export, log, store or commit seed
+phrases or private keys. Public treasury, token, market and pair addresses are intentionally public.
 No wallet credentials are required by CI.
 
-## Verified local foundation
+## Current live boundaries
 
-The current local build uses Anchor 1.0.2 with explicit System Program address constraints.
-The user confirmed the preceding commit passed Solana verification #2, Local verification #5
-and Pages deployment #32. Those runs do not validate these newer uncommitted changes.
-Current evidence: 4 host tests, actual SBF compilation, IDL/schema verification and 24 runtime tests,
-including frontend-built instructions, maximum metadata/packet/compute checks, 384 seeded four-user
-trades and a System Program substitution regression. See
-[READINESS_FOLLOWUP.md](READINESS_FOLLOWUP.md) for exact results and limits.
-This is a local verification gate, not Mainnet approval.
+Base Mainnet writes are enabled with contractVersion=2. Solana remains fail-closed with
+`programId=null` and `transactionsEnabled=false`.
 
-The frontend full genesis-hash blocker is now fixed and covered by seven loopback-only regression
-checks plus published-bundle validation at mobile/desktop widths. Both configuration and RPC
-responses must exactly match the pinned Mainnet hash; truncated references and RPC failures are
-rejected. Identity is rechecked rather than cached. Transactions remain disabled and deployment
-addresses remain null. A genesis response alone cannot authenticate a malicious RPC or establish
-wallet interoperability; those release gates remain.
+Real user-approved Base wallet operations have occurred, including the PLITE launch and a separately
+approved PLITE/WETH Uniswap V2 liquidity position. Local EVM and browser tests remain local tests and
+must not be described as live-chain acceptance.
 
-## Required before Mainnet deployment
+The external Uniswap V2 pool is not PumpLite curve backing. Its reserves and reserve-ratio price can
+change independently. Very small external liquidity can create extreme slippage.
 
-1. Obtain explicit user approval for any eventual deployment; the current task authorizes local work only.
-2. Reproduce the pinned host/SBF/IDL/runtime checks in the clean Linux CI environment and review Cargo.lock.
-   The reviewed ABI and actual client-built create/buy/sell instructions now execute in the local SBF harness.
-3. Extend the seeded multi-user suite into broader fuzz campaigns, integer-extreme and production feature-set testing; maximum metadata, packet and compute bounds now have local coverage. Keep the signer, PDA, CPI, reserve, fee,
-   slippage, liquidity and atomic rollback regression tests passing.
-4. Independently audit both contracts and the client transaction construction. Extend fuzz/stateful testing,
-   economic analysis, sandwich/MEV analysis, tiny-trade fee behavior, full-inventory round trips and long sequences.
-5. Review fixed supply, 30 SOL/1 ETH pricing offsets, 25 bps treasury-only fee, donation locking,
-   no migration/graduation, and dust behavior as product decisions. These are not adjustable after launch.
-6. Confirm treasury ownership and ability to receive native payments without requesting any credentials.
-   A reverting Base treasury halts trades; wallet fee estimates need production verification.
-7. Verify immutable bytecode/program artifacts, exact compiler settings, source, treasury constants, and chain IDs.
-   The current Solana program identity is only inherited build configuration, not proof of a deployed artifact.
-8. Complete real wallet interoperability and mobile-device checks, transaction replacement/timeout/rejection handling,
-   RPC outage and rate-limit handling, and account/network-change tests using a safe local harness first.
-9. Decide how to publish immutable Solana token metadata recognizable by wallets.
-   The current market metadata alone does not register Metaplex metadata.
-10. Resolve dependency audit findings and review the pinned toolchain/actions for release.
-    Verify the separate Solana runtime CI result for the exact release commit; green web/Pages CI is insufficient.
-11. Configure production RPC capacity without exposing secrets. Update CSP for reviewed RPC hosts,
-    serve compressed assets with appropriate immutable caching, enforce HTTPS and server-side security headers,
-    and use a bounded discovery service when Solana market enumeration becomes large.
-12. Resolve the inherited LICENSE placeholder and publish accurate fee/risk/authority disclosures.
-13. Only after reviewed deployment, verify actual deployed code/immutable authority, populate public addresses,
-    review the frontend deployment lock and enable writes as a separate explicitly approved release.
+## Data integrity
 
-## Dependency observations
+Do not hardcode or fabricate balances, prices, volume, trades, holders or liquidity.
 
-Runtime dependencies are pinned and browser-bundled. Dependency scans cover packages, not contract correctness.
-The local test VM has older native optional dependencies; it is not shipped in the website or exposed as an RPC service.
-Current scans are recorded in READINESS_FOLLOWUP.md; IMPLEMENTATION_REPORT.md retains historical observations. Never silence an advisory merely to make CI green.
+Base market reads are chain-derived. Rolling 24-hour activity and chart/history reads are bounded to
+protect public RPC capacity. The PLITE external-liquidity card reads the verified PLITE/WETH V2 pair
+directly from Base.
 
-## Product data
+User-controlled text must remain rendered as inert text. Remote creator metadata is not automatically
+executed or injected into the DOM.
 
-No hardcoded balances, prices, market lists, transactions, or volume.
-Empty/unconfigured/error states must remain empty/unavailable.
-Test fixtures are confined to tests and never bundled into the product.
-User-controlled text is rendered with textContent; metadata URI contents are not rendered.
-Do not enable production features by replacing failures with example data.
+## Metadata publication
 
-## Current verification and dependency disposition
+The public frontend can use wallet-signed authorization for image/metadata publishing through the
+configured PumpLite upload service. The browser does not receive Pinata or infrastructure secrets.
+Images are normalized and bounded before upload. Published IPFS content is public and may be difficult
+or impossible to erase everywhere.
 
-See [RELEASE_CANDIDATE.md](RELEASE_CANDIDATE.md) and [dependency-review.json](dependency-review.json).
-Advisories are version-scoped and review-dated; changed/new findings and expired reviews fail CI.
-These engineering dispositions do not substitute for independent audit approval.
+External provider credentials, quotas and Cloudflare/Pinata runtime state are operational concerns and
+cannot be proven by repository tests alone.
+
+## CI and release checks
+
+The current GitHub workflows run local/frontend/Base verification, Pages deployment checks and Solana
+build/runtime verification. A green CI run establishes only the checks it actually executes.
+
+For significant public funds, remaining security work includes:
+
+1. Obtain an independent smart-contract/economic/frontend review and resolve material findings.
+2. Keep the controller/treasury wallet secure and verify immutable addresses before approving actions.
+3. Continue adversarial/stateful testing for edge cases, MEV, slippage, tiny-trade rounding and long sequences.
+4. Monitor public RPC capacity, metadata infrastructure and GitHub Pages availability.
+5. Re-run the complete release checks after any contract, transaction, wallet, RPC or metadata change.
+6. Keep Solana transaction-locked until a separate deployment, authority and acceptance process is explicitly approved.
+
+## Historical reports
+
+IMPLEMENTATION_REPORT.md, READINESS_FOLLOWUP.md, RELEASE_CANDIDATE.md, RELEASE_HANDOFF.md and
+LOCAL_READINESS_CLOSURE.md are retained as historical verification records. Their old deployment-state
+statements must be interpreted at the date/commit they recorded. See CURRENT_STATUS.md for current state.

@@ -1,0 +1,86 @@
+# PumpLite current status
+
+Status date: 1 October 2026.
+
+This file is the current operational-status reference. Documents such as IMPLEMENTATION_REPORT.md,
+READINESS_FOLLOWUP.md, RELEASE_CANDIDATE.md, RELEASE_HANDOFF.md and LOCAL_READINESS_CLOSURE.md record
+earlier verification checkpoints. Statements in those historical reports such as "not deployed",
+"transactions disabled" or "no Mainnet wallet transaction" describe their checkpoint and do not
+override this current status.
+
+## Base Mainnet
+
+PumpLite Base V2 is deployed and public writes are enabled.
+
+- Chain: Base Mainnet (8453)
+- Active V2 factory: `0xdA8c34819ae397FD4bE3C95947DEA64f4A3278f4`
+- Contract version: 2
+- Platform fee: 25 bps (0.25%)
+- Mayhem support while active: 75 bps (0.75%) retained as real market backing
+- PumpLite creation fee: 0%; Base network gas still applies
+- Solana remains separately locked and undeployed
+
+Base Mainnet wallet signing has been exercised with real user-approved operations. PLITE was created
+on Base through the live PumpLite V2 deployment, and a separate PLITE/WETH Uniswap V2 liquidity
+position was created with an explicit wallet approval. These facts do not imply that every wallet,
+trade path, device, RPC failure or economic condition has been acceptance-tested.
+
+## PLITE
+
+- Token: `0xb15A460142c77b42cDF57815b0eeFEb24b593196`
+- PumpLite V2 market: `0xa522A4Ef81fD31daec390ab46A32D4886e1461C7`
+- Uniswap V2 PLITE/WETH pair: `0xDAD81f9f5DbF71Ce54D63f96eE45231D97d6B086`
+- Canonical Base WETH: `0x4200000000000000000000000000000000000006`
+
+The PumpLite bonding curve and the Uniswap V2 pool are separate markets. Curve backing/curve volume
+must not include external DEX reserves, swaps or fees. The website reads the verified external pair
+directly from Base for live reserves, reserve-ratio spot price and spot-implied pool liquidity.
+
+## Frontend and market data
+
+The public frontend supports Base wallet connection, token creation, market discovery, quotes,
+wallet-signed transactions, confirmation checks and explorer links. Base market pages include bounded
+on-chain history and rolling 24-hour curve activity reads. PLITE additionally displays live external
+Uniswap V2 reserve data.
+
+PumpLite must not fabricate prices, volume, trades, holders, liquidity or activity. A displayed DEX
+spot price is a reserve ratio, not an execution guarantee or independent price oracle.
+
+## Metadata
+
+The public configuration has metadata uploads enabled. The frontend can normalize a selected token
+image, request wallet-signed upload authorization, publish the image and metadata through the configured
+PumpLite upload service, and use canonical IPFS URIs. The repository does not contain the provider's
+private credentials and does not prove the current state or quota of external Cloudflare/Pinata services.
+
+Published blockchain and IPFS information should be treated as public and potentially permanent.
+
+## Security
+
+The Base V2 contracts and frontend have automated, integration, adversarial and browser checks. Current
+CI must remain green before a documentation or product update is treated as released.
+
+PumpLite has not received an independent third-party smart-contract/economic audit. The controller wallet
+and creators of tokens launched as mintable have documented roles. A mintable Base V2 creator can add
+inventory only into that token's PumpLite market, only up to the immutable lifetime cap, until minting is
+permanently locked. There is no arbitrary mint-to-wallet, owner reserve withdrawal, mutable treasury,
+mutable platform fee, proxy upgrade, blacklist or pause function in Base V2.
+
+## Legal and risk pages
+
+The public site provides:
+
+- Terms of Use: `terms.html`
+- Privacy: `privacy.html`
+- Risk Disclosure: `risk.html`
+
+These pages describe non-custodial wallet use, fees, mintable-token behavior, metadata/IPFS publication,
+external services and token/liquidity risks.
+
+## Solana
+
+The Solana program continues to be build/test material only for the public product configuration:
+`programId=null` and `transactionsEnabled=false`. Passing Solana verification does not establish
+a Solana Mainnet deployment.
+
+Current-status note: the documents listed above are historical verification checkpoints and must be read at the commit and date they recorded.
