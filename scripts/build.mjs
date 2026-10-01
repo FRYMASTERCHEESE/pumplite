@@ -83,7 +83,7 @@ if (checkOnly) {
     await mkdir(dirname(path), { recursive: true }); await writeFile(path, bytes);
   }
   await mkdir(dist, { recursive: true });
-  for (const path of ['index.html', 'claim.html', 'config.json', '.nojekyll', '_headers']) await copyFile(path, resolve(dist, path));
+  for (const path of ['index.html', 'claim.html', 'terms.html', 'privacy.html', 'risk.html', 'config.json', '.nojekyll', '_headers']) await copyFile(path, resolve(dist, path));
   await cp(assets, resolve(dist, 'assets'), { recursive: true });
   await mkdir('build', { recursive: true });
   await writeFile('build/frontend-metafile.json', JSON.stringify(result.metafile, null, 2) + '\n');

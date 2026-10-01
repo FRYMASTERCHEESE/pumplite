@@ -11,7 +11,7 @@ const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright')
 const fixture = await mkdtemp(join(tmpdir(), 'pumplite-pages-'));
 let browser, server;
 try {
-  for (const file of ['index.html', 'claim.html', 'config.json', '.nojekyll']) await copyFile(file, join(fixture, file));
+  for (const file of ['index.html', 'claim.html', 'terms.html', 'privacy.html', 'risk.html', 'config.json', '.nojekyll']) await copyFile(file, join(fixture, file));
   await cp('assets', join(fixture, 'assets'), { recursive: true });
   const mount = '/pumplite/';
   const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json' };
@@ -206,6 +206,36 @@ try {
       /0xb15A460142c77b42cDF57815b0eeFEb24b593196/,
       'Claim page must show the PLITE token before RPC reads finish'
     );
+    for (const legalPage of [
+      'terms.html',
+      'privacy.html',
+      'risk.html'
+    ]) {
+      assert.equal(
+        (await page.request.get(base + legalPage)).status(),
+        200,
+        legalPage + ' must be published'
+      );
+    }
+
+    assert.equal(
+      await page.locator('footer a[href="./terms.html"]').count(),
+      1,
+      'Main footer must link Terms'
+    );
+
+    assert.equal(
+      await page.locator('footer a[href="./privacy.html"]').count(),
+      1,
+      'Main footer must link Privacy'
+    );
+
+    assert.equal(
+      await page.locator('footer a[href="./risk.html"]').count(),
+      1,
+      'Main footer must link Risk disclosure'
+    );
+
     assert.equal(
       (await page.request.get(base + 'assets/claim.js')).status(),
       200,
