@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "project": "PumpLite",
+  "token": {
+    "network": "Base Mainnet",
+    "chainId": 8453,
+    "address": "0xb15A460142c77b42cDF57815b0eeFEb24b593196",
+    "name": "PumpLite",
+    "symbol": "PLITE",
+    "decimals": 18
+  },
+  "contracts": {
+    "factory": "0xdA8c34819ae397FD4bE3C95947DEA64f4A3278f4",
+    "market": "0xa522A4Ef81fD31daec390ab46A32D4886e1461C7",
+    "holderClaim": "0xeCe2B0494f3010D3bd37ba4C3eF39faCe228c5c2",
+    "uniswapV2Pair": "0xDAD81f9f5DbF71Ce54D63f96eE45231D97d6B086"
+  },
+  "website": "https://frymastercheese.github.io/pumplite/",
+  "verificationPage": "https://frymastercheese.github.io/pumplite/verification.html",
+  "verificationManifest": "https://frymastercheese.github.io/pumplite/assets/token-verification.json",
+  "sourceRepository": "https://github.com/FRYMASTERCHEESE/pumplite",
+  "sourcify": "https://sourcify.dev/server/v2/contract/8453/0xb15A460142c77b42cDF57815b0eeFEb24b593196?fields=all",
+  "review": {
+    "type": "PumpLite identity-and-provenance review",
+    "easUid": "0x805a4b6019e15479a489751c44d7b078eaad6ccd71b6fe27d1ad93a234ce59b9",
+    "note": "This record is official PumpLite identity evidence. External providers remain authoritative for their own badges and listings."
+  }
+}
