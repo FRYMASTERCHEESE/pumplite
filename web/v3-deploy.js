@@ -6,11 +6,13 @@ import {
   ContractFactory,
   getAddress,
   isAddress,
-  parseEther
+  parseEther,
+  ZeroAddress
 } from "ethers";
 
 import {
-  discoverEvm
+  discoverEvm,
+  watchWallet
 } from "./wallets.js";
 
 import deployment from "./generated/base-v3-deploy.json" with { type: "json" };
@@ -40,6 +42,7 @@ let signer;
 let connectedAddress;
 let estimatedGas;
 let lastDeployment;
+let disposeWalletWatch;
 
 function status(message) {
   el("v3-page-status")
@@ -53,6 +56,134 @@ function errorText(error) {
     error?.message ||
     "Operation failed"
   );
+}
+
+function invalidateWalletSession(
+  message =
+    "Wallet account or network changed. Reconnect before continuing."
+) {
+  disposeWalletWatch?.();
+  disposeWalletWatch = undefined;
+  selectedProvider = undefined;
+  browserProvider = undefined;
+  signer = undefined;
+  connectedAddress = undefined;
+  estimatedGas = undefined;
+
+  el("v3-connected")
+    .textContent =
+      "Not connected";
+
+  el("v3-network")
+    .textContent =
+      "Base Mainnet required";
+
+  el("v3-gas")
+    .textContent =
+      "Not estimated";
+
+  status(message);
+  controls();
+}
+
+async function requireCurrentWallet() {
+  if (
+    !selectedProvider ||
+    !browserProvider ||
+    !signer ||
+    !connectedAddress
+  ) {
+    throw new Error(
+      "Connect the PumpLite treasury wallet first"
+    );
+  }
+
+  const chain =
+    BigInt(
+      await selectedProvider.request({
+        method: "eth_chainId"
+      })
+    );
+
+  if (chain !== BASE_CHAIN_ID) {
+    invalidateWalletSession(
+      "Wallet network changed. Reconnect on Base Mainnet."
+    );
+
+    throw new Error(
+      "Wallet must remain on Base Mainnet"
+    );
+  }
+
+  const accounts =
+    await selectedProvider.request({
+      method: "eth_accounts"
+    });
+
+  if (
+    !accounts?.[0] ||
+    !isAddress(accounts[0]) ||
+    getAddress(accounts[0]) !==
+      connectedAddress
+  ) {
+    invalidateWalletSession(
+      "Wallet account changed. Reconnect the published PumpLite treasury wallet."
+    );
+
+    throw new Error(
+      "Wallet account changed; reconnect before deploying"
+    );
+  }
+
+  const required =
+    getAddress(
+      config.base.treasury
+    );
+
+  if (connectedAddress !== required) {
+    invalidateWalletSession(
+      "Connected account is no longer the published PumpLite treasury."
+    );
+
+    throw new Error(
+      "Connected wallet is not the published PumpLite treasury"
+    );
+  }
+
+  return signer;
+}
+
+async function copyText(text) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  const box =
+    document.createElement(
+      "textarea"
+    );
+
+  box.value = text;
+  box.setAttribute(
+    "readonly",
+    ""
+  );
+  box.style.position = "fixed";
+  box.style.opacity = "0";
+  document.body.append(box);
+  box.select();
+
+  const copied =
+    document.execCommand("copy");
+
+  box.remove();
+
+  if (!copied) {
+    throw new Error(
+      "Clipboard copy is unavailable"
+    );
+  }
 }
 
 function fillWallets() {
@@ -147,7 +278,10 @@ async function readConfig() {
   if (
     !isAddress(
       value.base.treasury
-    )
+    ) ||
+    getAddress(
+      value.base.treasury
+    ) === ZeroAddress
   ) {
     throw new Error(
       "Configured PumpLite treasury is invalid"
@@ -212,6 +346,9 @@ async function connect() {
     );
   }
 
+  disposeWalletWatch?.();
+  disposeWalletWatch = undefined;
+
   selectedProvider =
     entry.provider;
 
@@ -275,6 +412,18 @@ async function connect() {
       "Wallet provider is not Base Mainnet"
     );
   }
+
+  disposeWalletWatch =
+    watchWallet(
+      selectedProvider,
+      [
+        "accountsChanged",
+        "chainChanged",
+        "disconnect"
+      ],
+      () =>
+        invalidateWalletSession()
+    );
 
   el("v3-connected")
     .textContent =
@@ -386,6 +535,18 @@ function deploymentArgs() {
       feeTreasuryRaw
     );
 
+  if (controller === ZeroAddress) {
+    throw new Error(
+      "Mayhem controller cannot be the zero address"
+    );
+  }
+
+  if (feeTreasury === ZeroAddress) {
+    throw new Error(
+      "Mayhem fee treasury cannot be the zero address"
+    );
+  }
+
   const limits = {
     minBuy:
       parsePositiveEth(
@@ -486,6 +647,8 @@ function factoryForSigner() {
 }
 
 async function estimate() {
+  await requireCurrentWallet();
+
   const factory =
     factoryForSigner();
 
@@ -603,7 +766,8 @@ async function verifyDeployment(
     controller,
     treasury,
     feeTreasury,
-    count
+    count,
+    liveLimits
   ] =
     await Promise.all([
       contract
@@ -613,7 +777,9 @@ async function verifyDeployment(
       contract
         .mayhemFeeTreasury(),
       contract
-        .marketCount()
+        .marketCount(),
+      contract
+        .mayhemLimits()
     ]);
 
   if (
@@ -648,6 +814,37 @@ async function verifyDeployment(
       "New V3 factory unexpectedly has existing markets"
     );
   }
+
+  const limitNames = [
+    "minBuy",
+    "maxBuy",
+    "maxTotalBuy",
+    "maxTotalSell",
+    "pauseBelowNativeReserve",
+    "minInterval",
+    "maxTrades",
+    "minSellBps",
+    "maxSellBps"
+  ];
+
+  for (
+    let index = 0;
+    index < limitNames.length;
+    index++
+  ) {
+    const name =
+      limitNames[index];
+
+    if (
+      BigInt(liveLimits[index]) !==
+      BigInt(expected[3][name])
+    ) {
+      throw new Error(
+        "V3 Mayhem limit read-back mismatch: " +
+          name
+      );
+    }
+  }
 }
 
 async function deploy() {
@@ -659,6 +856,8 @@ async function deploy() {
       "Confirm that you understand this is a real Base Mainnet deployment"
     );
   }
+
+  await requireCurrentWallet();
 
   const factory =
     factoryForSigner();
@@ -677,6 +876,8 @@ async function deploy() {
   status(
     "Opening your wallet for the REAL Base Mainnet V3 deployment. Review the network fee before approving."
   );
+
+  await requireCurrentWallet();
 
   const contract =
     await factory.deploy(
@@ -712,6 +913,16 @@ async function deploy() {
   ) {
     throw new Error(
       "V3 deployment transaction did not succeed"
+    );
+  }
+
+  if (
+    !receipt.from ||
+    getAddress(receipt.from) !==
+      connectedAddress
+  ) {
+    throw new Error(
+      "Confirmed V3 deployment came from an unexpected wallet"
     );
   }
 
@@ -811,8 +1022,7 @@ async function copyResult() {
       2
     );
 
-  await navigator.clipboard
-    .writeText(text);
+  await copyText(text);
 
   status(
     "Deployment details copied. Keep the factory address and transaction hash for the V3 activation verification."
@@ -951,6 +1161,7 @@ for (
 window.addEventListener(
   "pagehide",
   () => {
+    disposeWalletWatch?.();
     wallets?.dispose();
   }
 );

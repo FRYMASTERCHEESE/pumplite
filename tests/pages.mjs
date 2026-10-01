@@ -11,8 +11,40 @@ const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright')
 const fixture = await mkdtemp(join(tmpdir(), 'pumplite-pages-'));
 let browser, server;
 try {
-  for (const file of ['index.html', 'claim.html', 'verification.html', 'status.html', 'v3-deploy.html', 'terms.html', 'privacy.html', 'risk.html', 'config.json', '.nojekyll']) await copyFile(file, join(fixture, file));
-  await cp('assets', join(fixture, 'assets'), { recursive: true });
+  for (const file of [
+    'index.html',
+    'claim.html',
+    'verification.html',
+    'status.html',
+    'v3-deploy.html',
+    'terms.html',
+    'privacy.html',
+    'risk.html',
+    'config.json',
+    'status.js',
+    'manifest.webmanifest',
+    'robots.txt',
+    'sitemap.xml',
+    'token-list.json',
+    '.nojekyll'
+  ]) {
+    await copyFile(
+      file,
+      join(fixture, file)
+    );
+  }
+
+  await cp(
+    '.well-known',
+    join(fixture, '.well-known'),
+    { recursive: true }
+  );
+
+  await cp(
+    'assets',
+    join(fixture, 'assets'),
+    { recursive: true }
+  );
   const mount = '/pumplite/';
   const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json' };
   server = createServer(async (req, res) => {
@@ -33,6 +65,26 @@ try {
   assert.equal((await fetch(origin + '/assets/app.js')).status, 404, 'No root-path fallback');
   assert.equal((await fetch(base + 'web/app.js')).status, 404, 'Source modules must not be available');
   assert.equal((await fetch(base + 'node_modules/@solana/web3.js')).status, 404, 'No Node resolution fallback');
+
+  for (const publicPath of [
+    'status.js',
+    'manifest.webmanifest',
+    'robots.txt',
+    'sitemap.xml',
+    'token-list.json',
+    '.well-known/security.txt',
+    '.well-known/plite-token.json',
+    'v3-deploy.html',
+    'verification.html',
+    'status.html'
+  ]) {
+    assert.equal(
+      (await fetch(base + publicPath)).status,
+      200,
+      'Published fixture is missing ' +
+        publicPath
+    );
+  }
   const chunks = (await readdir('assets/chunks')).filter(name => /^(solana|base)-.*\.js$/.test(name));
   assert.equal(chunks.filter(name => /^solana-/.test(name)).length, 1, 'Solana bundle must exist exactly once');
   assert.equal(chunks.filter(name => /^base-(?!v[23]-)/.test(name)).length, 1, 'Base V1 compatibility bundle must exist exactly once');

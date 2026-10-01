@@ -23,7 +23,7 @@ test('claim Connect is a real Phantom universal link with injected-wallet interc
 
   assert.match(
     html,
-    /assets\/claim\.js\?boot=20261002e/
+    /assets\/claim\.js\?boot=[0-9A-Za-z_-]+/
   );
 
   assert.match(
@@ -135,6 +135,6 @@ test('live claim config is the default when no contract query is supplied', asyn
 
   assert.match(
     html,
-    /assets\/claim\.js\?boot=20261002e/
+    /assets\/claim\.js\?boot=[0-9A-Za-z_-]+/
   );
 });

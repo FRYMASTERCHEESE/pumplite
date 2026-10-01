@@ -153,6 +153,118 @@ async function verifyOnce() {
     fetchJson('assets/verified-tokens.json')
   ]);
 
+  const [
+    verificationPage,
+    statusPage,
+    v3DeployPage,
+    statusScript,
+    manifest,
+    robots,
+    sitemap,
+    tokenList,
+    securityText,
+    v3DeployBundle
+  ] = await Promise.all([
+    fetchText('verification.html'),
+    fetchText('status.html'),
+    fetchText('v3-deploy.html'),
+    fetchText('status.js'),
+    fetchJson('manifest.webmanifest'),
+    fetchText('robots.txt'),
+    fetchText('sitemap.xml'),
+    fetchJson('token-list.json'),
+    fetchText('.well-known/security.txt'),
+    fetchText('assets/v3-deploy.js')
+  ]);
+
+  assert.ok(
+    verificationPage.includes(
+      'PLITE Token Verification'
+    ),
+    'Live verification page marker missing'
+  );
+
+  assert.ok(
+    statusPage.includes(
+      'PLITE verification &amp; discovery'
+    ) &&
+    statusPage.includes(
+      'src="./status.js?boot=20261002bugs1"'
+    ),
+    'Live status page or status script reference is stale'
+  );
+
+  assert.ok(
+    v3DeployPage.includes(
+      'Deploy PumpLite V3'
+    ) &&
+    v3DeployPage.includes(
+      'src="./assets/v3-deploy.js?boot=20261002bugs1"'
+    ) &&
+    !/simulation/i.test(v3DeployPage),
+    'Live V3 deployment page is missing or stale'
+  );
+
+  assert.ok(
+    statusScript.includes(
+      'Refreshing read-only public verification checks'
+    ),
+    'Live status script marker missing'
+  );
+
+  assert.equal(
+    manifest.name,
+    'PumpLite',
+    'Live web manifest identity mismatch'
+  );
+
+  assert.ok(
+    robots.includes(
+      'sitemap.xml'
+    ),
+    'Live robots.txt is missing the sitemap'
+  );
+
+  assert.ok(
+    sitemap.includes(
+      '/verification.html'
+    ) &&
+    sitemap.includes(
+      '/status.html'
+    ),
+    'Live sitemap is incomplete'
+  );
+
+  assert.ok(
+    tokenList.tokens?.some(
+      item =>
+        String(item.address || '').toLowerCase() ===
+        '0xb15a460142c77b42cdf57815b0eefeb24b593196'
+    ),
+    'Live token list is missing official PLITE'
+  );
+
+  assert.ok(
+    securityText.length > 20,
+    'Live security contact is unexpectedly empty'
+  );
+
+  for (const marker of [
+    'wallet_switchEthereumChain',
+    'V3 Mayhem limit read-back mismatch',
+    'Mayhem controller cannot be the zero address',
+    'Wallet account changed',
+    'mayhemLimits',
+    'accountsChanged',
+    'chainChanged'
+  ]) {
+    assert.ok(
+      v3DeployBundle.includes(marker),
+      'Live V3 deployment bundle is missing: ' +
+        marker
+    );
+  }
+
   assert.ok(
     index.includes(
       'src="./' + expectedApp + '"'

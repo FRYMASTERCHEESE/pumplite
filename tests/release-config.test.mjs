@@ -114,3 +114,52 @@ test('legacy global transaction switch is rejected', () => {
     /global transaction switch/
   );
 });
+test('invalid and zero Base treasuries are rejected', () => {
+  for (const treasury of [
+    '0x0000000000000000000000000000000000000000',
+    'not-an-address'
+  ]) {
+    const config = clone();
+    config.base.treasury = treasury;
+
+    assert.throws(
+      () => validatePublicConfig(config),
+      /treasury/
+    );
+  }
+});
+
+test('enabled holder claim fails closed on bad addresses or limits', () => {
+  for (const [field, value] of [
+    ['contract', '0x0000000000000000000000000000000000000000'],
+    ['token', 'not-an-address']
+  ]) {
+    const config = clone();
+    config.base.holderClaim[field] = value;
+
+    assert.throws(
+      () => validatePublicConfig(config),
+      /holder claim address/
+    );
+  }
+
+  {
+    const config = clone();
+    config.base.holderClaim.claimAmount = '0';
+
+    assert.throws(
+      () => validatePublicConfig(config),
+      /holder claim amount/
+    );
+  }
+
+  {
+    const config = clone();
+    config.base.holderClaim.maxClaims = 0;
+
+    assert.throws(
+      () => validatePublicConfig(config),
+      /holder claim maximum/
+    );
+  }
+});

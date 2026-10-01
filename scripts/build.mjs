@@ -84,8 +84,41 @@ if (checkOnly) {
     await mkdir(dirname(path), { recursive: true }); await writeFile(path, bytes);
   }
   await mkdir(dist, { recursive: true });
-  for (const path of ['index.html', 'claim.html', 'verification.html', 'status.html', 'v3-deploy.html', 'terms.html', 'privacy.html', 'risk.html', 'config.json', '.nojekyll', '_headers']) await copyFile(path, resolve(dist, path));
-  await cp(assets, resolve(dist, 'assets'), { recursive: true });
+  for (const path of [
+    'index.html',
+    'claim.html',
+    'verification.html',
+    'status.html',
+    'v3-deploy.html',
+    'terms.html',
+    'privacy.html',
+    'risk.html',
+    'config.json',
+    'status.js',
+    'manifest.webmanifest',
+    'robots.txt',
+    'sitemap.xml',
+    'token-list.json',
+    '.nojekyll',
+    '_headers'
+  ]) {
+    await copyFile(
+      path,
+      resolve(dist, path)
+    );
+  }
+
+  await cp(
+    '.well-known',
+    resolve(dist, '.well-known'),
+    { recursive: true }
+  );
+
+  await cp(
+    assets,
+    resolve(dist, 'assets'),
+    { recursive: true }
+  );
   await mkdir('build', { recursive: true });
   await writeFile('build/frontend-metafile.json', JSON.stringify(result.metafile, null, 2) + '\n');
   console.log('Built repository-root assets/ and matching dist/ preview');

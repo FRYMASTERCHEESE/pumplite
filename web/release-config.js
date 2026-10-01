@@ -2,6 +2,14 @@ const BASE_ADDRESS = /^0x[0-9a-fA-F]{40}$/;
 const SOLANA_ADDRESS = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 const ZERO_BASE = /^0x0{40}$/i;
 
+function validBaseAddress(value) {
+  return (
+    typeof value === 'string' &&
+    BASE_ADDRESS.test(value) &&
+    !ZERO_BASE.test(value)
+  );
+}
+
 function chainConfig(config, chain) {
   if (!config || !['solana', 'base'].includes(chain)) return null;
   return config[chain] ?? null;
@@ -12,9 +20,9 @@ export function deploymentConfigured(config, chain) {
   if (!value) return false;
 
   if (chain === 'base') {
-    return typeof value.factory === 'string' &&
-      BASE_ADDRESS.test(value.factory) &&
-      !ZERO_BASE.test(value.factory);
+    return validBaseAddress(
+      value.factory
+    );
   }
 
   return typeof value.programId === 'string' &&
@@ -47,6 +55,10 @@ export function validatePublicConfig(config) {
     throw Error('Unsupported Base chain configuration');
   }
 
+  if (!validBaseAddress(config.base?.treasury)) {
+    throw Error('Invalid Base treasury address');
+  }
+
   if (
     config.base?.contractVersion !== undefined &&
     ![1, 2].includes(config.base.contractVersion)
@@ -66,11 +78,52 @@ export function validatePublicConfig(config) {
 
   if (
     config.base.factory !== null &&
-    !(typeof config.base.factory === 'string' &&
-      BASE_ADDRESS.test(config.base.factory) &&
-      !ZERO_BASE.test(config.base.factory))
+    !validBaseAddress(
+      config.base.factory
+    )
   ) {
     throw Error('Invalid Base factory address');
+  }
+
+  const holderClaim =
+    config.base?.holderClaim;
+
+  if (holderClaim?.enabled === true) {
+    if (
+      !validBaseAddress(
+        holderClaim.contract
+      ) ||
+      !validBaseAddress(
+        holderClaim.token
+      )
+    ) {
+      throw Error(
+        'Invalid Base holder claim address'
+      );
+    }
+
+    if (
+      typeof holderClaim.claimAmount !== 'string' ||
+      !/^[0-9]+(?:\.[0-9]+)?$/.test(
+        holderClaim.claimAmount
+      ) ||
+      Number(holderClaim.claimAmount) <= 0
+    ) {
+      throw Error(
+        'Invalid Base holder claim amount'
+      );
+    }
+
+    if (
+      !Number.isInteger(
+        holderClaim.maxClaims
+      ) ||
+      holderClaim.maxClaims < 1
+    ) {
+      throw Error(
+        'Invalid Base holder claim maximum'
+      );
+    }
   }
 
   if (

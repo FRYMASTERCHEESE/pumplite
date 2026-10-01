@@ -77,14 +77,29 @@ function controls() {
   $('v3-launch-mode').disabled =
     state.busy || !baseV3;
 
+  const activeWallet =
+    state.wallet?.toLowerCase();
+
+  const creatorWallet =
+    Boolean(activeWallet) &&
+    activeWallet ===
+      String(state.market?.creator || '').toLowerCase();
+
+  const controllerWallet =
+    Boolean(activeWallet) &&
+    activeWallet ===
+      String(state.market?.mayhemController || '').toLowerCase();
+
   $('v3-request-manual').disabled =
     !writable() ||
+    !creatorWallet ||
     state.market?.contractVersion !== 3 ||
     state.market?.launchMode !== 2 ||
     state.market?.pendingManualRequest === true;
 
   $('v3-support-submit').disabled =
     !writable() ||
+    !controllerWallet ||
     state.market?.contractVersion !== 3;
 
   $('v3-finalize-mayhem').disabled =
@@ -92,10 +107,10 @@ function controls() {
     state.market?.contractVersion !== 3 ||
     state.market?.mayhemState !== 3 ||
     state.market?.mayhemFinalized === true;
-  $('create-supply-fact').textContent = baseV2 ? 'Custom' : '1 billion';
-  $('create-supply-mode-fact').textContent = baseV2 ? 'Supply options' : 'Fixed supply';
+  $('create-supply-fact').textContent = baseModern ? 'Custom' : '1 billion';
+  $('create-supply-mode-fact').textContent = baseModern ? 'Supply options' : 'Fixed supply';
   $('create-supply-help').textContent =
-    baseV2
+    baseModern
       ? 'No creator allocation. Choose Fixed / No Mint or a permanently capped Mintable supply.'
       : 'No creator allocation. All supply starts in the market vault. No future minting.';
 
@@ -105,7 +120,7 @@ function controls() {
 
   $('v2-max-supply').disabled =
     state.busy ||
-    !baseV2 ||
+    !baseModern ||
     $('v2-supply-mode').value !== 'mintable';
 
   $('base-v2-buy-burn-submit').disabled =
@@ -113,21 +128,17 @@ function controls() {
 
   $('v2-mint-submit').disabled =
     !writable() ||
+    !creatorWallet ||
     ![2, 3].includes(state.market?.contractVersion) ||
     state.market?.mintingLocked === true ||
     state.market?.mintableAtLaunch !== true;
 
   $('v2-lock-minting').disabled =
     !writable() ||
+    !creatorWallet ||
     ![2, 3].includes(state.market?.contractVersion) ||
     state.market?.mintingLocked === true ||
     state.market?.mintableAtLaunch !== true;
-
-  const controllerWallet =
-    state.wallet &&
-    state.market?.mayhemController &&
-    state.wallet.toLowerCase() ===
-      String(state.market.mayhemController).toLowerCase();
 
   const mayhemReady =
     [2, 3].includes(state.market?.contractVersion) &&
@@ -148,7 +159,9 @@ function controls() {
     state.market?.mayhemActive !== true;
 
   $('v2-support-submit').disabled =
-    !writable() || ![2, 3].includes(state.market?.contractVersion);
+    !writable() ||
+    !controllerWallet ||
+    ![2, 3].includes(state.market?.contractVersion);
 
   const ownerReviewReady =
     writable() &&
@@ -742,10 +755,10 @@ async function loadMarketChart(market) {
 
   if (
     state.chain !== 'base' ||
-    market.contractVersion !== 2
+    ![2, 3].includes(market.contractVersion)
   ) {
     clearMarketChart(
-      'Trade chart is available for Base V2 markets.'
+      'Trade chart is available for Base V2/V3 markets.'
     );
     return;
   }
@@ -892,8 +905,18 @@ function marketCapText(m) {
 
 function distributedPercent(m) {
   if (!m?.supply || m.supply <= 0n) return 0;
+
+  const custody =
+    m.tokenReserve +
+    (m.agentInventory || 0n);
+
+  const distributed =
+    m.supply > custody
+      ? m.supply - custody
+      : 0n;
+
   return Number(
-    (m.supply - m.tokenReserve) *
+    distributed *
     10_000n /
     m.supply
   ) / 100;
