@@ -21,6 +21,7 @@
                     "verify:base-v2-live":  "node scripts/compile-base-v2.mjs \u0026\u0026 node scripts/verify-base-v2-live.mjs",
                     "verify:base-production":  "node scripts/compile-base-v2.mjs && node scripts/compile-plite-holder-claim.mjs && node scripts/verify-base-production.mjs",
                     "verify:base-markets":  "node scripts/compile-base-v2.mjs && node scripts/verify-base-markets.mjs",
+                    "verify:base-rpc-health":  "node scripts/verify-base-rpc-health.mjs",
                     "verify:public-site":  "node scripts/verify-public-site.mjs",
                     "build:claim":  "node scripts/compile-base-v2.mjs \u0026\u0026 node scripts/compile-plite-holder-claim.mjs",
                     "test:claim":  "node scripts/compile-base-v2.mjs \u0026\u0026 node scripts/compile-plite-holder-claim.mjs \u0026\u0026 node --test tests/plite-holder-claim.test.mjs"

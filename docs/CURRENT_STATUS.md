@@ -103,3 +103,8 @@ The repository includes `pnpm verify:public-site` and a `Public site health` Git
 ## All-market Base invariant health
 
 PumpLite now has a read-only verifier for every market registered by the active Base V2 factory. At a common Base block it checks reviewed runtime templates and market/token authority relationships, verifies that accounting reserves are backed by actual market balances, checks lifetime mint caps and permanent fixed-supply locks, and reconciles market burn accounting with token lifetime minted/current supply. The scheduled `Base market invariants` workflow is bounded to 250 markets by default so public RPC load cannot silently grow without an explicit capacity review.
+
+
+## Base RPC redundancy health
+
+PumpLite now checks the primary and fallback Base read RPC endpoints independently. The verifier requires every configured endpoint to identify Base Mainnet, report a recent block, read the active production contracts, and agree on key factory state at a common block. This complements the frontend's tested rate-limit/network fallback path: redundancy is considered degraded if either configured endpoint becomes unavailable or excessively stale rather than silently relying on only one provider.

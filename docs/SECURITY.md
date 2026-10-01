@@ -105,3 +105,8 @@ The `Public site health` workflow performs public HTTPS reads against the live P
 ## All-market invariant monitoring
 
 The `Base market invariants` workflow enumerates every active-factory market up to an explicit safety cap and performs read-only on-chain invariant checks at a common block. It checks runtime identity, immutable controller/treasury routing, token-market authority, reserve backing, mint-cap/lock behavior and burn/supply accounting. Direct ETH or token donations can make actual balances larger than accounting reserves, so backing checks deliberately require actual balances to be greater than or equal to reserves rather than exactly equal. The monitor detects invariant violations; it cannot move funds or repair state.
+
+
+## Base RPC redundancy monitoring
+
+The `Base RPC redundancy` workflow checks each configured Base read endpoint independently with bounded retries and no wallet capability. It verifies chain identity, block freshness, recent block-height agreement and critical factory/PLITE contract reads at a common block. This detects loss of redundancy that ordinary fallback can otherwise mask. Temporary public-provider outages can therefore make this health workflow fail even when the site can still read successfully through the other endpoint; that failure means redundancy is degraded and should be investigated, not that PumpLite should automatically change providers or submit a transaction.

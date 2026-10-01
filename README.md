@@ -187,3 +187,10 @@ This checks the active Base V2 factory, PLITE market/token, official First 50 cl
 `pnpm verify:base-markets` enumerates every market registered by the active Base V2 factory at one Base block and checks the deployed market/token runtime templates, immutable controller and treasury relationships, unique market/token identities, native and token reserve backing, lifetime mint caps, fixed-supply mint locks, remaining mint allowance and burn/supply accounting. The verifier is bounded by `PUMPLITE_MAX_MARKETS` so public RPC usage fails closed instead of silently becoming unbounded.
 
 The `Base market invariants` GitHub workflow runs this read-only check after relevant production changes, manually, and daily. It uses no wallet, signing secret, transaction or ETH.
+
+
+## Base RPC redundancy health
+
+`pnpm verify:base-rpc-health` tests every configured Base read RPC independently instead of allowing a healthy fallback to hide a broken primary. Each endpoint must identify Base Mainnet, return a recent block, expose the active factory/PLITE/claim/DEX runtimes, and agree on factory controller, treasury, PLITE registration and market count at a common block. A configurable block-lag and stale-block ceiling prevents silently accepting a badly lagging endpoint.
+
+The `Base RPC redundancy` GitHub workflow runs this read-only check after relevant configuration/client changes, manually, and daily. Existing browser failover logic remains separately covered by `tests/base-rpc-fallback.test.mjs`. No wallet, signing secret, transaction or ETH is used.
