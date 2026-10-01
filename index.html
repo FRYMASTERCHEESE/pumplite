@@ -16,7 +16,7 @@
 <title>PumpLite · Token launches, kept simple</title>
 <link rel="stylesheet" href="./assets/styles.css">
 <script defer src="./assets/phantom-diagnostic.js"></script>
-<script type="module" src="./assets/app.js?boot=20261001dex1"></script>
+<script type="module" src="./assets/app.js?boot=20261001dex2"></script>
 </head>
 <body>
 <a class="skip-link" id="skip-content" href="#main-content">Skip to main content</a>
@@ -312,12 +312,18 @@
 
         <section id="plite-dex-liquidity" class="dex-liquidity-card" aria-labelledby="plite-dex-title" hidden>
           <p class="eyebrow">EXTERNAL DEX LIQUIDITY</p>
-          <h3 id="plite-dex-title">Uniswap V2 Â· PLITE / WETH</h3>
+          <h3 id="plite-dex-title">Uniswap V2 - PLITE / WETH</h3>
           <dl class="stats dex-liquidity-stats">
             <div><dt>Protocol</dt><dd>Uniswap V2</dd></div>
             <div><dt>Fee tier</dt><dd>0.30%</dd></div>
+            <div><dt>WETH reserve</dt><dd id="plite-dex-weth-reserve">-</dd></div>
+            <div><dt>PLITE reserve</dt><dd id="plite-dex-token-reserve">-</dd></div>
+            <div><dt>DEX spot price</dt><dd id="plite-dex-price">-</dd></div>
+            <div><dt>Spot-implied pool liquidity</dt><dd id="plite-dex-liquidity-value">-</dd></div>
+            <div><dt>Base block</dt><dd id="plite-dex-block">-</dd></div>
             <div class="dex-pair-row"><dt>Pair contract</dt><dd><code id="plite-dex-pair-address">0xDAD81f9f5DbF71Ce54D63f96eE45231D97d6B086</code></dd></div>
           </dl>
+          <p id="plite-dex-live-status" class="fine">Live Uniswap V2 reserve data has not been loaded yet.</p>
           <p class="fine">This external PLITE/WETH pool is separate from the PumpLite bonding curve. Its reserves, swaps, fees and DEX price can change independently and are not included in PumpLite curve backing or curve volume.</p>
           <div class="links">
             <a href="https://app.uniswap.org/explore/pools/base/0xDAD81f9f5DbF71Ce54D63f96eE45231D97d6B086" target="_blank" rel="noopener noreferrer">Open Uniswap pool</a>

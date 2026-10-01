@@ -113,6 +113,10 @@ test('Base V2 frontend contains gated V2 features', async () => {
   assert.match(adapter, /Avoid burst-loading dozens of JSON-RPC calls in parallel/);
   assert.match(adapter, /tradeHistory/);
   assert.match(adapter, /marketStats24h/);
+  assert.match(adapter, /pliteUniswapV2Stats/);
+  assert.match(adapter, /UNISWAP_V2_PAIR_ABI/);
+  assert.match(adapter, /getReserves/);
+  assert.match(adapter, /spotLiquidityWei/);
   assert.match(adapter, /86_400/);
   assert.match(adapter, /BuyAndBurn/);
   assert.match(app, /routeMarketId/);

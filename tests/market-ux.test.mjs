@@ -200,6 +200,40 @@ test(
       /PLITE_UNISWAP_V2_PAIR_ADDRESS/
     );
 
+    assert.match(
+      app,
+      /loadPliteDexStats/
+    );
+
+    assert.match(
+      adapter,
+      /async pliteUniswapV2Stats/
+    );
+
+    assert.match(
+      adapter,
+      /getReserves/
+    );
+
+    assert.match(
+      adapter,
+      /spotLiquidityWei/
+    );
+
+    for (const id of [
+      'plite-dex-weth-reserve',
+      'plite-dex-token-reserve',
+      'plite-dex-price',
+      'plite-dex-liquidity-value',
+      'plite-dex-block',
+      'plite-dex-live-status'
+    ]) {
+      assert.match(
+        html,
+        new RegExp('id="' + id + '"')
+      );
+    }
+
     assert.equal(
       pliteInfo.dexLiquidity.pair,
       '0xDAD81f9f5DbF71Ce54D63f96eE45231D97d6B086'

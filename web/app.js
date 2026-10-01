@@ -16,6 +16,7 @@ $('skip-content').addEventListener('click', event => { event.preventDefault(); $
 const PLITE_MARKET_ADDRESS = '0xa522A4Ef81fD31daec390ab46A32D4886e1461C7';
 const PLITE_MARKET_ID = PLITE_MARKET_ADDRESS.toLowerCase();
 const PLITE_UNISWAP_V2_PAIR_ADDRESS = '0xDAD81f9f5DbF71Ce54D63f96eE45231D97d6B086';
+const BASE_WETH_ADDRESS = '0x4200000000000000000000000000000000000006';
 const state = { config: null, chain: 'base', adapter: null, wallet: null, market: null, quote: null, busy: false, epoch: 0, next: null, markets: [], featuredPlite: null, registry: null, reviewProof: null, reviewSchemaReady: false, platformStats: null };
 function status(message, href) {
   $('status-text').textContent = message;
@@ -390,6 +391,126 @@ function renderRecentTrades(market) {
 
     link.append(side, amount, price, time);
     root.append(link);
+  }
+}
+
+let pliteDexStatsRequest = 0;
+
+async function loadPliteDexStats(market) {
+  const request = ++pliteDexStatsRequest;
+
+  const isPlite =
+    state.chain === 'base' &&
+    String(market?.id || '').toLowerCase() ===
+      PLITE_MARKET_ID;
+
+  if (!isPlite) {
+    $('plite-dex-liquidity').hidden = true;
+    return;
+  }
+
+  $('plite-dex-liquidity').hidden = false;
+
+  const fields = [
+    'plite-dex-weth-reserve',
+    'plite-dex-token-reserve',
+    'plite-dex-price',
+    'plite-dex-liquidity-value',
+    'plite-dex-block'
+  ];
+
+  const production =
+    location.protocol === 'https:' &&
+    location.hostname !== 'localhost' &&
+    location.hostname !== '127.0.0.1';
+
+  if (!production) {
+    for (const id of fields) {
+      $(id).textContent = 'Production live read';
+    }
+
+    $('plite-dex-live-status').textContent =
+      'Live PLITE/WETH reserves are read from Base Mainnet on the production HTTPS site.';
+
+    return;
+  }
+
+  for (const id of fields) {
+    $(id).textContent = 'Loading...';
+  }
+
+  $('plite-dex-live-status').textContent =
+    'Reading the PLITE/WETH Uniswap V2 pair directly from Base Mainnet...';
+
+  try {
+    const stats =
+      await (
+        await getAdapter()
+      ).pliteUniswapV2Stats(
+        PLITE_UNISWAP_V2_PAIR_ADDRESS,
+        market.token,
+        BASE_WETH_ADDRESS
+      );
+
+    if (
+      request !== pliteDexStatsRequest ||
+      state.market?.id !== market.id
+    ) {
+      return;
+    }
+
+    $('plite-dex-weth-reserve').textContent =
+      formatUnits(
+        stats.wethReserve,
+        18,
+        8
+      ) + ' WETH';
+
+    $('plite-dex-token-reserve').textContent =
+      formatUnits(
+        stats.tokenReserve,
+        18,
+        2
+      ) + ' PLITE';
+
+    $('plite-dex-price').textContent =
+      formatUnits(
+        stats.priceWeiPerToken,
+        18,
+        14
+      ) + ' WETH / PLITE';
+
+    $('plite-dex-liquidity-value').textContent =
+      formatUnits(
+        stats.spotLiquidityWei,
+        18,
+        8
+      ) + ' ETH equivalent';
+
+    $('plite-dex-block').textContent =
+      Number(
+        stats.blockNumber
+      ).toLocaleString();
+
+    $('plite-dex-live-status').textContent =
+      'Live reserves read directly from the verified Uniswap V2 pair at Base block ' +
+      Number(stats.blockNumber).toLocaleString() +
+      '. Spot-implied liquidity values the PLITE side at the pool reserve ratio; it is not a USD oracle or PumpLite curve liquidity.';
+  } catch (error) {
+    if (
+      request !== pliteDexStatsRequest ||
+      state.market?.id !== market.id
+    ) {
+      return;
+    }
+
+    for (const id of fields) {
+      $(id).textContent = 'Unavailable';
+    }
+
+    $('plite-dex-live-status').textContent =
+      'Live Uniswap V2 data is temporarily unavailable: ' +
+      (error?.message || 'read failed');
   }
 }
 
@@ -1210,6 +1331,7 @@ async function refreshLiveData() {
     state.market = fresh;
     renderMarket(fresh);
     void loadMarket24hStats(fresh);
+    void loadPliteDexStats(fresh);
   }
 
   renderDiscovery();
@@ -1245,6 +1367,19 @@ function renderMarket(m) {
   if (isPlite) {
     $('plite-dex-pair-address').textContent =
       PLITE_UNISWAP_V2_PAIR_ADDRESS;
+
+    for (const id of [
+      'plite-dex-weth-reserve',
+      'plite-dex-token-reserve',
+      'plite-dex-price',
+      'plite-dex-liquidity-value',
+      'plite-dex-block'
+    ]) {
+      $(id).textContent = 'Loading...';
+    }
+
+    $('plite-dex-live-status').textContent =
+      'Preparing the live Uniswap V2 reserve read...';
   }
 
   const baseV2 = m.contractVersion === 2;
@@ -1425,6 +1560,7 @@ async function loadMarket(id) {
 
   void loadMarketChart(m);
   void loadMarket24hStats(m);
+  void loadPliteDexStats(m);
   void loadOwnerReviewTools(m).catch(error => {
     $('eas-schema-status').textContent =
       'Portable review tools are temporarily unavailable: ' +
@@ -1433,6 +1569,7 @@ async function loadMarket(id) {
 }
 async function route() {
   chartRequest++;
+  pliteDexStatsRequest++;
   state.market = null; invalidateQuote();
   $('market-badges').replaceChildren(); $('verification-details').replaceChildren();
   $('verification-state').textContent='Identity has not been checked.';

@@ -35,6 +35,12 @@ const HOLDER_CLAIM_ABI = [
   'function claimed(address) view returns (bool)',
   'function claim()'
 ];
+
+const UNISWAP_V2_PAIR_ABI = [
+  'function token0() view returns (address)',
+  'function token1() view returns (address)',
+  'function getReserves() view returns (uint112 reserve0,uint112 reserve1,uint32 blockTimestampLast)'
+];
 const EAS_ABI = [
   'function attest((bytes32 schema,(address recipient,uint64 expirationTime,bool revocable,bytes32 refUID,bytes data,uint256 value) data) request) payable returns (bytes32)',
   'function revoke((bytes32 schema,(bytes32 uid,uint256 value) data) request) payable',
@@ -100,6 +106,7 @@ export function adapter(config, notify, changed = () => {}) {
   );
 
   const marketStats24hCache = new Map();
+  const uniswapV2PairStatsCache = new Map();
 
   async function batchRead(calls, blockTag) {
     if (!calls.length) return [];
@@ -570,6 +577,150 @@ export function adapter(config, notify, changed = () => {}) {
       }
 
       return signature;
+    },
+
+    async pliteUniswapV2Stats(
+      pairAddress,
+      tokenAddress,
+      wethAddress
+    ) {
+      await network();
+
+      const pairId = getAddress(pairAddress);
+      const tokenId = getAddress(tokenAddress);
+      const wethId = getAddress(wethAddress);
+      const cacheKey = pairId.toLowerCase();
+      const cached =
+        uniswapV2PairStatsCache.get(cacheKey);
+
+      if (
+        cached &&
+        Date.now() - cached.cachedAt < 45_000
+      ) {
+        return cached.value;
+      }
+
+      const pair =
+        new Contract(
+          pairId,
+          UNISWAP_V2_PAIR_ABI,
+          provider
+        );
+
+      const blockTag =
+        await provider.getBlockNumber();
+
+      const [
+        token0Value,
+        token1Value,
+        reserves
+      ] =
+        await batchRead(
+          [
+            {
+              contract: pair,
+              method: 'token0'
+            },
+            {
+              contract: pair,
+              method: 'token1'
+            },
+            {
+              contract: pair,
+              method: 'getReserves'
+            }
+          ],
+          blockTag
+        );
+
+      const token0 =
+        getAddress(token0Value);
+
+      const token1 =
+        getAddress(token1Value);
+
+      const expectedPair =
+        (
+          token0 === tokenId &&
+          token1 === wethId
+        ) ||
+        (
+          token0 === wethId &&
+          token1 === tokenId
+        );
+
+      if (!expectedPair) {
+        throw Error(
+          'Uniswap V2 pair tokens do not match PLITE/WETH'
+        );
+      }
+
+      const reserve0 =
+        BigInt(reserves[0]);
+
+      const reserve1 =
+        BigInt(reserves[1]);
+
+      const tokenReserve =
+        token0 === tokenId
+          ? reserve0
+          : reserve1;
+
+      const wethReserve =
+        token0 === wethId
+          ? reserve0
+          : reserve1;
+
+      if (
+        tokenReserve <= 0n ||
+        wethReserve <= 0n
+      ) {
+        throw Error(
+          'Uniswap V2 PLITE/WETH pool has no active reserves'
+        );
+      }
+
+      // PLITE and Base WETH both use 18 decimals. This is the current
+      // reserve-ratio spot price, not a trade execution price or oracle.
+      const priceWeiPerToken =
+        wethReserve *
+        10n ** 18n /
+        tokenReserve;
+
+      const tokensPerEth =
+        tokenReserve *
+        10n ** 18n /
+        wethReserve;
+
+      // At the pool's own spot ratio, both reserve sides have equal value.
+      // This is an ETH-equivalent pool value, not a USD valuation.
+      const spotLiquidityWei =
+        wethReserve * 2n;
+
+      const value = {
+        pair: pairId,
+        token: tokenId,
+        weth: wethId,
+        token0,
+        token1,
+        tokenReserve,
+        wethReserve,
+        priceWeiPerToken,
+        tokensPerEth,
+        spotLiquidityWei,
+        blockNumber: Number(blockTag),
+        observedAt: Date.now()
+      };
+
+      uniswapV2PairStatsCache.set(
+        cacheKey,
+        {
+          cachedAt: Date.now(),
+          value
+        }
+      );
+
+      return value;
     },
 
     async platformStats() {
