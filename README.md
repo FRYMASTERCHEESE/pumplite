@@ -236,3 +236,10 @@ A 401 from the unauthenticated upload probes is intentional: it confirms the pub
 `pnpm verify:base-privileged-actions` audits the transaction provenance behind Base V2 market creation and privileged controller/creator events. Each `MarketCreatedV2` transaction must come from the event's creator, target the active factory and decode to `createMarketV2`. Each `MayhemChanged` and `MarketSupported` transaction must come from the market's immutable Mayhem controller and decode to the matching controller function. Each `InventoryMinted` and `MintingLocked` transaction must come from the immutable creator and decode to the matching creator function. Support transaction ETH value and event parameters are cross-checked, and every audited receipt must have succeeded.
 
 The `Base privileged actions` workflow runs this public read-only audit after relevant V2 changes, manually, and daily. It does not sign or submit a transaction and does not prove that the controller/creator wallets themselves are uncompromised; it proves that recorded privileged actions came from the roles the deployed contracts recognize.
+
+
+## Base trade transaction provenance
+
+`pnpm verify:base-trade-provenance` audits every historical Base V2 `Trade` and `BuyAndBurn` event across the active factory markets. The corresponding transaction must target the emitting market, come from the event trader/buyer, have a successful receipt and decode to the expected `buy`, `sell` or `buyAndBurn` function. The verifier cross-checks ETH/token input, positive slippage protection, the contract's five-minute deadline bound, fixed platform/Mayhem fee arithmetic, and the matching ERC-20 transfer or burn movement in the receipt.
+
+If no trade of a given type has occurred yet, that count is reported as zero rather than fabricated. The `Base trade provenance` workflow runs this public read-only audit after relevant V2 changes, manually, and daily. It never signs or submits a transaction and does not guarantee future execution price, MEV conditions or wallet UX.

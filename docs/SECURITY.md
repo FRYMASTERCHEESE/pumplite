@@ -140,3 +140,8 @@ The `Metadata infrastructure health` workflow probes only public/fail-closed rou
 ## Privileged-action provenance monitoring
 
 The `Base privileged actions` workflow independently checks transaction sender, target, decoded calldata, successful receipt and emitted event fields for V2 creation and controller/creator-only actions. This helps detect provenance drift or an unexpected privileged caller in recorded history. It does not establish operational custody security for the controller/treasury/creator wallets and cannot determine whether a valid-key transaction was authorized by the human owner; wallet security remains an operational responsibility.
+
+
+## Trade transaction provenance monitoring
+
+The `Base trade provenance` workflow independently checks recorded buy, sell and Buy & Burn transaction provenance against emitted events and token Transfer logs. It verifies sender/target, decoded function and inputs, receipt success, slippage/deadline constraints and fixed fee arithmetic. This is historical consistency evidence only: it does not protect a future transaction from price movement, MEV, wallet compromise, RPC censorship or user-approved malicious calldata outside PumpLite.

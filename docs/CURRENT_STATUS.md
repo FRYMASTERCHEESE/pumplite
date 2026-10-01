@@ -138,3 +138,8 @@ PumpLite now monitors the live metadata authorization/upload service without cre
 ## Base privileged-action provenance
 
 PumpLite now audits the historical transaction provenance for factory creation and Base V2 privileged actions. Creation transactions are matched to the event creator and active factory calldata. Controller-only Mayhem/support actions and creator-only inventory/lock actions are matched to each market's immutable roles, transaction sender/target, decoded function input, successful receipt and emitted event parameters. This is a read-only provenance check; it does not infer whether a wallet owner intended an action or whether a privileged wallet has been compromised.
+
+
+## Base trade transaction provenance
+
+PumpLite now audits the transaction provenance behind every recorded Base V2 Trade and BuyAndBurn event. The monitor matches transaction sender/target and decoded calldata to the event, verifies successful receipts, checks positive minimum-output and five-minute deadline constraints, independently checks the fixed fee arithmetic, and requires a matching ERC-20 transfer or burn movement in the same receipt. Trade types that have not occurred are explicitly reported as zero rather than inferred or fabricated.
