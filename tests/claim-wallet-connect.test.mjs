@@ -138,3 +138,29 @@ test('live claim config is the default when no contract query is supplied', asyn
     /assets\/claim\.js\?boot=[0-9A-Za-z_-]+/
   );
 });
+test('claim page is frame-safe and wallet-state-safe', async () => {
+  const source =
+    await readFile(
+      'web/claim.js',
+      'utf8'
+    );
+
+  for (const marker of [
+    'window.top !== window.self',
+    'Embedded PumpLite claim is disabled',
+    'validatePublicConfig',
+    'watchWallet',
+    'accountsChanged',
+    'chainChanged',
+    'requireCurrentWallet',
+    'assertReceiptSender',
+    'copyText',
+    'Claim link does not match the official PumpLite claim contract'
+  ]) {
+    assert.ok(
+      source.includes(marker),
+      'Missing claim hardening marker: ' +
+        marker
+    );
+  }
+});

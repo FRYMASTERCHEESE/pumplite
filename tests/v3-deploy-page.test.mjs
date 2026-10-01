@@ -162,3 +162,34 @@ test(
     );
   }
 );
+test(
+  "real V3 deployment page fails closed when embedded",
+  async () => {
+    const source =
+      await readFile(
+        "web/v3-deploy.js",
+        "utf8"
+      );
+
+    const html =
+      await readFile(
+        "v3-deploy.html",
+        "utf8"
+      );
+
+    assert.match(
+      source,
+      /window\.top !== window\.self/
+    );
+
+    assert.match(
+      source,
+      /Embedded PumpLite V3 deployment is disabled/
+    );
+
+    assert.doesNotMatch(
+      html,
+      /frame-ancestors/
+    );
+  }
+);

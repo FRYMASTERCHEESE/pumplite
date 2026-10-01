@@ -17,6 +17,18 @@ import {
 
 import deployment from "./generated/base-v3-deploy.json" with { type: "json" };
 
+if (window.top !== window.self) {
+  document.body.replaceChildren(
+    document.createTextNode(
+      "Open the PumpLite V3 deployment page directly in your browser. Embedded wallet actions are disabled."
+    )
+  );
+
+  throw new Error(
+    "Embedded PumpLite V3 deployment is disabled"
+  );
+}
+
 const BASE_CHAIN_ID = 8453n;
 const BASE_CHAIN_HEX = "0x2105";
 

@@ -155,7 +155,7 @@ test('browser entrypoint cache keys were advanced together', async () => {
     ['v3', v3]
   ]) {
     assert.ok(
-      html.includes('boot=20261002bugs1'),
+      html.includes('boot=20261002bugs2'),
       name + ' did not receive the current release cache key'
     );
   }
@@ -243,5 +243,44 @@ test('verification page identity and encoding stay aligned with live health', as
       '&ldquo;Verified by PumpLite&rdquo;'
     ),
     'Verification disclosure quote is not encoded safely'
+  );
+});
+test('wallet-sensitive secondary pages fail closed when embedded', async () => {
+  const claim =
+    await read('web/claim.js');
+
+  const v3 =
+    await read('web/v3-deploy.js');
+
+  assert.ok(
+    claim.includes(
+      'Embedded PumpLite claim is disabled'
+    )
+  );
+
+  assert.ok(
+    v3.includes(
+      'Embedded PumpLite V3 deployment is disabled'
+    )
+  );
+});
+
+test('public V3 live verifier does not mistake real wording for simulation mode', async () => {
+  const source =
+    await read(
+      'scripts/verify-public-site.mjs'
+    );
+
+  assert.ok(
+    source.includes(
+      'SIMULATION ONLY|mayhem-playground'
+    )
+  );
+
+  assert.equal(
+    source.includes(
+      '!/simulation/i.test(v3DeployPage)'
+    ),
+    false
   );
 });

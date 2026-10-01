@@ -1062,6 +1062,16 @@ async function boot() {
   controls();
 }
 
+window.addEventListener(
+  'pagehide',
+  () => {
+    unwatchWallet();
+    walletDiscovery.dispose();
+    walletProvider?.destroy?.();
+    readProvider?.destroy?.();
+  }
+);
+
 boot().catch(error => {
   busy = false;
 

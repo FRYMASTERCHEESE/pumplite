@@ -377,11 +377,70 @@ try {
     assert.equal(await page.locator('body').evaluate(el => el.scrollWidth <= innerWidth), true);
     assert.deepEqual(await page.evaluate(() => window.__walletCalls), []);
     assert.ok(requests.every(url => url === origin + '/pumplite' || url.startsWith(base)), 'All assets stay beneath /pumplite/');
-    // Pages cannot set frame-ancestors headers; verify the app's fail-closed fallback too.
-    await page.evaluate(url => { const frame=document.createElement('iframe');frame.id='frame-check';frame.src=url;document.body.append(frame); },base);
-    await page.waitForFunction(()=>document.querySelector('#frame-check')?.contentDocument?.body?.textContent.includes('Embedded wallet interactions are disabled'));
-    assert.deepEqual(errors.filter(e=>e!=='Embedded PumpLite is disabled'), []);
-    assert.ok(errors.includes('Embedded PumpLite is disabled'));
+    // Every wallet-sensitive page must fail closed when embedded.
+    const embeddedChecks = [
+      [
+        'frame-check',
+        base,
+        'Embedded wallet interactions are disabled'
+      ],
+      [
+        'claim-frame-check',
+        base + 'claim.html',
+        'Embedded wallet actions are disabled'
+      ],
+      [
+        'v3-frame-check',
+        base + 'v3-deploy.html',
+        'Embedded wallet actions are disabled'
+      ]
+    ];
+
+    for (const [id, url, marker] of embeddedChecks) {
+      await page.evaluate(
+        ({ id, url }) => {
+          const frame =
+            document.createElement('iframe');
+
+          frame.id = id;
+          frame.src = url;
+          document.body.append(frame);
+        },
+        { id, url }
+      );
+
+      await page.waitForFunction(
+        ({ id, marker }) =>
+          document
+            .querySelector('#' + id)
+            ?.contentDocument
+            ?.body
+            ?.textContent
+            ?.includes(marker),
+        { id, marker }
+      );
+    }
+
+    const allowedFrameErrors =
+      new Set([
+        'Embedded PumpLite is disabled',
+        'Embedded PumpLite claim is disabled',
+        'Embedded PumpLite V3 deployment is disabled'
+      ]);
+
+    assert.deepEqual(
+      errors.filter(
+        error =>
+          !allowedFrameErrors.has(error)
+      ),
+      []
+    );
+
+    assert.ok(
+      errors.includes(
+        'Embedded PumpLite is disabled'
+      )
+    );
     assert.deepEqual(failed, []);
     console.log('PASS Pages export ' + width + 'px: /pumplite/, both production SDK imports, lazy loading, config/CSS, hash reload, no errors/404s/external requests/wallet calls');
     await context.close();
