@@ -88,3 +88,6 @@ The Solana program continues to be build/test material only for the public produ
 a Solana Mainnet deployment.
 
 Current-status note: the documents listed above are historical verification checkpoints and must be read at the commit and date they recorded.
+## Read-only Base production verification
+
+The repository includes `pnpm verify:base-production`. It validates the active Base V2 factory runtime and immutable roles, the reviewed PLITE market/token relationship, the official First 50 claim runtime/settings/backing, and the PLITE/WETH Uniswap V2 token identities and non-zero reserves directly from Base Mainnet. The verifier uses public RPC reads only: no wallet, signature, transaction, or ETH spend is used.

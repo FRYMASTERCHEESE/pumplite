@@ -163,3 +163,13 @@ See [the readiness follow-up](docs/READINESS_FOLLOWUP.md) for the Anchor securit
 See [the current release-candidate verification](docs/RELEASE_CANDIDATE.md) for the final local gates, scoped dependency review, deployment prerequisites and full test/file inventories.
 
 Latest readiness evidence and remaining operational gates: [Local readiness closure](docs/LOCAL_READINESS_CLOSURE.md).
+
+## Read-only Base production verification
+
+Run:
+
+```sh
+pnpm verify:base-production
+```
+
+This checks the active Base V2 factory, PLITE market/token, official First 50 claim, and PLITE/WETH Uniswap V2 pair directly against Base Mainnet. It uses public RPC reads only and does not load a wallet, request a signature, submit a transaction, or spend ETH.
