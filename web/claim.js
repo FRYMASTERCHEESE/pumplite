@@ -49,6 +49,23 @@ function phantomBrowseUrl() {
   );
 }
 
+function pickBaseProvider() {
+  walletDiscovery.refresh();
+
+  const phantom =
+    walletDiscovery.entries.find(
+      entry => /phantom/i.test(entry.name)
+    );
+
+  return (
+    window.phantom?.ethereum ||
+    phantom?.provider ||
+    walletDiscovery.entries[0]?.provider ||
+    window.ethereum ||
+    null
+  );
+}
+
 function setStatus(message) {
   $('claim-network').textContent = message;
 }
@@ -249,7 +266,11 @@ function controls() {
     ownerPliteBalance >= totalFunding() &&
     ownerNativeBalance > 0n;
 
-  $('claim-connect').disabled = busy;
+  $('claim-connect').setAttribute(
+    'aria-disabled',
+    busy ? 'true' : 'false'
+  );
+
   $('claim-connect').textContent =
     account
       ? 'Connected ' +
@@ -433,35 +454,15 @@ async function ensureBaseWallet() {
     selectedProvider = null;
   }
 
-  walletDiscovery.refresh();
-
-  const phantom =
-    walletDiscovery.entries.find(
-      entry => /phantom/i.test(entry.name)
-    );
-
   selectedProvider =
-    window.phantom?.ethereum ||
-    phantom?.provider ||
-    walletDiscovery.entries[0]?.provider ||
-    window.ethereum ||
-    null;
+    pickBaseProvider();
 
   if (
     typeof selectedProvider?.request !== 'function'
   ) {
-    setStatus(
-      'No Base wallet is available in this browser. Opening this exact claim page inside Phantom...'
+    throw Error(
+      'No injected Base wallet is available here. Tap Connect Base wallet to open this page inside Phantom.'
     );
-
-    // Phantom mobile only exposes its wallet provider to sites opened
-    // inside Phantom's own in-app browser. The Connect button itself
-    // performs that handoff when an injected EVM provider is absent.
-    location.assign(phantomBrowseUrl());
-
-    // Navigation is expected to replace this page. Keep the current
-    // action pending rather than displaying a false connection error.
-    await new Promise(() => {});
   }
 
   setStatus('Requesting Base wallet access...');
@@ -870,9 +871,35 @@ async function copyShareLink() {
   setStatus('Verified claim link copied.');
 }
 
+// Use a real HTTPS Phantom universal link as the default action.
+ // This matters in mobile/in-app browsers that block script-created
+ // app handoffs. If a wallet provider is already injected, intercept
+ // the same tap and connect directly instead.
+$('claim-connect').href =
+  phantomBrowseUrl();
+
 $('claim-connect').addEventListener(
   'click',
-  () => withBusy(ensureBaseWallet)
+  event => {
+    const provider =
+      pickBaseProvider();
+
+    if (
+      typeof provider?.request !== 'function'
+    ) {
+      setStatus(
+        'Opening this claim page inside Phantom...'
+      );
+
+      // Do NOT preventDefault here. The user's direct tap follows the
+      // real HTTPS Phantom universal link in the anchor's href.
+      return;
+    }
+
+    event.preventDefault();
+    selectedProvider = provider;
+    withBusy(ensureBaseWallet);
+  }
 );
 
 $('claim-launch').addEventListener(
