@@ -180,3 +180,10 @@ This checks the active Base V2 factory, PLITE market/token, official First 50 cl
 ## Live public-site health
 
 `pnpm verify:public-site` checks the deployed GitHub Pages site against the current repository state. It verifies the home page, First 50 claim page, Terms, Privacy and Risk pages, the public Base/Solana configuration, PLITE public metadata, reviewed-token registry, current application/claim bundles and stylesheet. The GitHub `Public site health` workflow retries while Pages catches up after relevant pushes and also runs daily. It uses public HTTPS reads only: no wallet, signing secret, transaction or ETH is used.
+
+
+## All-market Base invariant health
+
+`pnpm verify:base-markets` enumerates every market registered by the active Base V2 factory at one Base block and checks the deployed market/token runtime templates, immutable controller and treasury relationships, unique market/token identities, native and token reserve backing, lifetime mint caps, fixed-supply mint locks, remaining mint allowance and burn/supply accounting. The verifier is bounded by `PUMPLITE_MAX_MARKETS` so public RPC usage fails closed instead of silently becoming unbounded.
+
+The `Base market invariants` GitHub workflow runs this read-only check after relevant production changes, manually, and daily. It uses no wallet, signing secret, transaction or ETH.

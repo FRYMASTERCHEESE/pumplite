@@ -100,3 +100,8 @@ The `Base production health` GitHub Actions workflow runs the public read-only p
 ## Public-site health verification
 
 The `Public site health` workflow performs public HTTPS reads against the live PumpLite Pages origin and compares critical JSON/configuration and asset references with the checked-out commit. It has repository `contents: read` permission, no secrets and no wallet capability. This catches stale or missing public site files but does not turn GitHub Pages into a full security-header-capable production proxy and does not replace independent security review.
+
+
+## All-market invariant monitoring
+
+The `Base market invariants` workflow enumerates every active-factory market up to an explicit safety cap and performs read-only on-chain invariant checks at a common block. It checks runtime identity, immutable controller/treasury routing, token-market authority, reserve backing, mint-cap/lock behavior and burn/supply accounting. Direct ETH or token donations can make actual balances larger than accounting reserves, so backing checks deliberately require actual balances to be greater than or equal to reserves rather than exactly equal. The monitor detects invariant violations; it cannot move funds or repair state.

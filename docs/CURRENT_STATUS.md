@@ -98,3 +98,8 @@ GitHub Actions now runs the read-only Base production verifier on relevant produ
 ## Live public-site health
 
 The repository includes `pnpm verify:public-site` and a `Public site health` GitHub Actions workflow. The verifier checks that the live PumpLite Pages site matches the current checked-out public configuration and build references, including the home page, claim page, legal/risk pages, PLITE metadata, reviewed-token registry and static application assets. The workflow retries while Pages catches up after a relevant main-branch push and also runs daily. It is read-only and uses no wallet, signature, transaction or ETH.
+
+
+## All-market Base invariant health
+
+PumpLite now has a read-only verifier for every market registered by the active Base V2 factory. At a common Base block it checks reviewed runtime templates and market/token authority relationships, verifies that accounting reserves are backed by actual market balances, checks lifetime mint caps and permanent fixed-supply locks, and reconciles market burn accounting with token lifetime minted/current supply. The scheduled `Base market invariants` workflow is bounded to 250 markets by default so public RPC load cannot silently grow without an explicit capacity review.
