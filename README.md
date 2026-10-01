@@ -194,3 +194,10 @@ The `Base market invariants` GitHub workflow runs this read-only check after rel
 `pnpm verify:base-rpc-health` tests every configured Base read RPC independently instead of allowing a healthy fallback to hide a broken primary. Each endpoint must identify Base Mainnet, return a recent block, expose the active factory/PLITE/claim/DEX runtimes, and agree on factory controller, treasury, PLITE registration and market count at a common block. A configurable block-lag and stale-block ceiling prevents silently accepting a badly lagging endpoint.
 
 The `Base RPC redundancy` GitHub workflow runs this read-only check after relevant configuration/client changes, manually, and daily. Existing browser failover logic remains separately covered by `tests/base-rpc-fallback.test.mjs`. No wallet, signing secret, transaction or ETH is used.
+
+
+## Base economic quote health
+
+`pnpm verify:base-economic-health` independently recomputes Base V2 buy/sell quote economics from live market state and compares the results with each market's on-chain `quoteBuy` and `quoteSell` views. It also verifies the immutable 0.25% platform fee, 0.75% Mayhem support rate, 1 ETH virtual-native pricing parameter, 24-hour initial Mayhem window and the live Mayhem state implied by launch time plus manual state.
+
+The `Base economic health` GitHub workflow runs this read-only monitor after relevant V2/economic changes, manually, and daily. It never submits a trade: quote probes are public view calls only and use no wallet, signing secret or ETH.

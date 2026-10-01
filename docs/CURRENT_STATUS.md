@@ -108,3 +108,8 @@ PumpLite now has a read-only verifier for every market registered by the active 
 ## Base RPC redundancy health
 
 PumpLite now checks the primary and fallback Base read RPC endpoints independently. The verifier requires every configured endpoint to identify Base Mainnet, report a recent block, read the active production contracts, and agree on key factory state at a common block. This complements the frontend's tested rate-limit/network fallback path: redundancy is considered degraded if either configured endpoint becomes unavailable or excessively stale rather than silently relying on only one provider.
+
+
+## Base economic quote health
+
+PumpLite now independently recomputes the live Base V2 bonding-curve quote math and compares it with each registered market's on-chain quote functions. The monitor verifies the fixed platform fee, Mayhem support rate, virtual-native pricing offset, initial Mayhem timing behavior and live manual/initial Mayhem state. Buy and sell probes are read-only calls at a common block and never submit transactions.

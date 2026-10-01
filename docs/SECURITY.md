@@ -110,3 +110,8 @@ The `Base market invariants` workflow enumerates every active-factory market up 
 ## Base RPC redundancy monitoring
 
 The `Base RPC redundancy` workflow checks each configured Base read endpoint independently with bounded retries and no wallet capability. It verifies chain identity, block freshness, recent block-height agreement and critical factory/PLITE contract reads at a common block. This detects loss of redundancy that ordinary fallback can otherwise mask. Temporary public-provider outages can therefore make this health workflow fail even when the site can still read successfully through the other endpoint; that failure means redundancy is degraded and should be investigated, not that PumpLite should automatically change providers or submit a transaction.
+
+
+## Economic quote monitoring
+
+The `Base economic health` workflow independently calculates expected buy and sell outputs/fees from live reserves and compares them with the deployed market quote functions. It also checks the fixed fee constants, virtual-native parameter and Mayhem timing/state logic. This is a read-only production consistency monitor, not an oracle and not a substitute for independent economic review. It does not submit trades, approve tokens, connect a wallet or spend ETH.
