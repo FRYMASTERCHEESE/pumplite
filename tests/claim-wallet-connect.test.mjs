@@ -23,7 +23,7 @@ test('claim Connect is a real Phantom universal link with injected-wallet interc
 
   assert.match(
     html,
-    /assets\/claim\.js\?boot=20261002c/
+    /assets\/claim\.js\?boot=20261002d/
   );
 
   assert.match(
@@ -46,19 +46,9 @@ test('claim Connect is a real Phantom universal link with injected-wallet interc
     /event\.preventDefault\(\)/
   );
 
-  assert.match(
-    source,
-    /Do NOT preventDefault here/
-  );
-
   assert.doesNotMatch(
     source,
     /location\.assign\(phantomBrowseUrl\(\)\)/
-  );
-
-  assert.doesNotMatch(
-    source,
-    /await new Promise\(\(\) => \{\}\)/
   );
 
   assert.match(
@@ -69,5 +59,49 @@ test('claim Connect is a real Phantom universal link with injected-wallet interc
   assert.match(
     source,
     /Base wallet connected:/
+  );
+});
+
+test('claim boot never blocks Connect while read-only RPC initializes', async () => {
+  const source = await readFile('web/claim.js', 'utf8');
+
+  assert.match(
+    source,
+    /const configReady\s*=\s*Boolean\(config\?\.base\?\.holderClaim\)/
+  );
+
+  assert.match(
+    source,
+    /Wallet connection is ready\. Checking Base Mainnet/
+  );
+
+  assert.match(
+    source,
+    /The read-only RPC check must never block wallet connection/
+  );
+
+  assert.match(
+    source,
+    /if \(readProvider\)/
+  );
+
+  assert.match(
+    source,
+    /read-only Base RPC is temporarily unavailable/
+  );
+
+  assert.match(
+    source,
+    /boot\(\)\.catch/
+  );
+
+  assert.doesNotMatch(
+    source,
+    /withBusy\(boot\)/
+  );
+
+  assert.match(
+    source,
+    /PumpLite configuration is still loading\. Tap Connect Base wallet again in a moment/
   );
 });

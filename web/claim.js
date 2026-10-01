@@ -243,6 +243,31 @@ async function refreshOwnerBalances() {
 }
 
 function controls() {
+  const configReady =
+    Boolean(config?.base?.holderClaim);
+
+  $('claim-connect').setAttribute(
+    'aria-disabled',
+    busy ? 'true' : 'false'
+  );
+
+  $('claim-connect').textContent =
+    account
+      ? 'Connected ' +
+        account.slice(0, 6) +
+        '...' +
+        account.slice(-4)
+      : 'Connect Base wallet';
+
+  if (!configReady) {
+    $('claim-owner-tools').hidden = true;
+    $('claim-launch').hidden = true;
+    $('claim-fund').hidden = true;
+    $('claim-now').disabled = true;
+    $('claim-share-box').hidden = true;
+    return;
+  }
+
   const owner = isOwnerWallet();
 
   const configured =
@@ -265,19 +290,6 @@ function controls() {
     ownerNativeBalance !== null &&
     ownerPliteBalance >= totalFunding() &&
     ownerNativeBalance > 0n;
-
-  $('claim-connect').setAttribute(
-    'aria-disabled',
-    busy ? 'true' : 'false'
-  );
-
-  $('claim-connect').textContent =
-    account
-      ? 'Connected ' +
-        account.slice(0, 6) +
-        '...' +
-        account.slice(-4)
-      : 'Connect Base wallet';
 
   $('claim-owner-tools').hidden = !owner;
 
@@ -422,6 +434,12 @@ async function withBusy(fn) {
 }
 
 async function ensureBaseWallet() {
+  if (!config?.base) {
+    throw Error(
+      'PumpLite configuration is still loading. Tap Connect Base wallet again in a moment.'
+    );
+  }
+
   if (
     signer &&
     account &&
@@ -530,7 +548,24 @@ async function ensureBaseWallet() {
     '...' +
     account.slice(-4)
   );
-  await refresh();
+
+  if (readProvider) {
+    try {
+      await refresh();
+    } catch (error) {
+      setStatus(
+        'Base wallet connected: ' +
+        account.slice(0, 6) +
+        '...' +
+        account.slice(-4) +
+        '. The read-only Base RPC is temporarily unavailable, so balances and launch readiness cannot load yet.'
+      );
+      controls();
+    }
+  } else {
+    controls();
+  }
+
   return signer;
 }
 
@@ -960,8 +995,12 @@ async function boot() {
     expectedToken();
 
   setStatus(
-    'PLITE configuration loaded. Connecting to Base Mainnet...'
+    'PLITE configuration loaded. Wallet connection is ready. Checking Base Mainnet...'
   );
+
+  // Enable the wallet control as soon as local configuration is loaded.
+  // The read-only RPC check must never block wallet connection.
+  controls();
 
   const rpcUrls =
     baseReadRpcUrls(config.base);
@@ -1015,4 +1054,17 @@ async function boot() {
   controls();
 }
 
-withBusy(boot);
+boot().catch(error => {
+  busy = false;
+
+  setStatus(
+    config?.base
+      ? 'Wallet connection is ready, but the read-only Base RPC could not finish loading: ' +
+        (error?.shortMessage || error?.message || 'unknown RPC error')
+      : error?.shortMessage ||
+        error?.message ||
+        'Unable to load PumpLite claim configuration'
+  );
+
+  controls();
+});
