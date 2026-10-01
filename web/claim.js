@@ -37,6 +37,18 @@ let ownerNativeBalance = null;
 const walletDiscovery =
   discoverEvm(window);
 
+function phantomBrowseUrl() {
+  const target = new URL(location.href);
+  target.searchParams.delete('utm_source');
+
+  return (
+    'https://phantom.app/ul/browse/' +
+    encodeURIComponent(target.href) +
+    '?ref=' +
+    encodeURIComponent(target.origin)
+  );
+}
+
 function setStatus(message) {
   $('claim-network').textContent = message;
 }
@@ -429,8 +441,8 @@ async function ensureBaseWallet() {
     );
 
   selectedProvider =
-    phantom?.provider ||
     window.phantom?.ethereum ||
+    phantom?.provider ||
     walletDiscovery.entries[0]?.provider ||
     window.ethereum ||
     null;
@@ -438,12 +450,21 @@ async function ensureBaseWallet() {
   if (
     typeof selectedProvider?.request !== 'function'
   ) {
-    throw Error(
-      'Open this page in Phantom, Coinbase Wallet, MetaMask or another Base-compatible wallet browser'
+    setStatus(
+      'No Base wallet is available in this browser. Opening this exact claim page inside Phantom...'
     );
+
+    // Phantom mobile only exposes its wallet provider to sites opened
+    // inside Phantom's own in-app browser. The Connect button itself
+    // performs that handoff when an injected EVM provider is absent.
+    location.assign(phantomBrowseUrl());
+
+    // Navigation is expected to replace this page. Keep the current
+    // action pending rather than displaying a false connection error.
+    await new Promise(() => {});
   }
 
-  setStatus('Requesting wallet access...');
+  setStatus('Requesting Base wallet access...');
 
   await selectedProvider.request({
     method: 'eth_requestAccounts'
@@ -502,7 +523,12 @@ async function ensureBaseWallet() {
   account =
     getAddress(await signer.getAddress());
 
-  setStatus('Base wallet connected.');
+  setStatus(
+    'Base wallet connected: ' +
+    account.slice(0, 6) +
+    '...' +
+    account.slice(-4)
+  );
   await refresh();
   return signer;
 }
