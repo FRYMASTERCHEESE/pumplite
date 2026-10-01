@@ -130,7 +130,17 @@ test('live claim config is the default when no contract query is supplied', asyn
 
   assert.match(
     source,
-    /urlValue \|\| configuredValue/
+    /if \(!urlValue\) \{\s*return official;/
+  );
+
+  assert.match(
+    source,
+    /if \(requested !== official\)/
+  );
+
+  assert.match(
+    source,
+    /Claim link does not match the official PumpLite claim contract/
   );
 
   assert.match(
