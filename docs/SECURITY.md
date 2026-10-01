@@ -92,3 +92,7 @@ For significant public funds, remaining security work includes:
 IMPLEMENTATION_REPORT.md, READINESS_FOLLOWUP.md, RELEASE_CANDIDATE.md, RELEASE_HANDOFF.md and
 LOCAL_READINESS_CLOSURE.md are retained as historical verification records. Their old deployment-state
 statements must be interpreted at the date/commit they recorded. See CURRENT_STATUS.md for current state.
+
+## Base production health workflow
+
+The `Base production health` GitHub Actions workflow runs the public read-only production verifier on relevant production changes, manual dispatch, and a daily schedule. It is intentionally configured with repository `contents: read` permission and no signing secret. The workflow can report a problem but cannot repair contracts, move funds, deploy, or submit a transaction.

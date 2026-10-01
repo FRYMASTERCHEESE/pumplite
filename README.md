@@ -173,3 +173,6 @@ pnpm verify:base-production
 ```
 
 This checks the active Base V2 factory, PLITE market/token, official First 50 claim, and PLITE/WETH Uniswap V2 pair directly against Base Mainnet. It uses public RPC reads only and does not load a wallet, request a signature, submit a transaction, or spend ETH.
+## Continuous Base production health
+
+`.github/workflows/base-production-health.yml` runs the read-only Base production verifier on relevant production changes, on manual dispatch, and once daily. The workflow has read-only repository permission, uses no wallet or signing secret, and submits no transaction. A failed run means the live Base state or a required public RPC read should be investigated; it does not authorize an automatic repair or transaction.
