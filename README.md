@@ -208,3 +208,10 @@ The `Base economic health` GitHub workflow runs this read-only monitor after rel
 `pnpm verify:base-write-sim` uses Base Mainnet `eth_call` to execute state-changing code paths ephemerally without broadcasting a transaction. It simulates valid fixed and mintable market creation, rejects invalid creation inputs, verifies Mayhem controller authorization/timing, creator-only mint/lock boundaries, and the token's market-only mint/burn authority for every registered Base V2 market.
 
 These simulations execute against live contract code and current state but are discarded by the RPC node after each call. They do not connect a wallet, request a signature, broadcast a transaction or spend ETH. The `Base write simulation` workflow runs the checks after relevant V2 changes, manually, and daily.
+
+
+## Base event/accounting reconciliation
+
+`pnpm verify:base-event-accounting` reconstructs Base V2 market accounting from emitted Mainnet events from the factory deployment block through a single current block. It verifies factory creation/config history and independently rebuilds each market's native reserve, token reserve, volume, accumulated Mayhem/support backing, burned supply and minted inventory from `Trade`, `MarketSupported`, `BuyAndBurn`, `InventoryMinted`, `MintingLocked` and `MayhemChanged` events, then compares the results with live contract state and token supply.
+
+Log reads are bounded and automatically split into smaller ranges if a public RPC rejects a requested range. The `Base event accounting` workflow runs this read-only reconciliation after relevant V2 changes, manually, and daily. No wallet, signature, transaction or ETH is used.

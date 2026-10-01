@@ -118,3 +118,8 @@ PumpLite now independently recomputes the live Base V2 bonding-curve quote math 
 ## Base write-path simulation health
 
 PumpLite now performs live Base Mainnet `eth_call` simulations of important state-changing V2 paths without persisting any state. The monitor exercises valid fixed/mintable factory creation and invalid creation rejection, then checks controller/creator/token-market authority boundaries across every registered market. Authorized simulations are required to reach the expected live state path while unauthorized callers must fail. No wallet or transaction is used.
+
+
+## Base event/accounting reconciliation
+
+PumpLite now reconstructs live Base V2 accounting from the chain's own factory and market event history. The monitor checks that factory market order/configuration agrees with creation events and that event-derived reserves, volume, market support, burns, inventory minting, mint-lock state and manual Mayhem state reconcile with current contract/token state at the same Base block. Historical log requests are bounded and can split automatically for public RPC range limits.

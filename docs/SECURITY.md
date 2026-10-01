@@ -120,3 +120,8 @@ The `Base economic health` workflow independently calculates expected buy and se
 ## Write-path simulation monitoring
 
 The `Base write simulation` workflow uses `eth_call` against live Base Mainnet contracts to exercise state-changing code paths without committing state. It verifies factory validation and important controller, creator and market-only authorization boundaries. The simulation is useful for detecting regressions or unexpected live behavior but it is not a real transaction, does not prove wallet-provider UX, does not model mempool/MEV conditions and does not replace independent security review.
+
+
+## Event/accounting reconciliation monitoring
+
+The `Base event accounting` workflow reconstructs V2 accounting from immutable Mainnet logs and compares it with current on-chain state. This provides a separate consistency path from direct state reads: trades, explicit market support, Buy & Burn, inventory minting, mint locking and manual Mayhem changes must reconcile with the corresponding cumulative state. The check is read-only and bounded for public RPC use. It detects inconsistencies but cannot repair them and does not replace an independent audit.
