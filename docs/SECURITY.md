@@ -154,3 +154,7 @@ The `Production hardening 19-27` workflow adds independent consistency checks ar
 ## Production hardening bundle 28-50
 
 The `Production hardening 28-50` workflow provides 23 additional static/local fail-closed gates. It checks configuration and identity drift, source-level contract authority/economic protections, wallet/provider boundaries, publication/security-header policy, exact dependency locking, action pinning and workflow permissions, and monitoring/release coverage. It performs no wallet connection, signature, transaction, RPC write or ETH spend. Static verification reduces configuration and source-regression risk but does not prove future transaction execution, external-provider availability, wallet custody security, MEV resistance, or replace an independent smart-contract/economic/frontend audit.
+
+## Production hardening bundle 51-130
+
+The `Production hardening 51-130` workflow performs 80 static/local fail-closed checks across configuration, deployed-address records, contract source boundaries, claim rules, wallet/provider code, metadata upload limits, RPC/fetch bounds, Pages publishing, response-header source policy, dependency locking and GitHub Actions permissions/action pinning. It intentionally avoids live historical RPC scans so transient public-provider errors do not masquerade as source regressions. These checks strengthen regression detection but do not replace independent third-party smart-contract/economic/frontend review, operational wallet security, or live-chain monitoring.
