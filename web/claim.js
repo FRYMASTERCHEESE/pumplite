@@ -9,12 +9,30 @@ import {
   formatUnits
 } from 'ethers';
 import { gasBudget } from './gas.js';
-import { discoverEvm } from './wallets.js';
+import {
+  validatePublicConfig
+} from './release-config.js';
+import {
+  discoverEvm,
+  watchWallet
+} from './wallets.js';
 import {
   baseReadRpcUrls,
   baseReadTransport
 } from './base-rpc.js';
 import claimArtifact from './generated/plite-holder-claim.json' with { type: 'json' };
+
+if (window.top !== window.self) {
+  document.body.replaceChildren(
+    document.createTextNode(
+      'Open the PumpLite PLITE claim directly in your browser. Embedded wallet actions are disabled.'
+    )
+  );
+
+  throw Error(
+    'Embedded PumpLite claim is disabled'
+  );
+}
 
 const $ = id => document.getElementById(id);
 
@@ -31,6 +49,7 @@ let account;
 let busy = false;
 let currentClaim = null;
 let selectedProvider = null;
+let unwatchWallet = () => {};
 let ownerPliteBalance = null;
 let ownerNativeBalance = null;
 
@@ -70,25 +89,173 @@ function setStatus(message) {
   $('claim-network').textContent = message;
 }
 
+function invalidateWalletSession(
+  message =
+    'Wallet account or network changed. Reconnect before continuing.'
+) {
+  unwatchWallet();
+  unwatchWallet = () => {};
+
+  walletProvider?.destroy?.();
+  walletProvider = undefined;
+  signer = undefined;
+  account = undefined;
+  selectedProvider = null;
+  ownerPliteBalance = null;
+  ownerNativeBalance = null;
+
+  if (currentClaim) {
+    currentClaim = {
+      ...currentClaim,
+      alreadyClaimed: null
+    };
+  }
+
+  setStatus(message);
+  controls();
+}
+
+async function requireCurrentWallet() {
+  if (
+    !signer ||
+    !account ||
+    !selectedProvider
+  ) {
+    throw Error(
+      'Connect your Base wallet first'
+    );
+  }
+
+  const expected =
+    getAddress(account);
+
+  try {
+    const chainId =
+      BigInt(
+        await selectedProvider.request({
+          method: 'eth_chainId'
+        })
+      );
+
+    const accounts =
+      await selectedProvider.request({
+        method: 'eth_accounts'
+      });
+
+    const active =
+      accounts?.[0]
+        ? getAddress(accounts[0])
+        : null;
+
+    if (
+      chainId !== 8453n ||
+      active !== expected
+    ) {
+      throw Error(
+        'Wallet account or network changed'
+      );
+    }
+  } catch {
+    invalidateWalletSession();
+
+    throw Error(
+      'Wallet account or network changed. Reconnect before continuing.'
+    );
+  }
+
+  return signer;
+}
+
+function assertReceiptSender(
+  receipt,
+  expectedAccount
+) {
+  if (
+    !receipt?.from ||
+    getAddress(receipt.from) !==
+      getAddress(expectedAccount)
+  ) {
+    throw Error(
+      'Confirmed transaction came from an unexpected wallet'
+    );
+  }
+}
+
+async function copyText(text) {
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return;
+    } catch {}
+  }
+
+  const box =
+    document.createElement('textarea');
+
+  box.value = text;
+  box.setAttribute('readonly', '');
+  box.style.position = 'fixed';
+  box.style.left = '-9999px';
+
+  document.body.append(box);
+  box.select();
+
+  let copied = false;
+
+  try {
+    copied =
+      document.execCommand('copy');
+  } finally {
+    box.remove();
+  }
+
+  if (!copied) {
+    throw Error(
+      'Clipboard access is unavailable in this browser'
+    );
+  }
+}
+
 function contractFromUrl() {
   const urlValue =
-    new URL(location.href).searchParams.get('contract');
+    new URL(location.href)
+      .searchParams
+      .get('contract');
 
   const configuredValue =
     config?.base?.holderClaim?.enabled === true
       ? config.base.holderClaim.contract
       : null;
 
-  const value =
-    urlValue || configuredValue;
-
-  if (!value) return null;
-
-  try {
-    return getAddress(value);
-  } catch {
+  if (!configuredValue) {
     return null;
   }
+
+  const official =
+    getAddress(configuredValue);
+
+  if (!urlValue) {
+    return official;
+  }
+
+  let requested;
+
+  try {
+    requested =
+      getAddress(urlValue);
+  } catch {
+    throw Error(
+      'Invalid PLITE claim contract address'
+    );
+  }
+
+  if (requested !== official) {
+    throw Error(
+      'Claim link does not match the official PumpLite claim contract'
+    );
+  }
+
+  return official;
 }
 
 function expectedToken() {
@@ -453,31 +620,12 @@ async function ensureBaseWallet() {
     account &&
     selectedProvider
   ) {
-    const chainId =
-      BigInt(
-        await selectedProvider.request({
-          method: 'eth_chainId'
-        })
-      );
-
-    const accounts =
-      await selectedProvider.request({
-        method: 'eth_accounts'
-      });
-
-    if (
-      chainId === 8453n &&
-      accounts?.[0] &&
-      getAddress(accounts[0]) === account
-    ) {
-      return signer;
+    try {
+      return await requireCurrentWallet();
+    } catch {
+      // Invalid session was cleared.
+      // Continue into explicit reconnect.
     }
-
-    signer = undefined;
-    account = undefined;
-    walletProvider?.destroy?.();
-    walletProvider = undefined;
-    selectedProvider = null;
   }
 
   selectedProvider =
@@ -549,6 +697,22 @@ async function ensureBaseWallet() {
 
   account =
     getAddress(await signer.getAddress());
+
+  unwatchWallet();
+
+  unwatchWallet =
+    watchWallet(
+      selectedProvider,
+      [
+        'accountsChanged',
+        'chainChanged',
+        'disconnect'
+      ],
+      () =>
+        invalidateWalletSession()
+    );
+
+  await requireCurrentWallet();
 
   setStatus(
     'Base wallet connected: ' +
@@ -673,6 +837,11 @@ async function fundCurrentClaim() {
       missing
     );
 
+  const expectedAccount =
+    getAddress(account);
+
+  await requireCurrentWallet();
+
   const tx =
     await tokenWrite.transfer(
       currentClaim.address,
@@ -693,6 +862,11 @@ async function fundCurrentClaim() {
   if (!receipt || receipt.status !== 1) {
     throw Error('PLITE funding transaction failed');
   }
+
+  assertReceiptSender(
+    receipt,
+    expectedAccount
+  );
 
   await refresh();
 
@@ -784,6 +958,11 @@ async function launch() {
       data: deployRequest.data
     });
 
+  const expectedAccount =
+    getAddress(account);
+
+  await requireCurrentWallet();
+
   const contract =
     await factory.deploy(
       expectedToken(),
@@ -810,6 +989,11 @@ async function launch() {
   if (!receipt || receipt.status !== 1) {
     throw Error('Claim deployment failed');
   }
+
+  assertReceiptSender(
+    receipt,
+    expectedAccount
+  );
 
   const address =
     getAddress(await contract.getAddress());
@@ -876,6 +1060,11 @@ async function claimOne() {
   const gas =
     await claimWrite.claim.estimateGas();
 
+  const expectedAccount =
+    getAddress(account);
+
+  await requireCurrentWallet();
+
   const tx =
     await claimWrite.claim({
       gasLimit:
@@ -893,6 +1082,11 @@ async function claimOne() {
     throw Error('PLITE claim transaction failed');
   }
 
+  assertReceiptSender(
+    receipt,
+    expectedAccount
+  );
+
   await refresh();
   setStatus('Claim confirmed: this wallet received 1 PLITE.');
 }
@@ -905,11 +1099,7 @@ async function copyShareLink() {
   const text =
     shareUrl(currentClaim.address);
 
-  if (navigator.clipboard?.writeText) {
-    await navigator.clipboard.writeText(text);
-  } else {
-    throw Error('Clipboard access is unavailable in this browser');
-  }
+  await copyText(text);
 
   setStatus('Verified claim link copied.');
 }
@@ -982,12 +1172,14 @@ async function boot() {
   }
 
   config =
-    await response.json();
+    validatePublicConfig(
+      await response.json()
+    );
 
   if (
-    config?.base?.chainId !== 8453 ||
-    config?.base?.holderClaim?.maxClaims !== 50 ||
-    String(config?.base?.holderClaim?.claimAmount) !== '1'
+    config.base.holderClaim?.enabled !== true ||
+    config.base.holderClaim.maxClaims !== 50 ||
+    String(config.base.holderClaim.claimAmount) !== '1'
   ) {
     throw Error(
       'Unexpected PumpLite claim configuration'
@@ -1061,6 +1253,16 @@ async function boot() {
   await refresh();
   controls();
 }
+
+window.addEventListener(
+  'pagehide',
+  () => {
+    unwatchWallet();
+    walletDiscovery.dispose();
+    walletProvider?.destroy?.();
+    readProvider?.destroy?.();
+  }
+);
 
 window.addEventListener(
   'pagehide',
