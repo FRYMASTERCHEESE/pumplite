@@ -140,7 +140,7 @@
 
         <div id="base-v2-create-options" hidden>
           <fieldset>
-            <legend><span>V2</span> Supply & Mayhem</legend>
+            <legend><span id="base-contract-version-label">V2</span> Supply & Mayhem</legend>
 
             <label for="v2-supply-mode">Supply mode</label>
             <select id="v2-supply-mode">
@@ -154,10 +154,25 @@
             <label for="v2-max-supply">Maximum lifetime supply</label>
             <input id="v2-max-supply" inputmode="decimal" value="1000000000" maxlength="32">
 
-            <label>
+            <label id="v2-initial-mayhem-row">
               <input id="v2-initial-mayhem" type="checkbox">
-              Enable Mayhem for the first 24 hours
+              Enable V2 Mayhem support for the first 24 hours
             </label>
+
+            <div id="base-v3-mode-options" class="v3-launch-mode" hidden>
+              <label for="v3-launch-mode">Launch mode</label>
+              <select id="v3-launch-mode">
+                <option value="0">Classic - normal PumpLite market</option>
+                <option value="1">Mayhem Auto - autonomous agent cycle</option>
+                <option value="2">Mayhem Manual - creator requests each agent trade</option>
+              </select>
+              <div class="v3-mode-grid" aria-label="PumpLite V3 launch modes">
+                <article><b>Classic</b><span>No agent inventory or agent trades.</span></article>
+                <article><b>Mayhem Auto</b><span>24-hour agent lane with randomized direction and size.</span></article>
+                <article><b>Mayhem Manual</b><span>Creator requests a trade; creator cannot choose direction or size.</span></article>
+              </div>
+              <p id="v3-launch-mode-help" class="fine">Launch mode is permanent. Mayhem agent activity is labeled separately from organic user volume.</p>
+            </div>
 
             <p class="fine">Fixed supply can never mint later. Mintable supply can mint only into the market and never above its permanent cap.</p>
           </fieldset>
@@ -351,6 +366,20 @@
             <span><small>Mayhem</small><strong id="v2-mayhem-status">-</strong></span>
           </div>
 
+          <section id="base-v3-agent-status" class="v3-agent-card" hidden aria-labelledby="v3-agent-title">
+            <p class="eyebrow">V3 MAYHEM AGENT</p>
+            <h3 id="v3-agent-title">Transparent agent activity</h3>
+            <dl class="stats">
+              <div><dt>Launch mode</dt><dd id="v3-market-mode">-</dd></div>
+              <div><dt>Agent state</dt><dd id="v3-agent-state">-</dd></div>
+              <div><dt>Agent trades</dt><dd id="v3-agent-trades">0</dd></div>
+              <div><dt>Agent inventory</dt><dd id="v3-agent-inventory">-</dd></div>
+              <div><dt>Agent volume</dt><dd id="v3-agent-volume">-</dd></div>
+              <div><dt>Cycle ends</dt><dd id="v3-agent-ends">-</dd></div>
+            </dl>
+            <p id="v3-agent-disclosure" class="fine">Mayhem agent trades are explicitly tagged and excluded from PumpLite organic user-trade volume.</p>
+          </section>
+
           <details class="clean-details market-advanced-details">
             <summary>Advanced market details</summary>
 
@@ -385,6 +414,15 @@
               </form>
 
               <button id="v2-lock-minting" type="button" class="outline full">Permanently lock minting</button>
+
+              <div id="base-v3-manual-tools" hidden>
+                <h3>Mayhem Manual</h3>
+                <p class="fine">Request one randomized agent trade. The creator cannot choose whether it buys or sells and cannot choose the trade size.</p>
+                <button id="v3-request-manual" type="button" class="outline full">Request one Mayhem trade</button>
+                <p id="v3-manual-status" class="fine">No manual agent trade is pending.</p>
+              </div>
+
+              <button id="v3-finalize-mayhem" type="button" class="outline full" hidden>Finalize ended Mayhem and burn unused inventory</button>
             </div>
 
             <div id="base-v2-controller" hidden>
@@ -399,6 +437,16 @@
                 <label for="v2-support-amount">Add ETH market support</label>
                 <input id="v2-support-amount" inputmode="decimal" placeholder="0.00" maxlength="32">
                 <button id="v2-support-submit" type="submit" class="outline full">Review support in wallet</button>
+              </form>
+            </div>
+
+            <div id="base-v3-controller" hidden>
+              <h3>V3 Mayhem controller</h3>
+              <p class="fine">Auto/Manual direction and size are determined by the V3 commit/reveal randomness process. Agent trades are separate from organic user volume.</p>
+              <form id="v3-support-form">
+                <label for="v3-support-amount">Add ETH market support</label>
+                <input id="v3-support-amount" inputmode="decimal" placeholder="0.00" maxlength="32">
+                <button id="v3-support-submit" type="submit" class="outline full">Review V3 support in wallet</button>
               </form>
             </div>
           </details>

@@ -35,8 +35,9 @@ try {
   assert.equal((await fetch(base + 'node_modules/@solana/web3.js')).status, 404, 'No Node resolution fallback');
   const chunks = (await readdir('assets/chunks')).filter(name => /^(solana|base)-.*\.js$/.test(name));
   assert.equal(chunks.filter(name => /^solana-/.test(name)).length, 1, 'Solana bundle must exist exactly once');
-  assert.equal(chunks.filter(name => /^base-(?!v2-)/.test(name)).length, 1, 'Base V1 compatibility bundle must exist exactly once');
+  assert.equal(chunks.filter(name => /^base-(?!v[23]-)/.test(name)).length, 1, 'Base V1 compatibility bundle must exist exactly once');
   assert.equal(chunks.filter(name => /^base-v2-/.test(name)).length, 1, 'Base V2 bundle must exist exactly once');
+  assert.equal(chunks.filter(name => /^base-v3-/.test(name)).length, 1, 'Base V3 Classic/Mayhem bundle must exist exactly once');
   browser = await chromium.launch({ headless: true, ...(process.env.BROWSER_EXECUTABLE ? { executablePath: process.env.BROWSER_EXECUTABLE } : {}) });
   await verifyBrowser(browser,base);
   const broken = await browser.newPage({ viewport: { width: 390, height: 844 } });

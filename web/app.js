@@ -54,11 +54,44 @@ function controls() {
   $('download-metadata').disabled = state.busy;
   const metadataEnabled = state.config?.metadataUploads?.enabled === true;
 
+  const baseVersion =
+    Number(state.config?.base?.contractVersion || 0);
+
   const baseV2 =
     state.chain === 'base' &&
-    state.config?.base?.contractVersion === 2;
+    baseVersion === 2;
 
-  $('base-v2-create-options').hidden = !baseV2;
+  const baseV3 =
+    state.chain === 'base' &&
+    baseVersion === 3;
+
+  const baseModern =
+    baseV2 || baseV3;
+
+  $('base-v2-create-options').hidden = !baseModern;
+  $('base-v3-mode-options').hidden = !baseV3;
+  $('v2-initial-mayhem-row').hidden = baseV3;
+  $('base-contract-version-label').textContent =
+    baseV3 ? 'V3' : 'V2';
+
+  $('v3-launch-mode').disabled =
+    state.busy || !baseV3;
+
+  $('v3-request-manual').disabled =
+    !writable() ||
+    state.market?.contractVersion !== 3 ||
+    state.market?.launchMode !== 2 ||
+    state.market?.pendingManualRequest === true;
+
+  $('v3-support-submit').disabled =
+    !writable() ||
+    state.market?.contractVersion !== 3;
+
+  $('v3-finalize-mayhem').disabled =
+    !writable() ||
+    state.market?.contractVersion !== 3 ||
+    state.market?.mayhemState !== 3 ||
+    state.market?.mayhemFinalized === true;
   $('create-supply-fact').textContent = baseV2 ? 'Custom' : '1 billion';
   $('create-supply-mode-fact').textContent = baseV2 ? 'Supply options' : 'Fixed supply';
   $('create-supply-help').textContent =
@@ -66,9 +99,9 @@ function controls() {
       ? 'No creator allocation. Choose Fixed / No Mint or a permanently capped Mintable supply.'
       : 'No creator allocation. All supply starts in the market vault. No future minting.';
 
-  $('v2-supply-mode').disabled = state.busy || !baseV2;
-  $('v2-initial-supply').disabled = state.busy || !baseV2;
-  $('v2-initial-mayhem').disabled = state.busy || !baseV2;
+  $('v2-supply-mode').disabled = state.busy || !baseModern;
+  $('v2-initial-supply').disabled = state.busy || !baseModern;
+  $('v2-initial-mayhem').disabled = state.busy || !baseModern;
 
   $('v2-max-supply').disabled =
     state.busy ||
@@ -76,17 +109,17 @@ function controls() {
     $('v2-supply-mode').value !== 'mintable';
 
   $('base-v2-buy-burn-submit').disabled =
-    !writable() || state.market?.contractVersion !== 2;
+    !writable() || ![2, 3].includes(state.market?.contractVersion);
 
   $('v2-mint-submit').disabled =
     !writable() ||
-    state.market?.contractVersion !== 2 ||
+    ![2, 3].includes(state.market?.contractVersion) ||
     state.market?.mintingLocked === true ||
     state.market?.mintableAtLaunch !== true;
 
   $('v2-lock-minting').disabled =
     !writable() ||
-    state.market?.contractVersion !== 2 ||
+    ![2, 3].includes(state.market?.contractVersion) ||
     state.market?.mintingLocked === true ||
     state.market?.mintableAtLaunch !== true;
 
@@ -97,28 +130,30 @@ function controls() {
       String(state.market.mayhemController).toLowerCase();
 
   const mayhemReady =
-    state.market?.contractVersion === 2 &&
+    [2, 3].includes(state.market?.contractVersion) &&
     mayhemManualReady(state.market);
 
   $('v2-mayhem-on').disabled =
     !writable() ||
+    !baseV2 ||
     !controllerWallet ||
     !mayhemReady ||
     state.market?.mayhemActive === true;
 
   $('v2-mayhem-off').disabled =
     !writable() ||
+    !baseV2 ||
     !controllerWallet ||
     !mayhemReady ||
     state.market?.mayhemActive !== true;
 
   $('v2-support-submit').disabled =
-    !writable() || state.market?.contractVersion !== 2;
+    !writable() || ![2, 3].includes(state.market?.contractVersion);
 
   const ownerReviewReady =
     writable() &&
     state.chain === 'base' &&
-    state.market?.contractVersion === 2 &&
+    [2, 3].includes(state.market?.contractVersion) &&
     state.wallet?.toLowerCase() === String(state.config?.base?.treasury || '').toLowerCase();
 
   $('eas-register-schema').disabled =
@@ -152,11 +187,11 @@ function controls() {
   $('home-refresh-live').disabled = !ready() || state.busy;
   $('more').disabled = state.busy; $('verified-only').disabled = state.busy;
   $('show-home').disabled=state.busy; $('show-create').disabled=state.busy; $('show-explore').disabled=state.busy; $('show-help').disabled=state.busy;
-  for (const id of ['description','image-uri','banner-uri','website','twitter','telegram','discord','name','symbol','uri','side','amount','slippage','market-address','market-filter','market-sort','initial-buy-eth','initial-buy-currency','trade-display-amount','trade-display-currency']) $(id).disabled = state.busy;
+  for (const id of ['description','image-uri','banner-uri','website','twitter','telegram','discord','name','symbol','uri','side','amount','slippage','market-address','market-filter','market-sort','initial-buy-eth','initial-buy-currency','trade-display-amount','trade-display-currency','v3-support-amount']) $(id).disabled = state.busy;
   $('trade-use-display').disabled =
     state.busy ||
     state.chain !== 'base' ||
-    state.market?.contractVersion !== 2;
+    ![2, 3].includes(state.market?.contractVersion);
   $('initial-buy-submit').disabled = state.busy;
   $('initial-buy-close').disabled = state.busy;
 }
@@ -777,9 +812,11 @@ async function getAdapter() {
   const module =
     chain === 'solana'
       ? await import('./adapters/solana.js')
-      : state.config?.base?.contractVersion === 2
-        ? await import('./adapters/base-v2.js')
-        : await import('./adapters/base.js');
+      : state.config?.base?.contractVersion === 3
+        ? await import('./adapters/base-v3.js')
+        : state.config?.base?.contractVersion === 2
+          ? await import('./adapters/base-v2.js')
+          : await import('./adapters/base.js');
   if (epoch !== state.epoch) throw Error('Network selection changed');
   state.adapter = module.adapter(state.config[chain], (message, href) => { if (chain === 'solana') diagnostic(message); status(message, href); }, walletChanged);
   return state.adapter;
@@ -1356,7 +1393,16 @@ function renderMarket(m) {
   $('virtual').textContent = formatUnits(m.virtualNative, m.nativeDecimals) + ' ' + m.unit;
   $('market-age').textContent = launchAge(m);
   $('market-block').textContent = Number(m.provenance?.block || 0).toLocaleString();
-  const distributed = Number((m.supply - m.tokenReserve) * 10_000n / m.supply) / 100;
+  const marketCustody =
+    m.tokenReserve +
+    (m.agentInventory || 0n);
+
+  const distributed =
+    Number(
+      (m.supply - marketCustody) *
+      10_000n /
+      m.supply
+    ) / 100;
   $('distribution').value = distributed;
   $('distribution-label').textContent =
     distributed.toFixed(2) + '% distributed from the current token supply.';
@@ -1386,10 +1432,14 @@ function renderMarket(m) {
   }
 
   const baseV2 = m.contractVersion === 2;
-  $('base-v2-market').hidden = !baseV2;
-  $('base-v2-burn-form').hidden = !baseV2;
+  const baseV3 = m.contractVersion === 3;
+  const baseModern = baseV2 || baseV3;
 
-  if (baseV2) {
+  $('base-v2-market').hidden = !baseModern;
+  $('base-v2-burn-form').hidden = !baseModern;
+  $('base-v3-agent-status').hidden = !baseV3;
+
+  if (baseModern) {
     $('v2-supply-status').textContent =
       (m.mintableAtLaunch ? 'Mintable' : 'Fixed / No Mint') +
       ' · current ' +
@@ -1398,11 +1448,83 @@ function renderMarket(m) {
       formatUnits(m.maxSupply, 18, 2) +
       (m.mintingLocked ? ' · minting locked' : '');
 
-    $('v2-mayhem-status').textContent =
-      m.mayhemActive ? 'ACTIVE' : 'OFF';
+    if (baseV3) {
+      const modeNames = [
+        'CLASSIC',
+        'MAYHEM AUTO',
+        'MAYHEM MANUAL'
+      ];
 
-    $('v2-mayhem-help').textContent =
-      mayhemHelp(m);
+      const stateNames = [
+        'CLASSIC',
+        'ACTIVE',
+        'PAUSED',
+        'ENDED'
+      ];
+
+      $('v2-mayhem-status').textContent =
+        modeNames[m.launchMode] || 'UNKNOWN';
+
+      $('v3-market-mode').textContent =
+        modeNames[m.launchMode] || 'Unknown';
+
+      $('v3-agent-state').textContent =
+        stateNames[m.mayhemState] || 'Unknown';
+
+      $('v3-agent-trades').textContent =
+        Number(m.mayhemTradeCount || 0n).toLocaleString();
+
+      $('v3-agent-inventory').textContent =
+        formatUnits(
+          m.agentInventory || 0n,
+          m.decimals,
+          2
+        ) +
+        ' ' +
+        m.symbol;
+
+      $('v3-agent-volume').textContent =
+        formatUnits(
+          m.agentVolume || 0n,
+          m.nativeDecimals
+        ) +
+        ' ' +
+        m.unit;
+
+      $('v3-agent-ends').textContent =
+        m.launchMode === 0
+          ? 'Not applicable'
+          : new Date(
+              Number(m.mayhemEndsAt) * 1000
+            ).toLocaleString();
+
+      $('v3-manual-status').textContent =
+        m.launchMode !== 2
+          ? 'This market is not Manual Mayhem.'
+          : m.pendingManualRequest
+            ? 'One creator-requested agent trade is pending.'
+            : 'No manual agent trade is pending.';
+
+      $('base-v3-manual-tools').hidden =
+        m.launchMode !== 2;
+
+      $('v3-finalize-mayhem').hidden =
+        m.launchMode === 0 ||
+        m.mayhemState !== 3 ||
+        m.mayhemFinalized === true;
+
+      $('v2-mayhem-help').textContent =
+        'V3 launch mode is immutable. Agent activity is labeled separately from organic user trades.';
+    } else {
+      $('v2-mayhem-status').textContent =
+        m.mayhemActive ? 'ACTIVE' : 'OFF';
+
+      $('v2-mayhem-help').textContent =
+        mayhemHelp(m);
+
+      $('base-v3-manual-tools').hidden = true;
+      $('v3-finalize-mayhem').hidden = true;
+    }
 
     $('v2-support-total').textContent =
       formatUnits(m.totalMarketSupport, 18) + ' ETH';
@@ -1423,12 +1545,18 @@ function renderMarket(m) {
         String(m.mayhemController).toLowerCase();
 
     $('base-v2-creator').hidden = !isCreator;
-    $('base-v2-controller').hidden = !isController;
+    $('base-v2-controller').hidden =
+      !isController || !baseV2;
+    $('base-v3-controller').hidden =
+      !isController || !baseV3;
     $('market-admin-tools').hidden =
       !isCreator && !isController;
   } else {
     $('base-v2-creator').hidden = true;
     $('base-v2-controller').hidden = true;
+    $('base-v3-controller').hidden = true;
+    $('base-v3-manual-tools').hidden = true;
+    $('v3-finalize-mayhem').hidden = true;
     $('market-admin-tools').hidden = true;
   }
 
@@ -2010,11 +2138,14 @@ function creationData() {
     uri: $('uri').value.trim()
   };
 
+  const creationVersion =
+    Number(state.config?.base?.contractVersion || 0);
+
   if (
     state.chain !== 'base' ||
-    state.config?.base?.contractVersion !== 2
+    ![2, 3].includes(creationVersion)
   ) {
-    throw Error('Token creation is currently available on Base V2 only');
+    throw Error('Token creation is currently available on reviewed Base V2/V3 deployments only');
   }
 
   const mintable =
@@ -2047,8 +2178,24 @@ function creationData() {
   data.initialSupply = initialSupply;
   data.maxSupply = maxSupply;
   data.mintable = mintable;
-  data.initialMayhem =
-    $('v2-initial-mayhem').checked;
+  if (creationVersion === 3) {
+    data.launchMode =
+      Number($('v3-launch-mode').value);
+
+    if (
+      !Number.isInteger(data.launchMode) ||
+      data.launchMode < 0 ||
+      data.launchMode > 2
+    ) {
+      throw Error('Choose Classic, Mayhem Auto or Mayhem Manual');
+    }
+
+    data.initialMayhem =
+      data.launchMode !== 0;
+  } else {
+    data.initialMayhem =
+      $('v2-initial-mayhem').checked;
+  }
 
   validateMetadata(
     data.name,
@@ -2209,7 +2356,7 @@ function syncTradeHelperMode() {
   $('trade-use-display').disabled =
     state.busy ||
     state.chain !== 'base' ||
-    state.market?.contractVersion !== 2;
+    ![2, 3].includes(state.market?.contractVersion);
 }
 
 function normalizeTradeEth(value) {
@@ -2295,7 +2442,7 @@ async function updateTradeBuyEstimate() {
 
   if (
     state.chain !== 'base' ||
-    state.market?.contractVersion !== 2
+    ![2, 3].includes(state.market?.contractVersion)
   ) {
     tokenOutput.textContent = '- ' + symbol;
     output.textContent = 'Open a Base V2 market to use simple buy.';
@@ -2389,7 +2536,7 @@ $('trade-use-display').addEventListener(
   () => action(async () => {
     if (
       state.chain !== 'base' ||
-      state.market?.contractVersion !== 2
+      ![2, 3].includes(state.market?.contractVersion)
     ) {
       throw Error('Simple buy is available for Base V2 markets');
     }
@@ -2659,7 +2806,7 @@ $('get-quote').addEventListener('click', () => action(async () => {
   const slippageBps = Math.round(slippage);
   if (Math.abs(slippage - slippageBps) > 1e-7) throw Error('Slippage supports two decimal places');
   const q =
-    m.contractVersion === 2
+    [2, 3].includes(m.contractVersion)
       ? quoteBaseV2(m, side, amount)
       : quote(m, side, amount);
 
@@ -2674,7 +2821,7 @@ $('get-quote').addEventListener('click', () => action(async () => {
   $('quote-support-row').hidden = m.contractVersion !== 2;
 
   $('quote-support').textContent =
-    m.contractVersion === 2
+    [2, 3].includes(m.contractVersion)
       ? formatUnits(q.support, m.nativeDecimals, m.nativeDecimals) + ' ' + m.unit
       : '—';
   $('quote-age').textContent = 'Quoted at ' + new Date().toLocaleTimeString() + '. Valid for review for 30 seconds; chain slippage protection still applies.';
@@ -2697,13 +2844,118 @@ $('trade-form').addEventListener('submit', e => { e.preventDefault(); action(asy
 }); });
 $('v2-supply-mode').addEventListener('change', controls);
 
+$('v3-request-manual').addEventListener(
+  'click',
+  () => action(async () => {
+    requireWrite();
+
+    if (
+      state.market?.contractVersion !== 3 ||
+      state.market?.launchMode !== 2
+    ) {
+      throw Error(
+        'This market is not V3 Mayhem Manual'
+      );
+    }
+
+    await (await getAdapter())
+      .requestManualMayhemTrade(
+        state.market
+      );
+
+    await refreshMarketAfterAction(
+      state.market.id
+    );
+  })
+);
+
+$('v3-finalize-mayhem').addEventListener(
+  'click',
+  () => action(async () => {
+    requireWrite();
+
+    if (
+      state.market?.contractVersion !== 3 ||
+      state.market?.mayhemState !== 3
+    ) {
+      throw Error(
+        'Mayhem has not reached its immutable end condition'
+      );
+    }
+
+    await (await getAdapter())
+      .finalizeMayhem(
+        state.market
+      );
+
+    await refreshMarketAfterAction(
+      state.market.id
+    );
+  })
+);
+
+$('v3-support-form').addEventListener(
+  'submit',
+  e => {
+    e.preventDefault();
+
+    action(async () => {
+      requireWrite();
+
+      if (
+        state.market?.contractVersion !== 3
+      ) {
+        throw Error(
+          'V3 support requires a V3 market'
+        );
+      }
+
+      const amount =
+        parseUnits(
+          $('v3-support-amount')
+            .value
+            .trim(),
+          18
+        );
+
+      await (await getAdapter())
+        .supportMarket(
+          state.market,
+          amount
+        );
+
+      await refreshMarketAfterAction(
+        state.market.id
+      );
+    });
+  }
+);
+
+$('v3-launch-mode').addEventListener(
+  'change',
+  () => {
+    const mode =
+      Number(
+        $('v3-launch-mode').value
+      );
+
+    $('v3-launch-mode-help')
+      .textContent =
+        mode === 0
+          ? 'Classic has no agent inventory or agent trades.'
+          : mode === 1
+            ? 'Mayhem Auto prepares a 24-hour randomized agent lane. Agent trades are labeled separately from organic volume.'
+            : 'Mayhem Manual lets the creator request one randomized agent trade at a time. The creator cannot choose buy/sell direction or size.';
+  }
+);
+
 $('base-v2-burn-form').addEventListener('submit', e => {
   e.preventDefault();
 
   action(async () => {
     requireWrite();
 
-    if (state.market?.contractVersion !== 2) {
+    if (![2, 3].includes(state.market?.contractVersion)) {
       throw Error('Buy & Burn requires a Base V2 market');
     }
 

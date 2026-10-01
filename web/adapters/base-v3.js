@@ -1,0 +1,1803 @@
+import { discoverEvm, watchWallet } from '../wallets.js';
+import { BrowserProvider, JsonRpcProvider, Contract, getAddress, FetchRequest, AbiCoder, ZeroAddress, ZeroHash, keccak256, solidityPacked, toUtf8Bytes } from 'ethers';
+import { gasBudget } from '../gas.js';
+import { baseReadRpcUrls, baseReadTransport } from '../base-rpc.js';
+import abis from '../generated/base-v3-abi.json' with { type: 'json' };
+import { assertReceipt } from '../math.js';
+
+export const EAS_ADDRESS = '0x4200000000000000000000000000000000000021';
+export const EAS_SCHEMA_REGISTRY_ADDRESS = '0x4200000000000000000000000000000000000020';
+export const MULTICALL3_ADDRESS = '0xcA11bde05977b3631167028862bE2a173976CA11';
+const MULTICALL3_ABI = [
+  'function aggregate3((address target,bool allowFailure,bytes callData)[] calls) payable returns ((bool success,bytes returnData)[] returnData)'
+];
+export const PUMPLITE_REVIEW_SCHEMA = 'address market,address token,address creator,address factory,uint8 decision,bytes32 metadataHash,uint64 reviewedAt';
+export const PUMPLITE_REVIEW_SCHEMA_UID = keccak256(
+  solidityPacked(
+    ['string', 'address', 'bool'],
+    [PUMPLITE_REVIEW_SCHEMA, ZeroAddress, true]
+  )
+);
+
+const REVIEW_DECISION = Object.freeze({ verified: 1, declined: 2 });
+const REVIEW_DECISION_NAME = Object.freeze({ 1: 'verified', 2: 'declined' });
+const reviewCoder = AbiCoder.defaultAbiCoder();
+const SCHEMA_REGISTRY_ABI = [
+  'function getSchema(bytes32 uid) view returns (tuple(bytes32 uid,address resolver,bool revocable,string schema) record)',
+  'function register(string schema,address resolver,bool revocable) returns (bytes32)'
+];
+const HOLDER_CLAIM_ABI = [
+  'function token() view returns (address)',
+  'function CLAIM_AMOUNT() view returns (uint256)',
+  'function MAX_CLAIMS() view returns (uint256)',
+  'function claimCount() view returns (uint256)',
+  'function remainingClaims() view returns (uint256)',
+  'function claimed(address) view returns (bool)',
+  'function claim()'
+];
+
+const UNISWAP_V2_PAIR_ABI = [
+  'function token0() view returns (address)',
+  'function token1() view returns (address)',
+  'function getReserves() view returns (uint112 reserve0,uint112 reserve1,uint32 blockTimestampLast)'
+];
+const EAS_ABI = [
+  'function attest((bytes32 schema,(address recipient,uint64 expirationTime,bool revocable,bytes32 refUID,bytes data,uint256 value) data) request) payable returns (bytes32)',
+  'function revoke((bytes32 schema,(bytes32 uid,uint256 value) data) request) payable',
+  'function getAttestation(bytes32 uid) view returns (tuple(bytes32 uid,bytes32 schema,uint64 time,uint64 expirationTime,uint64 revocationTime,bytes32 refUID,address recipient,address attester,bool revocable,bytes data) attestation)',
+  'event Attested(address indexed recipient,address indexed attester,bytes32 uid,bytes32 indexed schemaUID)'
+];
+
+function reviewMetadataHash(uri) {
+  return keccak256(toUtf8Bytes(String(uri || '')));
+}
+
+function reviewDecisionCode(value) {
+  const code = REVIEW_DECISION[value];
+  if (!code) throw Error('Review decision must be verified or declined');
+  return code;
+}
+
+export async function settleBase(tx, notify, explorer) {
+  notify('Submitted. Waiting for a Base receipt.', explorer + '/tx/' + tx.hash);
+  // Bound waiting, never resend automatically, and never silently accept a replacement.
+  const receipt = await tx.wait(2, 120_000);
+  assertReceipt(receipt);
+  if (receipt.hash !== tx.hash) throw Error('Unexpected transaction receipt');
+  notify('Confirmed on Base (2 confirmations).', explorer + '/tx/' + receipt.hash);
+  return receipt;
+}
+
+export function adapter(config, notify, changed = () => {}) {
+  if (config.chainId !== 8453) throw Error('Unsupported Base chain configuration');
+  if (config.contractVersion !== 3) throw Error('Base V3 adapter requires contractVersion 3');
+  const readRpcUrls = baseReadRpcUrls(config);
+  const request = new FetchRequest(readRpcUrls[0]);
+  request.timeout = 15000;
+  request.setThrottleParams({ maxAttempts: 1 });
+
+  let fallbackAnnounced = false;
+
+  request.getUrlFunc = (req, signal) =>
+    baseReadTransport(
+      req,
+      signal,
+      readRpcUrls,
+      () => {
+        if (fallbackAnnounced) return;
+        fallbackAnnounced = true;
+
+        notify(
+          'Live Base data is connected through the backup Base Mainnet RPC. Wallet transactions are unaffected.'
+        );
+      }
+    );
+
+  const provider = new JsonRpcProvider(
+    request,
+    undefined,
+    { batchMaxCount: 1 }
+  );
+
+  const multicall = new Contract(
+    MULTICALL3_ADDRESS,
+    MULTICALL3_ABI,
+    provider
+  );
+
+  const marketStats24hCache = new Map();
+  const uniswapV2PairStatsCache = new Map();
+
+  async function batchRead(calls, blockTag) {
+    if (!calls.length) return [];
+
+    const encoded = calls.map(
+      ({ contract, method, args = [] }) => ({
+        target: getAddress(String(contract.target)),
+        allowFailure: false,
+        callData: contract.interface.encodeFunctionData(
+          method,
+          args
+        )
+      })
+    );
+
+    const results =
+      await multicall.aggregate3.staticCall(
+        encoded,
+        { blockTag }
+      );
+
+    if (results.length !== calls.length) {
+      throw Error('Unexpected Base multicall response');
+    }
+
+    return results.map((result, index) => {
+      if (!result.success) {
+        throw Error(
+          'Base multicall read failed: ' +
+          calls[index].method
+        );
+      }
+
+      const decoded =
+        calls[index].contract.interface
+          .decodeFunctionResult(
+            calls[index].method,
+            result.returnData
+          );
+
+      return decoded.length === 1
+        ? decoded[0]
+        : decoded;
+    });
+  }
+  let walletProvider, signer, connectedAddress, selected, revision = 0, unwatch = () => {};
+  function disconnect() {
+    revision++; unwatch(); unwatch = () => {}; walletProvider?.destroy();
+    walletProvider = undefined; signer = undefined; connectedAddress = undefined; selected = undefined; changed();
+  }
+  const factory = () => {
+    if (!config.factory) throw Error('Base contracts have not been deployed');
+    return new Contract(config.factory, abis.LaunchFactoryV3, provider);
+  };
+  const schemaRegistry = () =>
+    new Contract(EAS_SCHEMA_REGISTRY_ADDRESS, SCHEMA_REGISTRY_ABI, provider);
+  const eas = () =>
+    new Contract(EAS_ADDRESS, EAS_ABI, provider);
+  async function network() {
+    const id = BigInt(await provider.send('eth_chainId', []));
+    if (id !== 8453n) throw Error('RPC is not Base Mainnet');
+  }
+  async function wallet() {
+    const attempt = revision;
+    if (!signer) throw Error('Connect your wallet first');
+    if (BigInt(await selected.request({ method: 'eth_chainId' })) !== 8453n) throw Error('Wallet must be on Base Mainnet');
+    const accounts = await selected.request({ method: 'eth_accounts' });
+    if (!accounts[0] || getAddress(accounts[0]) !== connectedAddress) throw Error('Wallet changed; reconnect');
+    await network();
+    if (attempt !== revision || !signer) throw Error('Wallet changed; reconnect');
+    return signer;
+  }
+  const settle = tx => settleBase(tx, notify, config.explorer);
+  async function marketAtBlock(id, blockTag) {
+    const marketId = getAddress(id);
+    const readFactory = factory();
+
+    if (
+      !await readFactory.isMarket(
+        marketId,
+        { blockTag }
+      )
+    ) {
+      throw Error(
+        'Market is not in the configured factory'
+      );
+    }
+
+    const curve = new Contract(
+      marketId,
+      abis.CurveMarketV3,
+      provider
+    );
+
+    const curveValues = await batchRead(
+      [
+        { contract: curve, method: 'token' },
+        { contract: curve, method: 'nativeReserve' },
+        { contract: curve, method: 'tokenReserve' },
+        { contract: curve, method: 'volume' },
+        { contract: curve, method: 'creator' },
+        { contract: curve, method: 'treasury' },
+        { contract: curve, method: 'metadataURI' },
+        { contract: curve, method: 'initialSupply' },
+        { contract: curve, method: 'initialMayhem' },
+        { contract: curve, method: 'manualMayhem' },
+        { contract: curve, method: 'mayhemActive' },
+        { contract: curve, method: 'launchedAt' },
+        { contract: curve, method: 'totalMarketSupport' },
+        { contract: curve, method: 'totalBurned' },
+        { contract: curve, method: 'mayhemController' }
+      ],
+      blockTag
+    );
+
+    const [
+      tokenAddress,
+      nativeReserve,
+      tokenReserve,
+      volume,
+      creator,
+      treasury,
+      uri,
+      initialSupply,
+      initialMayhem,
+      manualMayhem,
+      mayhemActive,
+      launchedAt,
+      totalMarketSupport,
+      totalBurned,
+      mayhemController
+    ] = curveValues;
+
+    if (
+      getAddress(treasury) !==
+      getAddress(config.treasury)
+    ) {
+      throw Error('Unexpected platform treasury');
+    }
+
+    const token = new Contract(
+      tokenAddress,
+      abis.LaunchTokenV3,
+      provider
+    );
+
+    const tokenValues = await batchRead(
+      [
+        { contract: token, method: 'name' },
+        { contract: token, method: 'symbol' },
+        { contract: token, method: 'totalSupply' },
+        { contract: token, method: 'maxSupply' },
+        { contract: token, method: 'mintableAtLaunch' },
+        { contract: token, method: 'mintingLocked' },
+        { contract: token, method: 'totalMinted' },
+        { contract: token, method: 'remainingMintAllowance' }
+      ],
+      blockTag
+    );
+
+    const [
+      name,
+      symbol,
+      supply,
+      maxSupply,
+      mintableAtLaunch,
+      mintingLocked,
+      totalMinted,
+      remainingMintAllowance
+    ] = tokenValues;
+
+    const v3Values = await batchRead(
+      [
+        { contract: curve, method: "launchMode" },
+        { contract: curve, method: "mayhemState" },
+        { contract: curve, method: "agentInventory" },
+        { contract: curve, method: "agentVolume" },
+        { contract: curve, method: "agentNativeIn" },
+        { contract: curve, method: "agentNativeOut" },
+        { contract: curve, method: "mayhemTradeCount" },
+        { contract: curve, method: "pendingManualRequest" },
+        { contract: curve, method: "mayhemEndsAt" },
+        { contract: curve, method: "mayhemFinalized" }
+      ],
+      blockTag
+    );
+
+    const [
+      launchMode,
+      mayhemState,
+      agentInventory,
+      agentVolume,
+      agentNativeIn,
+      agentNativeOut,
+      mayhemTradeCount,
+      pendingManualRequest,
+      mayhemEndsAt,
+      mayhemFinalized
+    ] = v3Values;
+
+    return {
+      id: marketId,
+      token: getAddress(tokenAddress),
+      creator: getAddress(creator),
+      mayhemController: getAddress(mayhemController),
+      name,
+      symbol,
+      uri,
+      nativeReserve,
+      tokenReserve,
+      volume,
+      initialSupply,
+      supply,
+      maxSupply,
+      mintableAtLaunch,
+      mintingLocked,
+      totalMinted,
+      remainingMintAllowance,
+      initialMayhem,
+      manualMayhem,
+      mayhemActive,
+      launchedAt,
+      totalMarketSupport,
+      totalBurned,
+      launchMode: Number(launchMode),
+      mayhemState: Number(mayhemState),
+      agentInventory,
+      agentVolume,
+      agentNativeIn,
+      agentNativeOut,
+      mayhemTradeCount,
+      pendingManualRequest,
+      mayhemEndsAt: Number(mayhemEndsAt),
+      mayhemFinalized,
+      contractVersion: 3,
+      provenance: {
+        registered: true,
+        chainId: 8453,
+        factory: getAddress(config.factory),
+        market: marketId,
+        block: blockTag
+      },
+      decimals: 18,
+      nativeDecimals: 18,
+      unit: 'ETH',
+      virtualNative: 10n ** 18n,
+      source:
+        'Base V3 block ' + blockTag,
+      observedAt: Date.now()
+    };
+  }
+
+  async function market(id) {
+    await network();
+
+    return marketAtBlock(
+      id,
+      await provider.getBlockNumber()
+    );
+  }
+
+  function holderClaimConfig() {
+    const value = config.holderClaim;
+
+    if (
+      !value ||
+      value.enabled !== true ||
+      typeof value.contract !== 'string'
+    ) {
+      return null;
+    }
+
+    return value;
+  }
+
+  async function holderClaimStatus() {
+    const value = holderClaimConfig();
+
+    if (!value) {
+      return {
+        enabled: false,
+        claimed: null,
+        claimCount: 0n,
+        remaining: 0n,
+        maxClaims: 50n,
+        claimAmount: 10n ** 18n
+      };
+    }
+
+    await network();
+
+    const claim = new Contract(
+      value.contract,
+      HOLDER_CLAIM_ABI,
+      provider
+    );
+
+    const [
+      tokenAddress,
+      claimAmount,
+      maxClaims,
+      claimCount,
+      remaining
+    ] = await Promise.all([
+      claim.token(),
+      claim.CLAIM_AMOUNT(),
+      claim.MAX_CLAIMS(),
+      claim.claimCount(),
+      claim.remainingClaims()
+    ]);
+
+    if (
+      getAddress(tokenAddress) !==
+      getAddress(value.token)
+    ) {
+      throw Error(
+        'Holder claim contract points to an unexpected token'
+      );
+    }
+
+    let alreadyClaimed = null;
+
+    if (connectedAddress) {
+      alreadyClaimed =
+        await claim.claimed(connectedAddress);
+    }
+
+    return {
+      enabled: true,
+      contract: getAddress(value.contract),
+      token: getAddress(tokenAddress),
+      claimAmount,
+      maxClaims,
+      claimCount,
+      remaining,
+      claimed: alreadyClaimed
+    };
+  }
+
+  async function claimHolderToken() {
+    const value = holderClaimConfig();
+
+    if (!value) {
+      throw Error('PLITE holder claim is not open yet');
+    }
+
+    const active = await wallet();
+    const before = await holderClaimStatus();
+
+    if (before.claimed) {
+      throw Error('This wallet already claimed PLITE');
+    }
+
+    if (before.remaining <= 0n) {
+      throw Error('All 50 PLITE holder claims are already taken');
+    }
+
+    const claim = new Contract(
+      value.contract,
+      HOLDER_CLAIM_ABI,
+      active
+    );
+
+    const gas =
+      await claim.claim.estimateGas();
+
+    const gasLimit =
+      gasBudget(gas, 200_000n);
+
+    notify(
+      'Review the PLITE claim in your wallet. The token itself is free; Base network gas may apply.'
+    );
+
+    await wallet();
+    await settle(
+      await claim.claim({ gasLimit })
+    );
+
+    return holderClaimStatus();
+  }
+  return {
+    disconnect,
+    holderClaimStatus,
+    claimHolderToken,
+    close() { disconnect(); provider.destroy(); },
+    async connect(candidate) {
+      disconnect();
+      if (!candidate) {
+        const discovery = discoverEvm();
+        const choices = discovery.refresh(); discovery.dispose();
+        if (choices.length > 1) throw Error('Choose an EVM wallet before connecting');
+        candidate = choices[0]?.provider;
+      }
+      if (typeof candidate?.request !== 'function') throw Error('No EVM wallet detected. Open this page in Coinbase Wallet or another wallet browser.');
+      selected = candidate;
+      const attempt = revision;
+      unwatch = watchWallet(candidate, ['disconnect'], disconnect);
+      try {
+        await network();
+        if (attempt !== revision) throw Error('Wallet changed; reconnect');
+        await candidate.request({ method: 'eth_requestAccounts' });
+        if (attempt !== revision) throw Error('Wallet changed; reconnect');
+        if (BigInt(await candidate.request({ method: 'eth_chainId' })) !== 8453n) {
+          await candidate.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x2105' }] });
+        }
+        if (attempt !== revision) throw Error('Wallet changed; reconnect');
+        if (BigInt(await candidate.request({ method: 'eth_chainId' })) !== 8453n) throw Error('Wallet must be on Base Mainnet');
+        unwatch(); unwatch = watchWallet(candidate, ['disconnect', 'accountsChanged', 'chainChanged'], disconnect);
+        walletProvider = new BrowserProvider(candidate);
+        const nextSigner = await walletProvider.getSigner();
+        const address = await nextSigner.getAddress();
+        if (attempt !== revision) throw Error('Wallet changed; reconnect');
+        signer = nextSigner; connectedAddress = address;
+        await wallet();
+        if (attempt !== revision) throw Error('Wallet changed; reconnect');
+        return connectedAddress;
+      } catch (error) { if (attempt === revision) disconnect(); throw error; }
+    },
+    async signMetadataMessage(message) {
+      const bytes = new TextEncoder().encode(message);
+
+      if (
+        typeof message !== 'string' ||
+        bytes.length > 2048
+      ) {
+        throw Error('Metadata authorization message is invalid');
+      }
+
+      const active = await wallet();
+      const attempt = revision;
+
+      notify(
+        'Review the metadata authorization message. This signature does not spend ETH.'
+      );
+
+      const hexMessage =
+        '0x' +
+        Array.from(
+          bytes,
+          value => value.toString(16).padStart(2, '0')
+        ).join('');
+
+      const rejected = error =>
+        error?.code === 4001 ||
+        error?.code === 'ACTION_REJECTED' ||
+        /user rejected|user denied|rejected the request/i.test(
+          error?.shortMessage || error?.message || ''
+        );
+
+      let signature;
+      let firstError;
+
+      try {
+        signature = await selected.request({
+          method: 'personal_sign',
+          params: [
+            hexMessage,
+            connectedAddress
+          ]
+        });
+      } catch (error) {
+        if (rejected(error)) throw error;
+        firstError = error;
+      }
+
+      if (!signature) {
+        try {
+          // A small number of injected mobile providers expose the
+          // historical reversed personal_sign parameter order.
+          signature = await selected.request({
+            method: 'personal_sign',
+            params: [
+              connectedAddress,
+              hexMessage
+            ]
+          });
+        } catch (error) {
+          if (rejected(error)) throw error;
+
+          try {
+            // Final standards-compatible fallback through ethers.
+            signature = await active.signMessage(message);
+          } catch (fallbackError) {
+            if (rejected(fallbackError)) throw fallbackError;
+            throw firstError || error || fallbackError;
+          }
+        }
+      }
+
+      if (
+        attempt !== revision ||
+        !signer
+      ) {
+        throw Error(
+          'Wallet changed while signing; reconnect'
+        );
+      }
+
+      if (
+        typeof signature !== 'string' ||
+        !/^0x(?:[0-9a-fA-F]{2})+$/.test(signature) ||
+        signature.length > 1026
+      ) {
+        throw Error(
+          'Wallet returned an invalid Base signature'
+        );
+      }
+
+      return signature;
+    },
+
+    async pliteUniswapV2Stats(
+      pairAddress,
+      tokenAddress,
+      wethAddress
+    ) {
+      await network();
+
+      const pairId = getAddress(pairAddress);
+      const tokenId = getAddress(tokenAddress);
+      const wethId = getAddress(wethAddress);
+      const cacheKey = pairId.toLowerCase();
+      const cached =
+        uniswapV2PairStatsCache.get(cacheKey);
+
+      if (
+        cached &&
+        Date.now() - cached.cachedAt < 45_000
+      ) {
+        return cached.value;
+      }
+
+      const pair =
+        new Contract(
+          pairId,
+          UNISWAP_V2_PAIR_ABI,
+          provider
+        );
+
+      const blockTag =
+        await provider.getBlockNumber();
+
+      const [
+        token0Value,
+        token1Value,
+        reserves
+      ] =
+        await batchRead(
+          [
+            {
+              contract: pair,
+              method: 'token0'
+            },
+            {
+              contract: pair,
+              method: 'token1'
+            },
+            {
+              contract: pair,
+              method: 'getReserves'
+            }
+          ],
+          blockTag
+        );
+
+      const token0 =
+        getAddress(token0Value);
+
+      const token1 =
+        getAddress(token1Value);
+
+      const expectedPair =
+        (
+          token0 === tokenId &&
+          token1 === wethId
+        ) ||
+        (
+          token0 === wethId &&
+          token1 === tokenId
+        );
+
+      if (!expectedPair) {
+        throw Error(
+          'Uniswap V2 pair tokens do not match PLITE/WETH'
+        );
+      }
+
+      const reserve0 =
+        BigInt(reserves[0]);
+
+      const reserve1 =
+        BigInt(reserves[1]);
+
+      const tokenReserve =
+        token0 === tokenId
+          ? reserve0
+          : reserve1;
+
+      const wethReserve =
+        token0 === wethId
+          ? reserve0
+          : reserve1;
+
+      if (
+        tokenReserve <= 0n ||
+        wethReserve <= 0n
+      ) {
+        throw Error(
+          'Uniswap V2 PLITE/WETH pool has no active reserves'
+        );
+      }
+
+      // PLITE and Base WETH both use 18 decimals. This is the current
+      // reserve-ratio spot price, not a trade execution price or oracle.
+      const priceWeiPerToken =
+        wethReserve *
+        10n ** 18n /
+        tokenReserve;
+
+      const tokensPerEth =
+        tokenReserve *
+        10n ** 18n /
+        wethReserve;
+
+      // At the pool's own spot ratio, both reserve sides have equal value.
+      // This is an ETH-equivalent pool value, not a USD valuation.
+      const spotLiquidityWei =
+        wethReserve * 2n;
+
+      const value = {
+        pair: pairId,
+        token: tokenId,
+        weth: wethId,
+        token0,
+        token1,
+        tokenReserve,
+        wethReserve,
+        priceWeiPerToken,
+        tokensPerEth,
+        spotLiquidityWei,
+        blockNumber: Number(blockTag),
+        observedAt: Date.now()
+      };
+
+      uniswapV2PairStatsCache.set(
+        cacheKey,
+        {
+          cachedAt: Date.now(),
+          value
+        }
+      );
+
+      return value;
+    },
+
+    async platformStats() {
+      await network();
+
+      const [marketCount, blockNumber] =
+        await Promise.all([
+          factory().marketCount(),
+          provider.getBlockNumber()
+        ]);
+
+      return {
+        marketCount: Number(marketCount),
+        blockNumber: Number(blockNumber),
+        observedAt: Date.now()
+      };
+    },
+
+    async list(offset = 0) {
+      await network();
+
+      const readFactory = factory();
+      const count =
+        Number(await readFactory.marketCount());
+
+      const end =
+        Math.max(0, count - offset);
+      const start =
+        Math.max(0, end - 8);
+
+      const blockTag =
+        await provider.getBlockNumber();
+
+      const idCalls =
+        Array.from(
+          { length: end - start },
+          (_, index) => ({
+            contract: readFactory,
+            method: 'markets',
+            args: [end - index - 1]
+          })
+        );
+
+      const ids =
+        await batchRead(
+          idCalls,
+          blockTag
+        );
+
+      // Avoid burst-loading dozens of JSON-RPC calls in parallel.
+      // Each market now uses bounded Multicall3 reads at the same Base block.
+      const markets = [];
+
+      for (const id of ids) {
+        markets.push(
+          await marketAtBlock(id, blockTag)
+        );
+      }
+
+      return {
+        markets,
+        next:
+          start > 0
+            ? offset + 8
+            : null
+      };
+    },
+    market,
+    async balances(m) {
+      await wallet();
+      const token = new Contract(m.token, abis.LaunchTokenV3, provider);
+      const [native, tokens] = await Promise.all([provider.getBalance(connectedAddress), token.balanceOf(connectedAddress)]);
+      return { native, tokens };
+    },
+    async create({
+      name,
+      symbol,
+      uri,
+      initialSupply,
+      maxSupply,
+      mintable,
+      launchMode
+    }) {
+      if (
+        typeof initialSupply !== "bigint" ||
+        typeof maxSupply !== "bigint" ||
+        initialSupply <= 0n ||
+        maxSupply < initialSupply
+      ) {
+        throw Error("Invalid V3 supply configuration");
+      }
+
+      if (
+        !Number.isInteger(launchMode) ||
+        launchMode < 0 ||
+        launchMode > 2
+      ) {
+        throw Error("Invalid V3 launch mode");
+      }
+
+      await wallet();
+
+      const readFactory = factory();
+
+      const launchConfig = {
+        name,
+        symbol,
+        uri,
+        initialSupply,
+        maxSupply,
+        mintable: mintable === true,
+        launchMode
+      };
+
+      const data =
+        readFactory.interface.encodeFunctionData(
+          "createMarketV3",
+          [launchConfig]
+        );
+
+      const gas = await provider.estimateGas({
+        from: connectedAddress,
+        to: config.factory,
+        data
+      });
+
+      const gasLimit =
+        gasBudget(gas, 7_000_000n);
+
+      notify(
+        "Estimated V3 creation gas: " +
+          gas +
+          ". Review the wallet fee before approving."
+      );
+
+      const activeSigner =
+        await wallet();
+
+      const receipt = await settle(
+        await activeSigner.sendTransaction({
+          to: config.factory,
+          data,
+          gasLimit
+        })
+      );
+
+      for (const log of receipt.logs) {
+        if (
+          getAddress(log.address) !==
+          getAddress(config.factory)
+        ) {
+          continue;
+        }
+
+        try {
+          const parsed =
+            readFactory.interface.parseLog(
+              log
+            );
+
+          if (
+            parsed?.name ===
+            "MarketCreatedV3"
+          ) {
+            return parsed.args.market;
+          }
+        } catch {}
+      }
+
+      throw Error(
+        "Confirmed V3 transaction has no expected factory event"
+      );
+    },    async buyAndBurn(m, amount, min) {
+      if (amount <= 0n || min <= 0n) throw Error('Invalid Buy & Burn parameters');
+
+      const s = await wallet();
+      const verified = await market(m.id);
+      const curve = new Contract(verified.id, abis.CurveMarketV3, s);
+
+      const block = await provider.getBlock('latest');
+      const deadline = BigInt(block.timestamp + 180);
+
+      const gas = await curve.buyAndBurn.estimateGas(
+        min,
+        deadline,
+        { value: amount }
+      );
+
+      const gasLimit = gasBudget(gas, 300_000n);
+
+      await wallet();
+
+      return settle(
+        await curve.buyAndBurn(min, deadline, {
+          value: amount,
+          gasLimit
+        })
+      );
+    },
+
+    async mintInventory(m, amount) {
+      if (amount <= 0n) throw Error('Invalid mint amount');
+
+      const s = await wallet();
+      const verified = await market(m.id);
+      const curve = new Contract(verified.id, abis.CurveMarketV3, s);
+
+      const gas = await curve.mintInventory.estimateGas(amount);
+      const gasLimit = gasBudget(gas, 250_000n);
+
+      await wallet();
+
+      return settle(
+        await curve.mintInventory(amount, { gasLimit })
+      );
+    },
+
+    async lockMinting(m) {
+      const s = await wallet();
+      const verified = await market(m.id);
+      const curve = new Contract(verified.id, abis.CurveMarketV3, s);
+
+      const gas = await curve.lockMintingForever.estimateGas();
+      const gasLimit = gasBudget(gas, 150_000n);
+
+      await wallet();
+
+      return settle(
+        await curve.lockMintingForever({ gasLimit })
+      );
+    },
+
+    async requestManualMayhemTrade(m) {
+      const s = await wallet();
+      const verified = await market(m.id);
+
+      if (verified.contractVersion !== 3) {
+        throw Error("Manual Mayhem requests require a V3 market");
+      }
+
+      if (verified.launchMode !== 2) {
+        throw Error("This market was not launched in Mayhem Manual mode");
+      }
+
+      if (
+        getAddress(connectedAddress) !==
+        getAddress(verified.creator)
+      ) {
+        throw Error("Only the token creator can request a Manual Mayhem trade");
+      }
+
+      const curve = new Contract(
+        verified.id,
+        abis.CurveMarketV3,
+        s
+      );
+
+      const gas =
+        await curve.requestManualMayhemTrade.estimateGas();
+
+      const gasLimit =
+        gasBudget(gas, 180_000n);
+
+      await wallet();
+
+      return settle(
+        await curve.requestManualMayhemTrade({
+          gasLimit
+        })
+      );
+    },
+
+    async finalizeMayhem(m) {
+      const s = await wallet();
+      const verified = await market(m.id);
+
+      if (verified.contractVersion !== 3) {
+        throw Error("Mayhem finalization requires a V3 market");
+      }
+
+      const curve = new Contract(
+        verified.id,
+        abis.CurveMarketV3,
+        s
+      );
+
+      const gas =
+        await curve.finalizeMayhem.estimateGas();
+
+      const gasLimit =
+        gasBudget(gas, 250_000n);
+
+      await wallet();
+
+      return settle(
+        await curve.finalizeMayhem({
+          gasLimit
+        })
+      );
+    },
+
+    async setMayhem() {
+      throw Error(
+        "V3 launch mode is immutable. Classic, Auto or Manual is selected only when the token is created."
+      );
+    },
+    async supportMarket(m, amount) {
+      if (amount <= 0n) throw Error('Invalid support amount');
+
+      const s = await wallet();
+      const verified = await market(m.id);
+      const curve = new Contract(verified.id, abis.CurveMarketV3, s);
+
+      const gas = await curve.supportMarket.estimateGas({ value: amount });
+      const gasLimit = gasBudget(gas, 150_000n);
+
+      await wallet();
+
+      return settle(
+        await curve.supportMarket({
+          value: amount,
+          gasLimit
+        })
+      );
+    },
+
+    reviewSchemaUid() {
+      return PUMPLITE_REVIEW_SCHEMA_UID;
+    },
+
+    async reviewSchemaStatus() {
+      await network();
+      const record = await schemaRegistry().getSchema(PUMPLITE_REVIEW_SCHEMA_UID);
+      const registered = record.uid !== ZeroHash;
+
+      if (!registered) {
+        return {
+          registered: false,
+          uid: PUMPLITE_REVIEW_SCHEMA_UID,
+          schema: PUMPLITE_REVIEW_SCHEMA
+        };
+      }
+
+      const matches =
+        record.uid === PUMPLITE_REVIEW_SCHEMA_UID &&
+        getAddress(record.resolver) === getAddress(ZeroAddress) &&
+        record.revocable === true &&
+        record.schema === PUMPLITE_REVIEW_SCHEMA;
+
+      if (!matches) {
+        throw Error('PumpLite EAS schema UID exists with unexpected schema data');
+      }
+
+      return {
+        registered: true,
+        uid: PUMPLITE_REVIEW_SCHEMA_UID,
+        schema: PUMPLITE_REVIEW_SCHEMA
+      };
+    },
+
+    async registerReviewSchema() {
+      const active = await wallet();
+
+      if (getAddress(connectedAddress) !== getAddress(config.treasury)) {
+        throw Error('Only the PumpLite controller wallet can register the review schema from this site');
+      }
+
+      const existing = await this.reviewSchemaStatus();
+      if (existing.registered) return existing;
+
+      const registry = new Contract(
+        EAS_SCHEMA_REGISTRY_ADDRESS,
+        SCHEMA_REGISTRY_ABI,
+        active
+      );
+
+      const gas = await registry.register.estimateGas(
+        PUMPLITE_REVIEW_SCHEMA,
+        ZeroAddress,
+        true
+      );
+      const gasLimit = gasBudget(gas, 500_000n);
+
+      notify(
+        'Registering the PumpLite review schema on Base EAS. This is a one-time Base transaction and uses network gas.'
+      );
+
+      await wallet();
+      await settle(
+        await registry.register(
+          PUMPLITE_REVIEW_SCHEMA,
+          ZeroAddress,
+          true,
+          { gasLimit }
+        )
+      );
+
+      const checked = await this.reviewSchemaStatus();
+      if (!checked.registered) throw Error('EAS schema registration was not visible after confirmation');
+      return checked;
+    },
+
+    async reviewAttestation(uid) {
+      if (typeof uid !== 'string' || !/^0x[0-9a-fA-F]{64}$/.test(uid)) {
+        throw Error('Invalid EAS attestation UID');
+      }
+
+      await network();
+      const attestation = await eas().getAttestation(uid);
+
+      if (attestation.uid === ZeroHash) {
+        throw Error('EAS attestation was not found');
+      }
+
+      let decoded;
+      try {
+        decoded = reviewCoder.decode(
+          ['address','address','address','address','uint8','bytes32','uint64'],
+          attestation.data
+        );
+      } catch {
+        throw Error('EAS attestation data does not match the PumpLite review schema');
+      }
+
+      const decisionCode = Number(decoded[4]);
+      const decision = REVIEW_DECISION_NAME[decisionCode] || 'unknown';
+      const expiration = BigInt(attestation.expirationTime);
+      const now = BigInt(Math.floor(Date.now() / 1000));
+
+      return {
+        uid: attestation.uid,
+        schema: attestation.schema,
+        recipient: getAddress(attestation.recipient),
+        attester: getAddress(attestation.attester),
+        time: BigInt(attestation.time),
+        expirationTime: expiration,
+        revocationTime: BigInt(attestation.revocationTime),
+        revocable: Boolean(attestation.revocable),
+        market: getAddress(decoded[0]),
+        token: getAddress(decoded[1]),
+        creator: getAddress(decoded[2]),
+        factory: getAddress(decoded[3]),
+        decisionCode,
+        decision,
+        metadataHash: decoded[5],
+        reviewedAt: BigInt(decoded[6]),
+        active:
+          attestation.schema === PUMPLITE_REVIEW_SCHEMA_UID &&
+          BigInt(attestation.revocationTime) === 0n &&
+          (expiration === 0n || expiration > now)
+      };
+    },
+
+    async publishReviewAttestation(m, decision) {
+      const active = await wallet();
+      const owner = getAddress(config.treasury);
+
+      if (getAddress(connectedAddress) !== owner) {
+        throw Error('Only the PumpLite controller wallet can publish PumpLite review attestations');
+      }
+
+      const verified = await market(m.id);
+      const schema = await this.reviewSchemaStatus();
+      if (!schema.registered) {
+        throw Error('Register the PumpLite review schema on Base first');
+      }
+
+      const code = reviewDecisionCode(decision);
+      const block = await provider.getBlock('latest');
+      const reviewedAt = BigInt(block.timestamp);
+      const data = reviewCoder.encode(
+        ['address','address','address','address','uint8','bytes32','uint64'],
+        [
+          verified.id,
+          verified.token,
+          verified.creator,
+          getAddress(config.factory),
+          code,
+          reviewMetadataHash(verified.uri),
+          reviewedAt
+        ]
+      );
+
+      const requestData = {
+        recipient: verified.token,
+        expirationTime: 0,
+        revocable: true,
+        refUID: ZeroHash,
+        data,
+        value: 0
+      };
+
+      const easWrite = new Contract(EAS_ADDRESS, EAS_ABI, active);
+      const gas = await easWrite.attest.estimateGas({
+        schema: PUMPLITE_REVIEW_SCHEMA_UID,
+        data: requestData
+      });
+      const gasLimit = gasBudget(gas, 500_000n);
+
+      notify(
+        'Publishing a public PumpLite ' + decision + ' review attestation on Base EAS. Review the wallet network fee before approving.'
+      );
+
+      await wallet();
+      const receipt = await settle(
+        await easWrite.attest(
+          {
+            schema: PUMPLITE_REVIEW_SCHEMA_UID,
+            data: requestData
+          },
+          { gasLimit }
+        )
+      );
+
+      let uid = null;
+      for (const log of receipt.logs) {
+        if (getAddress(log.address) !== getAddress(EAS_ADDRESS)) continue;
+        try {
+          const parsed = easWrite.interface.parseLog(log);
+          if (parsed?.name === 'Attested') {
+            uid = parsed.args.uid;
+            break;
+          }
+        } catch {}
+      }
+
+      if (!uid) throw Error('Confirmed EAS transaction did not contain the expected Attested event');
+
+      const proof = await this.reviewAttestation(uid);
+      if (
+        !proof.active ||
+        proof.decision !== decision ||
+        getAddress(proof.attester) !== owner ||
+        getAddress(proof.market) !== getAddress(verified.id) ||
+        getAddress(proof.token) !== getAddress(verified.token) ||
+        getAddress(proof.creator) !== getAddress(verified.creator) ||
+        getAddress(proof.factory) !== getAddress(config.factory) ||
+        proof.metadataHash !== reviewMetadataHash(verified.uri)
+      ) {
+        throw Error('Published EAS attestation failed the PumpLite read-back checks');
+      }
+
+      return proof;
+    },
+
+    async revokeReviewAttestation(uid) {
+      const active = await wallet();
+      const owner = getAddress(config.treasury);
+      if (getAddress(connectedAddress) !== owner) {
+        throw Error('Only the PumpLite controller wallet can revoke PumpLite review attestations');
+      }
+
+      const proof = await this.reviewAttestation(uid);
+      if (getAddress(proof.attester) !== owner) {
+        throw Error('This attestation was not issued by the PumpLite controller wallet');
+      }
+      if (!proof.active) throw Error('This PumpLite review attestation is already inactive');
+      if (!proof.revocable) throw Error('This EAS attestation is not revocable');
+
+      const easWrite = new Contract(EAS_ADDRESS, EAS_ABI, active);
+      const request = {
+        schema: PUMPLITE_REVIEW_SCHEMA_UID,
+        data: { uid, value: 0 }
+      };
+      const gas = await easWrite.revoke.estimateGas(request);
+      const gasLimit = gasBudget(gas, 250_000n);
+
+      notify('Revoking the public PumpLite EAS review attestation. This uses Base network gas.');
+      await wallet();
+      await settle(await easWrite.revoke(request, { gasLimit }));
+
+      const after = await this.reviewAttestation(uid);
+      if (after.revocationTime === 0n) throw Error('EAS revocation was not visible after confirmation');
+      return after;
+    },
+
+    async marketStats24h(m) {
+      await network();
+
+      const id = getAddress(m.id);
+      const cacheKey = id.toLowerCase();
+      const cached =
+        marketStats24hCache.get(cacheKey);
+
+      if (
+        cached &&
+        Date.now() - cached.cachedAt < 120_000
+      ) {
+        return cached.value;
+      }
+
+      if (!await factory().isMarket(id)) {
+        throw Error(
+          'Market is not in the configured factory'
+        );
+      }
+
+      const curve = new Contract(
+        id,
+        abis.CurveMarketV3,
+        provider
+      );
+
+      const latestBlock =
+        await provider.getBlock('latest');
+
+      if (!latestBlock) {
+        throw Error('Latest Base block is unavailable');
+      }
+
+      const latestNumber =
+        Number(latestBlock.number);
+
+      const cutoffTimestamp =
+        Number(latestBlock.timestamp) - 86_400;
+
+      // Base normally produces blocks quickly. Start roughly 50k blocks
+      // back, then expand only when needed so this also remains correct if
+      // observed block cadence changes.
+      let span =
+        Math.min(latestNumber, 50_000);
+
+      let low =
+        Math.max(
+          0,
+          latestNumber - span
+        );
+
+      let lowBlock =
+        await provider.getBlock(low);
+
+      while (
+        low > 0 &&
+        lowBlock &&
+        Number(lowBlock.timestamp) >=
+          cutoffTimestamp
+      ) {
+        const nextSpan =
+          Math.min(
+            latestNumber,
+            Math.max(
+              span + 1,
+              span * 2
+            )
+          );
+
+        if (nextSpan === span) break;
+
+        span = nextSpan;
+
+        low =
+          Math.max(
+            0,
+            latestNumber - span
+          );
+
+        lowBlock =
+          await provider.getBlock(low);
+      }
+
+      if (!lowBlock) {
+        throw Error(
+          'Unable to locate the 24h Base boundary'
+        );
+      }
+
+      let startBlock;
+
+      if (
+        low === 0 &&
+        Number(lowBlock.timestamp) >=
+          cutoffTimestamp
+      ) {
+        startBlock = 0;
+      } else {
+        let left = low;
+        let right = latestNumber;
+
+        // Find the first Base block whose timestamp is inside the rolling
+        // 24h window. This avoids estimating 24h volume from block counts.
+        while (right - left > 1) {
+          const middle =
+            Math.floor(
+              (left + right) / 2
+            );
+
+          const block =
+            await provider.getBlock(middle);
+
+          if (!block) {
+            throw Error(
+              'Unable to read Base block ' +
+              middle
+            );
+          }
+
+          if (
+            Number(block.timestamp) <
+            cutoffTimestamp
+          ) {
+            left = middle;
+          } else {
+            right = middle;
+          }
+        }
+
+        startBlock = right;
+      }
+
+      const tradeTopic =
+        curve.interface.getEvent(
+          'Trade'
+        ).topicHash;
+
+      const burnTopic =
+        curve.interface.getEvent(
+          'BuyAndBurn'
+        ).topicHash;
+
+      let from = startBlock;
+      let volume = 0n;
+      let trades = 0;
+      let buyAndBurns = 0;
+      let logWindow = 999;
+
+      const minimumLogWindow = 31;
+
+      const rangeRejected = error => {
+        const message = String(
+          error?.shortMessage ||
+          error?.message ||
+          error?.cause?.message ||
+          ''
+        );
+
+        return (
+          /HTTP 413/i.test(message) ||
+          /request too large/i.test(message) ||
+          /response too large/i.test(message) ||
+          /block range/i.test(message) ||
+          /range limit/i.test(message) ||
+          /too many results/i.test(message)
+        );
+      };
+
+      while (from <= latestNumber) {
+        const to =
+          Math.min(
+            latestNumber,
+            from + logWindow
+          );
+
+        let batch;
+
+        try {
+          batch =
+            await provider.getLogs({
+              address: id,
+              fromBlock: from,
+              toBlock: to,
+              topics: [[
+                tradeTopic,
+                burnTopic
+              ]]
+            });
+        } catch (error) {
+          if (
+            !rangeRejected(error) ||
+            logWindow <= minimumLogWindow
+          ) {
+            throw error;
+          }
+
+          logWindow =
+            Math.max(
+              minimumLogWindow,
+              Math.floor(logWindow / 2)
+            );
+
+          continue;
+        }
+
+        for (const log of batch) {
+          const parsed =
+            curve.interface.parseLog(log);
+
+          if (!parsed) continue;
+
+          if (parsed.name === 'Trade') {
+            const isBuy =
+              Boolean(parsed.args.isBuy);
+
+            const input =
+              BigInt(parsed.args.input);
+
+            const output =
+              BigInt(parsed.args.output);
+
+            const platformFee =
+              BigInt(parsed.args.platformFee);
+
+            const mayhemSupport =
+              BigInt(parsed.args.mayhemSupport);
+
+            volume +=
+              isBuy
+                ? input
+                : output +
+                  platformFee +
+                  mayhemSupport;
+
+            trades++;
+          } else if (
+            parsed.name === 'BuyAndBurn'
+          ) {
+            volume +=
+              BigInt(parsed.args.input);
+
+            buyAndBurns++;
+          }
+        }
+
+        from = to + 1;
+
+        // Keep public RPC reads deliberately paced rather than sending a
+        // large burst of log requests.
+        if (from <= latestNumber) {
+          await new Promise(
+            resolve =>
+              setTimeout(resolve, 35)
+          );
+        }
+      }
+
+      const value = {
+        volume,
+        trades,
+        buyAndBurns,
+        fromBlock: startBlock,
+        toBlock: latestNumber,
+        cutoffTimestamp,
+        observedAt: Date.now()
+      };
+
+      marketStats24hCache.set(
+        cacheKey,
+        {
+          cachedAt: Date.now(),
+          value
+        }
+      );
+
+      return value;
+    },
+
+    async tradeHistory(m, limit = 120) {
+      if (
+        !Number.isInteger(limit) ||
+        limit < 1 ||
+        limit > 200
+      ) {
+        throw Error('Invalid trade history limit');
+      }
+
+      await network();
+
+      const id = getAddress(m.id);
+
+      if (!await factory().isMarket(id)) {
+        throw Error('Market is not in the configured factory');
+      }
+
+      const curve = new Contract(
+        id,
+        abis.CurveMarketV3,
+        provider
+      );
+
+      const latest =
+        await provider.getBlockNumber();
+
+      let to = latest;
+      let logs = [];
+
+      // Public Base RPCs can reject wide eth_getLogs windows with HTTP 413.
+      // Start below the common public-node range ceiling and shrink only when
+      // a provider explicitly rejects the range. This remains bounded and
+      // read-only; it never retries or submits a wallet transaction.
+      let logWindow = 999;
+      const minimumLogWindow = 31;
+
+      const rangeRejected = error => {
+        const message = String(
+          error?.shortMessage ||
+          error?.message ||
+          error?.cause?.message ||
+          ''
+        );
+
+        return (
+          /HTTP 413/i.test(message) ||
+          /request too large/i.test(message) ||
+          /response too large/i.test(message) ||
+          /block range/i.test(message) ||
+          /range limit/i.test(message) ||
+          /too many results/i.test(message)
+        );
+      };
+
+      for (
+        let chunk = 0;
+        chunk < 20 && to >= 0 && logs.length < limit;
+      ) {
+        const from = Math.max(0, to - logWindow);
+        let batch;
+
+        try {
+          batch = await curve.queryFilter(
+            curve.filters.Trade(),
+            from,
+            to
+          );
+        } catch (error) {
+          if (
+            !rangeRejected(error) ||
+            logWindow <= minimumLogWindow
+          ) {
+            throw error;
+          }
+
+          logWindow = Math.max(
+            minimumLogWindow,
+            Math.floor(logWindow / 2)
+          );
+
+          continue;
+        }
+
+        logs.push(...batch);
+        chunk++;
+
+        if (from === 0) break;
+        to = from - 1;
+      }
+
+      logs.sort(
+        (a, b) =>
+          Number(a.blockNumber) -
+          Number(b.blockNumber)
+      );
+
+      if (logs.length > limit) {
+        logs = logs.slice(-limit);
+      }
+
+      // Time-range tabs use exact block timestamps. Read each unique trade
+      // block once, in small batches, and keep charting available even if
+      // a timestamp lookup fails.
+      const blockTimes = new Map();
+      const blockNumbers = [
+        ...new Set(
+          logs.map(log => Number(log.blockNumber))
+        )
+      ];
+
+      for (let index = 0; index < blockNumbers.length; index += 8) {
+        const batch = blockNumbers.slice(index, index + 8);
+
+        const blocks = await Promise.all(
+          batch.map(async blockNumber => {
+            try {
+              return await provider.getBlock(blockNumber);
+            } catch {
+              return null;
+            }
+          })
+        );
+
+        for (let offset = 0; offset < batch.length; offset++) {
+          const block = blocks[offset];
+          if (block && Number.isFinite(Number(block.timestamp))) {
+            blockTimes.set(
+              batch[offset],
+              Number(block.timestamp)
+            );
+          }
+        }
+      }
+
+      return logs.map(log => {
+        const isBuy = Boolean(log.args.isBuy);
+        const input = BigInt(log.args.input);
+        const output = BigInt(log.args.output);
+
+        const price =
+          isBuy
+            ? input * 10n ** 18n / output
+            : output * 10n ** 18n / input;
+
+        return {
+          blockNumber: Number(log.blockNumber),
+          timestamp:
+            blockTimes.get(Number(log.blockNumber)) ?? null,
+          transactionHash: log.transactionHash,
+          isBuy,
+          input,
+          output,
+          price
+        };
+      });
+    },
+    async trade(m, side, amount, min) {
+      if (!['buy', 'sell'].includes(side) || amount <= 0n || min <= 0n) throw Error('Invalid trade parameters');
+      const s = await wallet();
+      // Validate registry again immediately before interacting.
+      const verified = await market(m.id);
+      if (getAddress(verified.token) !== getAddress(m.token)) throw Error('Market token changed; reload');
+      const curve = new Contract(verified.id, abis.CurveMarketV3, s);
+      if (side === 'sell') {
+        const token = new Contract(verified.token, abis.LaunchTokenV3, s);
+        if (await token.allowance(connectedAddress, m.id) < amount) {
+          notify('Approve only the exact token amount. A separate sell signature follows.');
+          await wallet();
+          await settle(await token.approve(verified.id, amount));
+          await wallet();
+        }
+      }
+      const block = await provider.getBlock('latest');
+      const deadline = BigInt(block.timestamp + 180);
+      await wallet();
+      const method = side === 'buy' ? curve.buy : curve.sell;
+      const args = side === 'buy' ? [min, deadline] : [amount, min, deadline];
+      const overrides = side === 'buy' ? { value: amount } : {};
+      const gas = await method.estimateGas(...args, overrides);
+      const gasLimit = gasBudget(gas, 250_000n);
+      notify('Estimated execution gas: ' + gas + '. Wallet fee estimates also include current network/data fees.');
+      await wallet();
+      return settle(await method(...args, { ...overrides, gasLimit }));
+    }
+  };
+}
