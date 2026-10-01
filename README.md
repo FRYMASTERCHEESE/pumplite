@@ -222,3 +222,10 @@ Log reads are bounded and automatically split into smaller ranges if a public RP
 `pnpm verify:plite-dex-health` verifies that the configured PLITE/WETH pair is the pair returned by the canonical Uniswap V2 factory on Base, that the pair points back to that factory, and that its tokens are exactly PLITE and canonical Base WETH. It also checks non-zero reserves, LP supply and minimum locked liquidity, the canonical `PairCreated` event, and that the latest `Sync` event agrees with the pair's current reserves.
 
 The `PLITE DEX health` GitHub workflow runs this public read-only verification after relevant PLITE/DEX changes, manually, and daily. External Uniswap liquidity remains separate from PumpLite bonding-curve backing and is not a guaranteed price oracle. No wallet, signature, transaction or ETH is used.
+
+
+## Metadata infrastructure health
+
+`pnpm verify:metadata-health` checks the live PumpLite metadata service without creating an authorization grant or uploading content. It verifies the Worker health endpoint, extended-metadata capability negotiation, exact-origin CORS enforcement, the image/JSON upload routes' authorization gate, and the challenge/issue service binding using deliberately invalid requests that must fail closed with the reviewed status.
+
+A 401 from the unauthenticated upload probes is intentional: it confirms the public relay is configured while refusing an upload without a short-lived grant. The challenge/issue probes similarly use invalid empty requests and must reject them; no wallet signature is requested. The `Metadata infrastructure health` GitHub workflow runs after relevant client/Worker changes, manually, and daily. It does not expose provider secrets, consume a valid upload grant, pin content or spend ETH.

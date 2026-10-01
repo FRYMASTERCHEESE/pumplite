@@ -130,3 +130,8 @@ The `Base event accounting` workflow reconstructs V2 accounting from immutable M
 ## PLITE DEX provenance monitoring
 
 The `PLITE DEX health` workflow confirms that the published PLITE/WETH external pool is the pair registered by the canonical Uniswap V2 factory on Base and that the pair reports that same factory and exact token identities. It also verifies non-empty reserves, LP minimum-liquidity locking and current reserve agreement with the latest Sync event. These checks detect provenance/configuration drift but do not make the small external pool an oracle, guarantee liquidity depth or protect a trader from slippage/MEV.
+
+
+## Metadata infrastructure monitoring
+
+The `Metadata infrastructure health` workflow probes only public/fail-closed routes. It confirms exact-origin behavior, public capability negotiation, that upload relays remain authorization-gated, and that challenge/issue requests reach the configured internal guard path. The verifier intentionally never obtains a valid grant or uploads a file, so it does not consume Pinata quota and cannot prove upstream pinning availability, account quota, or long-term IPFS persistence. Those remain external operational dependencies.

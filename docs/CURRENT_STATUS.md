@@ -128,3 +128,8 @@ PumpLite now reconstructs live Base V2 accounting from the chain's own factory a
 ## PLITE Uniswap V2 provenance health
 
 PumpLite now independently verifies the external PLITE/WETH Uniswap V2 pool against the canonical Base Uniswap V2 factory. The monitor checks factory-to-pair and pair-to-factory provenance, exact PLITE/WETH token identities, live non-zero reserves, LP supply/minimum locked liquidity, the canonical PairCreated record and latest Sync-to-reserve consistency. This external DEX pool remains separate from PumpLite curve backing and its reserve-ratio price is not a guaranteed execution price or oracle.
+
+
+## Metadata infrastructure health
+
+PumpLite now monitors the live metadata authorization/upload service without creating a grant or publishing content. The health check verifies the Worker endpoint, capability negotiation, PumpLite-origin CORS restriction, configured image/JSON upload authorization gates, and challenge/issue service-binding availability through deliberately invalid fail-closed requests. This provides an operational signal for Cloudflare/service-binding configuration while keeping provider secrets server-side.
