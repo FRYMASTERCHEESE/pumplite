@@ -143,3 +143,8 @@ PumpLite now audits the historical transaction provenance for factory creation a
 ## Base trade transaction provenance
 
 PumpLite now audits the transaction provenance behind every recorded Base V2 Trade and BuyAndBurn event. The monitor matches transaction sender/target and decoded calldata to the event, verifies successful receipts, checks positive minimum-output and five-minute deadline constraints, independently checks the fixed fee arithmetic, and requires a matching ERC-20 transfer or burn movement in the same receipt. Trade types that have not occurred are explicitly reported as zero rather than inferred or fabricated.
+
+
+## Production hardening Steps 19-27
+
+A single read-only hardening bundle now covers nine additional production gates: First 50 claim history provenance, claim solvency, official Base/PLITE identity sealing, wallet-provider safety boundaries, pinned CI actions, dependency-lock discipline, legal/risk-page integrity, monitoring-mesh completeness and live critical-file parity. The bundle is exposed as `pnpm verify:hardening-19-27` and by the `Production hardening 19-27` scheduled/manual/push workflow. It uses no wallet, signature, transaction or ETH.

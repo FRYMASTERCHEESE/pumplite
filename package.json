@@ -29,6 +29,7 @@
                     "verify:metadata-health":  "node scripts/verify-metadata-health.mjs",
                     "verify:base-privileged-actions":  "node scripts/compile-base-v2.mjs && node scripts/verify-base-privileged-actions.mjs",
                     "verify:base-trade-provenance":  "node scripts/compile-base-v2.mjs && node scripts/verify-base-trade-provenance.mjs",
+                    "verify:hardening-19-27":  "node scripts/compile-base-v2.mjs && node scripts/compile-plite-holder-claim.mjs && node scripts/verify-hardening-19-27.mjs",
                     "verify:public-site":  "node scripts/verify-public-site.mjs",
                     "build:claim":  "node scripts/compile-base-v2.mjs \u0026\u0026 node scripts/compile-plite-holder-claim.mjs",
                     "test:claim":  "node scripts/compile-base-v2.mjs \u0026\u0026 node scripts/compile-plite-holder-claim.mjs \u0026\u0026 node --test tests/plite-holder-claim.test.mjs"

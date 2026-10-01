@@ -145,3 +145,8 @@ The `Base privileged actions` workflow independently checks transaction sender, 
 ## Trade transaction provenance monitoring
 
 The `Base trade provenance` workflow independently checks recorded buy, sell and Buy & Burn transaction provenance against emitted events and token Transfer logs. It verifies sender/target, decoded function and inputs, receipt success, slippage/deadline constraints and fixed fee arithmetic. This is historical consistency evidence only: it does not protect a future transaction from price movement, MEV, wallet compromise, RPC censorship or user-approved malicious calldata outside PumpLite.
+
+
+## Production hardening bundle 19-27
+
+The `Production hardening 19-27` workflow adds independent consistency checks around the live First 50 claim, fixed production identities, wallet-provider boundaries, CI action pinning, exact dependency locking, static legal/risk pages, monitoring coverage and deployed critical-file parity. The claim checks reconcile emitted claims and token transfers and require enough PLITE to cover every remaining claim. These checks are read-only and fail closed; they cannot repair state, secure a compromised wallet, guarantee an external provider, eliminate MEV/slippage, or substitute for an independent smart-contract/economic/frontend audit.

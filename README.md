@@ -243,3 +243,20 @@ The `Base privileged actions` workflow runs this public read-only audit after re
 `pnpm verify:base-trade-provenance` audits every historical Base V2 `Trade` and `BuyAndBurn` event across the active factory markets. The corresponding transaction must target the emitting market, come from the event trader/buyer, have a successful receipt and decode to the expected `buy`, `sell` or `buyAndBurn` function. The verifier cross-checks ETH/token input, positive slippage protection, the contract's five-minute deadline bound, fixed platform/Mayhem fee arithmetic, and the matching ERC-20 transfer or burn movement in the receipt.
 
 If no trade of a given type has occurred yet, that count is reported as zero rather than fabricated. The `Base trade provenance` workflow runs this public read-only audit after relevant V2 changes, manually, and daily. It never signs or submits a transaction and does not guarantee future execution price, MEV conditions or wallet UX.
+
+
+## Production hardening Steps 19-27
+
+PumpLite groups nine additional read-only production gates into `pnpm verify:hardening-19-27` and the `Production hardening 19-27` workflow:
+
+- **Step 19:** reconcile every First 50 `Claimed` event with `claimCount`, the per-wallet claimed mapping, successful receipts and the matching PLITE transfer.
+- **Step 20:** verify current First 50 remaining-claim arithmetic and sufficient on-chain PLITE backing for every remaining obligation.
+- **Step 21:** seal the active Base V2 factory/treasury, PLITE market/token, First 50 claim, PLITE/WETH pair, canonical WETH and Solana-lock identities against the reviewed production constants and cross-file registry.
+- **Step 22:** preserve Base provider discovery, account/network invalidation, explicit account request and Phantom/Coinbase/MetaMask mobile-handoff safety boundaries.
+- **Step 23:** require GitHub Actions to be pinned to full commit SHAs, reject `pull_request_target`, keep checkout credentials disabled for read-only workflows, and validate the intentionally write-capable manual token-review workflow as a narrow exception.
+- **Step 24:** require exact dependency versions, the pinned pnpm version and a committed pnpm lockfile.
+- **Step 25:** keep Terms, Privacy and Risk pages static/script-free with their critical fee, wallet-secret, IPFS and liquidity-risk disclosures.
+- **Step 26:** require the complete Base production monitoring command/workflow mesh, plus local CI and Solana verification, to remain present.
+- **Step 27:** compare the live site's critical public HTML/JSON files with the checked-out repository using normalized SHA-256 content equality.
+
+This bundle uses only public Base RPC/HTTPS reads and local source inspection. It never loads a wallet, requests a signature, submits a transaction or spends ETH. It complements rather than replaces the existing dedicated production-health workflows and an independent third-party audit.
