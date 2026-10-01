@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "project": "PumpLite",
+  "token": {
+    "name": "PumpLite",
+    "symbol": "PLITE",
+    "network": "Base Mainnet",
+    "chainId": 8453,
+    "address": "0xb15A460142c77b42cDF57815b0eeFEb24b593196",
+    "metadataURI": "ipfs://bafkreidmtlxnc5g3wtmmvgg5522hkosyacnhuzgczxiqpwxtwarvdwbfsu"
+  },
+  "contracts": {
+    "factory": "0xdA8c34819ae397FD4bE3C95947DEA64f4A3278f4",
+    "market": "0xa522A4Ef81fD31daec390ab46A32D4886e1461C7",
+    "holderClaim": "0xeCe2B0494f3010D3bd37ba4C3eF39faCe228c5c2",
+    "uniswapV2Pair": "0xDAD81f9f5DbF71Ce54D63f96eE45231D97d6B086",
+    "baseWeth": "0x4200000000000000000000000000000000000006"
+  },
+  "identity": {
+    "treasuryAndReviewedCreator": "0x0de7FdCc798F7FAC6b03b366c529133A9c60794d",
+    "website": "https://frymastercheese.github.io/pumplite/",
+    "sourceRepository": "https://github.com/FRYMASTERCHEESE/pumplite",
+    "logo": "https://frymastercheese.github.io/pumplite/assets/plite-logo-200.png",
+    "icon": "https://frymastercheese.github.io/pumplite/assets/plite-icon-48.svg"
+  },
+  "pumpLiteReview": {
+    "status": "verified",
+    "type": "identity-and-provenance",
+    "easUid": "0x805a4b6019e15479a489751c44d7b078eaad6ccd71b6fe27d1ad93a234ce59b9",
+    "reviewedAt": "2026-09-29T11:17:49.172Z",
+    "disclaimer": "PumpLite verification confirms project identity and provenance only. It is not an investment endorsement, security audit, price promise or liquidity guarantee."
+  },
+  "explorers": {
+    "basescanToken": "https://basescan.org/token/0xb15A460142c77b42cDF57815b0eeFEb24b593196",
+    "basescanFactory": "https://basescan.org/address/0xdA8c34819ae397FD4bE3C95947DEA64f4A3278f4",
+    "basescanMarket": "https://basescan.org/address/0xa522A4Ef81fD31daec390ab46A32D4886e1461C7",
+    "basescanClaim": "https://basescan.org/address/0xeCe2B0494f3010D3bd37ba4C3eF39faCe228c5c2",
+    "basescanPair": "https://basescan.org/address/0xDAD81f9f5DbF71Ce54D63f96eE45231D97d6B086",
+    "blockscoutToken": "https://base.blockscout.com/token/0xb15A460142c77b42cDF57815b0eeFEb24b593196"
+  },
+  "verificationProviders": {
+    "sourcify": {
+      "apiVersion": "v2",
+      "lookupBase": "https://sourcify.dev/server/v2/contract/8453/",
+      "note": "Source verification can be submitted through Sourcify API v2. Provider status is independent from PumpLite review status."
+    },
+    "blockscout": {
+      "note": "Source verification is supported. Contract ownership verification/name and token-info management may require deployer-wallet message signing and provider review."
+    },
+    "basescan": {
+      "note": "Source-code verification and token/profile labels are external BaseScan/Etherscan processes and are not implied by PumpLite verification."
+    },
+    "coinmarketcap": {
+      "note": "DEXScan may discover assets automatically from on-chain data, but a CoinMarketCap Verified Listing is independently reviewed and cannot be forced by this repository."
+    }
+  },
+  "publishedEvidence": {
+    "projectInfo": "https://frymastercheese.github.io/pumplite/assets/plite-info.json",
+    "reviewRegistry": "https://frymastercheese.github.io/pumplite/assets/verified-tokens.json",
+    "verificationManifest": "https://frymastercheese.github.io/pumplite/assets/token-verification.json",
+    "verificationPage": "https://frymastercheese.github.io/pumplite/verification.html"
+  }
+}

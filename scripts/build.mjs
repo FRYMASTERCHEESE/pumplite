@@ -43,6 +43,7 @@ files.set(resolve(assets, 'styles.css'), await readFile('web/styles.css'));
 files.set(resolve(assets, 'plite-icon-48.svg'), await readFile('web/plite-icon-48.svg'));
 files.set(resolve(assets, 'plite-logo-200.png'), await readFile('web/plite-logo-200.png'));
 files.set(resolve(assets, 'plite-info.json'), await readFile('web/plite-info.json'));
+files.set(resolve(assets, 'token-verification.json'), await readFile('web/token-verification.json'));
 const registry=await readFile('web/verified-tokens.json');
 validateRegistry(JSON.parse(registry));
 files.set(resolve(assets,'verified-tokens.json'),registry);
@@ -83,7 +84,7 @@ if (checkOnly) {
     await mkdir(dirname(path), { recursive: true }); await writeFile(path, bytes);
   }
   await mkdir(dist, { recursive: true });
-  for (const path of ['index.html', 'claim.html', 'terms.html', 'privacy.html', 'risk.html', 'config.json', '.nojekyll', '_headers']) await copyFile(path, resolve(dist, path));
+  for (const path of ['index.html', 'claim.html', 'verification.html', 'terms.html', 'privacy.html', 'risk.html', 'config.json', '.nojekyll', '_headers']) await copyFile(path, resolve(dist, path));
   await cp(assets, resolve(dist, 'assets'), { recursive: true });
   await mkdir('build', { recursive: true });
   await writeFile('build/frontend-metafile.json', JSON.stringify(result.metafile, null, 2) + '\n');
