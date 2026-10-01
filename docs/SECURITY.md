@@ -96,3 +96,7 @@ statements must be interpreted at the date/commit they recorded. See CURRENT_STA
 ## Base production health workflow
 
 The `Base production health` GitHub Actions workflow runs the public read-only production verifier on relevant production changes, manual dispatch, and a daily schedule. It is intentionally configured with repository `contents: read` permission and no signing secret. The workflow can report a problem but cannot repair contracts, move funds, deploy, or submit a transaction.
+
+## Public-site health verification
+
+The `Public site health` workflow performs public HTTPS reads against the live PumpLite Pages origin and compares critical JSON/configuration and asset references with the checked-out commit. It has repository `contents: read` permission, no secrets and no wallet capability. This catches stale or missing public site files but does not turn GitHub Pages into a full security-header-capable production proxy and does not replace independent security review.

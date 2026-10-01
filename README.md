@@ -176,3 +176,7 @@ This checks the active Base V2 factory, PLITE market/token, official First 50 cl
 ## Continuous Base production health
 
 `.github/workflows/base-production-health.yml` runs the read-only Base production verifier on relevant production changes, on manual dispatch, and once daily. The workflow has read-only repository permission, uses no wallet or signing secret, and submits no transaction. A failed run means the live Base state or a required public RPC read should be investigated; it does not authorize an automatic repair or transaction.
+
+## Live public-site health
+
+`pnpm verify:public-site` checks the deployed GitHub Pages site against the current repository state. It verifies the home page, First 50 claim page, Terms, Privacy and Risk pages, the public Base/Solana configuration, PLITE public metadata, reviewed-token registry, current application/claim bundles and stylesheet. The GitHub `Public site health` workflow retries while Pages catches up after relevant pushes and also runs daily. It uses public HTTPS reads only: no wallet, signing secret, transaction or ETH is used.
