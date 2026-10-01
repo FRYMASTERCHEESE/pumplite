@@ -1,40 +1,40 @@
 {
-    "schemaVersion":  2,
-    "feeBps":  25,
-    "solana":  {
-                   "name":  "Solana Mainnet",
-                   "rpcUrl":  "https://pumplite-rpc.coreyedge123.workers.dev/rpc",
-                   "rpcFallbackUrls":  [
-                                           "https://solana-rpc.publicnode.com"
-                                       ],
-                   "genesisHash":  "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d",
-                   "programId":  null,
-                   "treasury":  "BNpFPPuy2h12dryy4dayemjA4YS17ccVaF82jBDuiwct",
-                   "explorer":  "https://solscan.io",
-                   "discoveryUrl":  null,
-                   "transactionsEnabled":  false
-               },
-    "base":  {
-                 "name":  "Base Mainnet",
-                 "chainId":  8453,
-                 "rpcUrl":  "https://base-rpc.publicnode.com",
-                 "factory":  "0xdA8c34819ae397FD4bE3C95947DEA64f4A3278f4",
-                 "treasury":  "0x0de7fdcc798f7fac6b03b366c529133a9c60794d",
-                 "explorer":  "https://basescan.org",
-                 "transactionsEnabled":  true,
-                 "contractVersion":  2,
-                 "rpcFallbackUrls":  [
-                                         "https://mainnet.base.org"
-                                     ],
-                 "holderClaim":  {
-                                     "enabled":  false,
-                                     "contract":  null,
-                                     "token":  "0xb15A460142c77b42cDF57815b0eeFEb24b593196",
-                                     "claimAmount":  "1",
-                                     "maxClaims":  50
-                                 }
-             },
-    "metadataUploads":  {
-                            "enabled":  true
-                        }
+  "schemaVersion": 2,
+  "feeBps": 25,
+  "solana": {
+    "name": "Solana Mainnet",
+    "rpcUrl": "https://pumplite-rpc.coreyedge123.workers.dev/rpc",
+    "rpcFallbackUrls": [
+      "https://solana-rpc.publicnode.com"
+    ],
+    "genesisHash": "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d",
+    "programId": null,
+    "treasury": "BNpFPPuy2h12dryy4dayemjA4YS17ccVaF82jBDuiwct",
+    "explorer": "https://solscan.io",
+    "discoveryUrl": null,
+    "transactionsEnabled": false
+  },
+  "base": {
+    "name": "Base Mainnet",
+    "chainId": 8453,
+    "rpcUrl": "https://base-rpc.publicnode.com",
+    "factory": "0xdA8c34819ae397FD4bE3C95947DEA64f4A3278f4",
+    "treasury": "0x0de7fdcc798f7fac6b03b366c529133a9c60794d",
+    "explorer": "https://basescan.org",
+    "transactionsEnabled": true,
+    "contractVersion": 2,
+    "rpcFallbackUrls": [
+      "https://mainnet.base.org"
+    ],
+    "holderClaim": {
+      "enabled": true,
+      "contract": "0xeCe2B0494f3010D3bd37ba4C3eF39faCe228c5c2",
+      "token": "0xb15A460142c77b42cDF57815b0eeFEb24b593196",
+      "claimAmount": "1",
+      "maxClaims": 50
+    }
+  },
+  "metadataUploads": {
+    "enabled": true
+  }
 }

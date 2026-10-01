@@ -1,6 +1,6 @@
 # PumpLite current status
 
-Status date: 1 October 2026.
+Status date: 2 October 2026.
 
 This file is the current operational-status reference. Documents such as IMPLEMENTATION_REPORT.md,
 READINESS_FOLLOWUP.md, RELEASE_CANDIDATE.md, RELEASE_HANDOFF.md and LOCAL_READINESS_CLOSURE.md record
@@ -30,7 +30,11 @@ trade path, device, RPC failure or economic condition has been acceptance-tested
 - Token: `0xb15A460142c77b42cDF57815b0eeFEb24b593196`
 - PumpLite V2 market: `0xa522A4Ef81fD31daec390ab46A32D4886e1461C7`
 - Uniswap V2 PLITE/WETH pair: `0xDAD81f9f5DbF71Ce54D63f96eE45231D97d6B086`
+- First 50 PLITE claim: `0xeCe2B0494f3010D3bd37ba4C3eF39faCe228c5c2`
 - Canonical Base WETH: `0x4200000000000000000000000000000000000006`
+
+The First 50 PLITE claim is live on Base Mainnet. Its fixed reviewed rules allow up to 50 different wallet
+addresses to claim exactly 1 PLITE each, once per address. The live on-chain claim count changes as claims occur.
 
 The PumpLite bonding curve and the Uniswap V2 pool are separate markets. Curve backing/curve volume
 must not include external DEX reserves, swaps or fees. The website reads the verified external pair

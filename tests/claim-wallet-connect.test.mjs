@@ -23,7 +23,7 @@ test('claim Connect is a real Phantom universal link with injected-wallet interc
 
   assert.match(
     html,
-    /assets\/claim\.js\?boot=20261002d/
+    /assets\/claim\.js\?boot=20261002e/
   );
 
   assert.match(
@@ -103,5 +103,38 @@ test('claim boot never blocks Connect while read-only RPC initializes', async ()
   assert.match(
     source,
     /PumpLite configuration is still loading\. Tap Connect Base wallet again in a moment/
+  );
+});
+
+test('live claim config is the default when no contract query is supplied', async () => {
+  const source = await readFile('web/claim.js', 'utf8');
+  const html = await readFile('claim.html', 'utf8');
+  const config = JSON.parse(
+    await readFile('config.json', 'utf8')
+  );
+
+  assert.equal(
+    config.base.holderClaim.enabled,
+    true
+  );
+
+  assert.equal(
+    config.base.holderClaim.contract,
+    '0xeCe2B0494f3010D3bd37ba4C3eF39faCe228c5c2'
+  );
+
+  assert.match(
+    source,
+    /config\?\.base\?\.holderClaim\?\.enabled === true/
+  );
+
+  assert.match(
+    source,
+    /urlValue \|\| configuredValue/
+  );
+
+  assert.match(
+    html,
+    /assets\/claim\.js\?boot=20261002e/
   );
 });

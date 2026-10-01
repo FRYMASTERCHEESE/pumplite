@@ -24,6 +24,17 @@ test('production enables verified Base while Solana remains fail-closed', () => 
   assert.equal(deploymentConfigured(current, 'solana'), false);
   assert.equal(transactionConfigEnabled(current, 'base'), true);
   assert.equal(transactionConfigEnabled(current, 'solana'), false);
+  assert.equal(current.base.holderClaim.enabled, true);
+  assert.equal(
+    current.base.holderClaim.contract,
+    '0xeCe2B0494f3010D3bd37ba4C3eF39faCe228c5c2'
+  );
+  assert.equal(
+    current.base.holderClaim.token,
+    '0xb15A460142c77b42cDF57815b0eeFEb24b593196'
+  );
+  assert.equal(current.base.holderClaim.claimAmount, '1');
+  assert.equal(current.base.holderClaim.maxClaims, 50);
 });
 
 test('Base may be enabled independently without unlocking Solana', () => {

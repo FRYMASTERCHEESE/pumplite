@@ -71,8 +71,16 @@ function setStatus(message) {
 }
 
 function contractFromUrl() {
-  const value =
+  const urlValue =
     new URL(location.href).searchParams.get('contract');
+
+  const configuredValue =
+    config?.base?.holderClaim?.enabled === true
+      ? config.base.holderClaim.contract
+      : null;
+
+  const value =
+    urlValue || configuredValue;
 
   if (!value) return null;
 
