@@ -15,5 +15,16 @@
   "explorers": {
     "basescan": "https://basescan.org/token/0xb15A460142c77b42cDF57815b0eeFEb24b593196",
     "blockscout": "https://base.blockscout.com/token/0xb15A460142c77b42cDF57815b0eeFEb24b593196"
+  },
+  "dexLiquidity": {
+    "protocol": "Uniswap V2",
+    "network": "Base",
+    "pair": "0xDAD81f9f5DbF71Ce54D63f96eE45231D97d6B086",
+    "baseToken": "PLITE",
+    "quoteToken": "WETH",
+    "quoteTokenAddress": "0x4200000000000000000000000000000000000006",
+    "feeBps": 30,
+    "uniswap": "https://app.uniswap.org/explore/pools/base/0xDAD81f9f5DbF71Ce54D63f96eE45231D97d6B086",
+    "basescan": "https://basescan.org/address/0xDAD81f9f5DbF71Ce54D63f96eE45231D97d6B086"
   }
 }

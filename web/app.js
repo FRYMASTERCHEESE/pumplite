@@ -15,6 +15,7 @@ const $ = id => document.getElementById(id);
 $('skip-content').addEventListener('click', event => { event.preventDefault(); $('main-content').focus(); });
 const PLITE_MARKET_ADDRESS = '0xa522A4Ef81fD31daec390ab46A32D4886e1461C7';
 const PLITE_MARKET_ID = PLITE_MARKET_ADDRESS.toLowerCase();
+const PLITE_UNISWAP_V2_PAIR_ADDRESS = '0xDAD81f9f5DbF71Ce54D63f96eE45231D97d6B086';
 const state = { config: null, chain: 'base', adapter: null, wallet: null, market: null, quote: null, busy: false, epoch: 0, next: null, markets: [], featuredPlite: null, registry: null, reviewProof: null, reviewSchemaReady: false, platformStats: null };
 function status(message, href) {
   $('status-text').textContent = message;
@@ -964,7 +965,7 @@ function renderFeaturedPlite() {
   $('plite-featured-status').textContent =
     'Live bonding-curve data from ' +
     market.source +
-    '. DEX LP liquidity is separate and is never invented.';
+    '. PLITE also has a separate Uniswap V2 PLITE/WETH pool. DEX liquidity is not counted as curve backing.';
 }
 
 function marketSortValue(m, mode) {
@@ -1235,6 +1236,17 @@ function renderMarket(m) {
   $('distribution-label').textContent =
     distributed.toFixed(2) + '% distributed from the current token supply.';
 
+  const isPlite =
+    state.chain === 'base' &&
+    String(m.id).toLowerCase() === PLITE_MARKET_ID;
+
+  $('plite-dex-liquidity').hidden = !isPlite;
+
+  if (isPlite) {
+    $('plite-dex-pair-address').textContent =
+      PLITE_UNISWAP_V2_PAIR_ADDRESS;
+  }
+
   const baseV2 = m.contractVersion === 2;
   $('base-v2-market').hidden = !baseV2;
   $('base-v2-burn-form').hidden = !baseV2;
@@ -1433,6 +1445,7 @@ async function route() {
     $('market-name').textContent = 'Loading market…';
     for (const field of ['market-source','market-metadata','market-cap','native-reserve','token-reserve','volume','volume-24h','trades-24h','market-24h-status','virtual','distribution-label']) $(field).textContent = '—';
     $('distribution').value = 0;
+    $('plite-dex-liquidity').hidden = true;
     $('market-link').removeAttribute('href'); $('token-link').removeAttribute('href');
     await loadMarket(id);
   }

@@ -373,6 +373,11 @@ footer{border-color:#20232d}
 .featured-token-links{display:flex;flex-wrap:wrap;gap:8px}
 .featured-token-links a{padding:7px 10px;border:1px solid #ffffff18;border-radius:10px;color:#dfe3eb;text-decoration:none;font-size:12px;font-weight:700;background:#090a0f66}
 .featured-token-links a:hover{border-color:#ffffff35}
+.dex-liquidity-card{margin:16px 0;padding:15px;border:1px solid #ffffff18;border-radius:14px;background:#090a0f66}
+.dex-liquidity-card h3{margin:4px 0 12px}
+.dex-liquidity-stats{margin-bottom:10px}
+.dex-pair-row{grid-column:1/-1}
+.dex-pair-row code{overflow-wrap:anywhere;word-break:break-word}
 .recent-trades{display:grid;gap:10px;margin-top:18px;padding-top:18px;border-top:1px solid #ffffff12}
 .recent-trades h3{margin:2px 0 0}
 .recent-trades-list{display:grid;gap:8px}

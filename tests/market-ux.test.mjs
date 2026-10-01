@@ -92,6 +92,14 @@ test(
         'utf8'
       );
 
+    const pliteInfo =
+      JSON.parse(
+        await readFile(
+          'web/plite-info.json',
+          'utf8'
+        )
+      );
+
     assert.match(
       app,
       /refreshMarketAfterAction/
@@ -170,6 +178,41 @@ test(
     assert.match(
       html,
       /id="plite-featured-market-cap"/
+    );
+
+    assert.match(
+      html,
+      /id="plite-dex-liquidity"/
+    );
+
+    assert.match(
+      html,
+      /0xDAD81f9f5DbF71Ce54D63f96eE45231D97d6B086/
+    );
+
+    assert.match(
+      html,
+      /app\.uniswap\.org\/explore\/pools\/base\/0xDAD81f9f5DbF71Ce54D63f96eE45231D97d6B086/
+    );
+
+    assert.match(
+      app,
+      /PLITE_UNISWAP_V2_PAIR_ADDRESS/
+    );
+
+    assert.equal(
+      pliteInfo.dexLiquidity.pair,
+      '0xDAD81f9f5DbF71Ce54D63f96eE45231D97d6B086'
+    );
+
+    assert.equal(
+      pliteInfo.dexLiquidity.quoteTokenAddress,
+      '0x4200000000000000000000000000000000000006'
+    );
+
+    assert.equal(
+      pliteInfo.dexLiquidity.feeBps,
+      30
     );
 
     assert.match(

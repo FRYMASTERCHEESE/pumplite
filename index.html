@@ -16,7 +16,7 @@
 <title>PumpLite · Token launches, kept simple</title>
 <link rel="stylesheet" href="./assets/styles.css">
 <script defer src="./assets/phantom-diagnostic.js"></script>
-<script type="module" src="./assets/app.js?boot=20261001a"></script>
+<script type="module" src="./assets/app.js?boot=20261001dex1"></script>
 </head>
 <body>
 <a class="skip-link" id="skip-content" href="#main-content">Skip to main content</a>
@@ -69,10 +69,13 @@
             <span><small>Curve backing</small><b id="plite-featured-reserve">-</b></span>
             <span><small>Current supply</small><b id="plite-featured-supply">-</b></span>
             <span><small>Curve volume</small><b id="plite-featured-volume">-</b></span>
+            <span><small>External pool</small><b>Uniswap V2</b></span>
           </div>
           <p id="plite-featured-status" class="fine featured-token-status">Waiting for the live PLITE Base market read.</p>
           <div class="featured-token-links">
             <a href="https://basescan.org/token/0xb15A460142c77b42cDF57815b0eeFEb24b593196" target="_blank" rel="noopener noreferrer">BaseScan</a>
+            <a href="https://basescan.org/address/0xDAD81f9f5DbF71Ce54D63f96eE45231D97d6B086" target="_blank" rel="noopener noreferrer">LP BaseScan</a>
+            <a href="https://app.uniswap.org/explore/pools/base/0xDAD81f9f5DbF71Ce54D63f96eE45231D97d6B086" target="_blank" rel="noopener noreferrer">Uniswap V2 pool</a>
             <a href="https://base.blockscout.com/token/0xb15A460142c77b42cDF57815b0eeFEb24b593196" target="_blank" rel="noopener noreferrer">Blockscout</a>
             <a href="https://coinstats.app/coins/0xb15A460142c77b42cDF57815b0eeFEb24b593196_base/" target="_blank" rel="noopener noreferrer">CoinStats</a>
           </div>
@@ -306,6 +309,21 @@
         </dl>
         <p id="market-24h-status" class="fine">Rolling 24h Base activity has not been loaded yet.</p>
         <p class="fine">Curve backing is real ETH held by the PumpLite market contract. It is not the same as external DEX LP liquidity. Curve-implied market cap uses the current PumpLite curve price and current on-chain token supply.</p>
+
+        <section id="plite-dex-liquidity" class="dex-liquidity-card" aria-labelledby="plite-dex-title" hidden>
+          <p class="eyebrow">EXTERNAL DEX LIQUIDITY</p>
+          <h3 id="plite-dex-title">Uniswap V2 Â· PLITE / WETH</h3>
+          <dl class="stats dex-liquidity-stats">
+            <div><dt>Protocol</dt><dd>Uniswap V2</dd></div>
+            <div><dt>Fee tier</dt><dd>0.30%</dd></div>
+            <div class="dex-pair-row"><dt>Pair contract</dt><dd><code id="plite-dex-pair-address">0xDAD81f9f5DbF71Ce54D63f96eE45231D97d6B086</code></dd></div>
+          </dl>
+          <p class="fine">This external PLITE/WETH pool is separate from the PumpLite bonding curve. Its reserves, swaps, fees and DEX price can change independently and are not included in PumpLite curve backing or curve volume.</p>
+          <div class="links">
+            <a href="https://app.uniswap.org/explore/pools/base/0xDAD81f9f5DbF71Ce54D63f96eE45231D97d6B086" target="_blank" rel="noopener noreferrer">Open Uniswap pool</a>
+            <a href="https://basescan.org/address/0xDAD81f9f5DbF71Ce54D63f96eE45231D97d6B086" target="_blank" rel="noopener noreferrer">View LP contract on BaseScan</a>
+          </div>
+        </section>
 
         <div id="base-v2-market" hidden>
           <div class="mayhem-summary">
