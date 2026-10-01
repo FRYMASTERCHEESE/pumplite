@@ -260,3 +260,9 @@ PumpLite groups nine additional read-only production gates into `pnpm verify:har
 - **Step 27:** compare the live site's critical public HTML/JSON files with the checked-out repository using normalized SHA-256 content equality.
 
 This bundle uses only public Base RPC/HTTPS reads and local source inspection. It never loads a wallet, requests a signature, submits a transaction or spends ETH. It complements rather than replaces the existing dedicated production-health workflows and an independent third-party audit.
+
+## Production hardening Steps 28-50
+
+`pnpm verify:hardening-28-50` adds 23 fast, static/local production gates covering public configuration, active Base V2 identities, treasury/controller immutability, Solana locking, the First 50 claim configuration, PLITE/registry/DEX identity consistency, Base RPC redundancy configuration, metadata routing, bonding-curve constants and guards, token authority/caps, claim adminlessness/backing source rules, wallet/provider safety, mobile handoff hygiene, Pages publication coverage, security-header source policy, exact dependency locking, GitHub Actions permissions/pinning, and the complete monitoring/release-readiness mesh.
+
+The `Production hardening 28-50` workflow runs after relevant changes, manually, and daily. This bundle intentionally avoids live RPC transactions and wallet operations so it remains fast and deterministic. It does not replace the existing live-chain monitors or an independent third-party audit.

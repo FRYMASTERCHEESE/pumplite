@@ -148,3 +148,7 @@ PumpLite now audits the transaction provenance behind every recorded Base V2 Tra
 ## Production hardening Steps 19-27
 
 A single read-only hardening bundle now covers nine additional production gates: First 50 claim history provenance, claim solvency, official Base/PLITE identity sealing, wallet-provider safety boundaries, pinned CI actions, dependency-lock discipline, legal/risk-page integrity, monitoring-mesh completeness and live critical-file parity. The bundle is exposed as `pnpm verify:hardening-19-27` and by the `Production hardening 19-27` scheduled/manual/push workflow. It uses no wallet, signature, transaction or ETH.
+
+## Production hardening Steps 28-50
+
+PumpLite now has a second bundled hardening verifier covering Steps 28 through 50. These checks are intentionally static/local for speed and determinism: they freeze critical Base/Solana/PLITE/claim identities and configuration, verify source-level economic and authority boundaries, preserve passive wallet discovery/mobile handoff protections, validate Pages/security-header publication rules, enforce exact dependency and GitHub Actions supply-chain controls, and require the complete production monitoring/release-readiness command and workflow mesh.

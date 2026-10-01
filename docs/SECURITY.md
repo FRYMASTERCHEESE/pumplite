@@ -150,3 +150,7 @@ The `Base trade provenance` workflow independently checks recorded buy, sell and
 ## Production hardening bundle 19-27
 
 The `Production hardening 19-27` workflow adds independent consistency checks around the live First 50 claim, fixed production identities, wallet-provider boundaries, CI action pinning, exact dependency locking, static legal/risk pages, monitoring coverage and deployed critical-file parity. The claim checks reconcile emitted claims and token transfers and require enough PLITE to cover every remaining claim. These checks are read-only and fail closed; they cannot repair state, secure a compromised wallet, guarantee an external provider, eliminate MEV/slippage, or substitute for an independent smart-contract/economic/frontend audit.
+
+## Production hardening bundle 28-50
+
+The `Production hardening 28-50` workflow provides 23 additional static/local fail-closed gates. It checks configuration and identity drift, source-level contract authority/economic protections, wallet/provider boundaries, publication/security-header policy, exact dependency locking, action pinning and workflow permissions, and monitoring/release coverage. It performs no wallet connection, signature, transaction, RPC write or ETH spend. Static verification reduces configuration and source-regression risk but does not prove future transaction execution, external-provider availability, wallet custody security, MEV resistance, or replace an independent smart-contract/economic/frontend audit.
