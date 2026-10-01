@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta name="theme-color" content="#090a0f">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="Read-only public verification and indexing status for the official PumpLite PLITE token on Base Mainnet.">
+  <meta name="robots" content="index,follow">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="PumpLite">
+  <meta property="og:title" content="PLITE public verification status">
+  <meta property="og:description" content="Read-only status for PLITE verification, public indexing and official identity evidence.">
+  <meta property="og:url" content="https://frymastercheese.github.io/pumplite/status.html">
+  <meta property="og:image" content="https://frymastercheese.github.io/pumplite/assets/plite-logo-200.png">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="PLITE public verification status">
+  <meta name="twitter:description" content="Read-only verification and indexing status for PLITE on Base Mainnet.">
+  <link rel="canonical" href="https://frymastercheese.github.io/pumplite/status.html">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" type="image/svg+xml" href="./assets/plite-icon-48.svg">
+  <link rel="stylesheet" href="./assets/styles.css">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://sourcify.dev https://api.dexscreener.com https://api.geckoterminal.com https://base.blockscout.com; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
+  <title>PLITE Status | PumpLite</title>
+  <script type="module" src="./status.js"></script>
+</head>
+<body class="status-page">
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  <header>
+    <a class="brand" href="./" aria-label="PumpLite home"><span class="mark" aria-hidden="true">&nearr;</span> PumpLite<span class="beta">BASE MAINNET</span></a>
+    <div class="header-controls">
+      <a class="utility-header-link" href="./">Home</a>
+      <a class="utility-header-link" href="./verification.html">Verify PLITE</a>
+    </div>
+  </header>
+
+  <main id="main-content" tabindex="-1">
+    <section class="panel status-hero">
+      <p class="eyebrow">PUBLIC STATUS</p>
+      <h1>PLITE verification &amp; discovery</h1>
+      <p class="intro">Read-only checks of official PLITE identity, source verification and public token indexing. This page never connects a wallet or sends a transaction.</p>
+
+      <div class="status-address">
+        <span>Official Base token</span>
+        <code id="official-token">0xb15A460142c77b42cDF57815b0eeFEb24b593196</code>
+        <div class="status-actions">
+          <button id="copy-token" type="button" class="outline">Copy address</button>
+          <button id="share-token" type="button" class="outline">Share official page</button>
+          <button id="refresh-status" type="button" class="primary compact-action">Refresh checks</button>
+        </div>
+      </div>
+
+      <p id="status-summary" class="notice" role="status" aria-live="polite">Preparing public read-only checks...</p>
+    </section>
+
+    <section class="status-grid" aria-label="PLITE verification providers">
+      <article class="panel status-card">
+        <p class="eyebrow">SOURCE</p>
+        <h2>Sourcify</h2>
+        <strong id="sourcify-status" class="provider-state">Checking...</strong>
+        <p class="fine">Source-verification record for the official PLITE token contract.</p>
+        <a href="https://sourcify.dev/server/v2/contract/8453/0xb15A460142c77b42cDF57815b0eeFEb24b593196?fields=all" target="_blank" rel="noopener noreferrer">Open Sourcify evidence</a>
+      </article>
+
+      <article class="panel status-card">
+        <p class="eyebrow">DEX INDEX</p>
+        <h2>DEX Screener</h2>
+        <strong id="dex-status" class="provider-state">Checking...</strong>
+        <p class="fine">Checks whether public DEX indexing currently exposes PLITE.</p>
+        <a href="https://dexscreener.com/base/0xDAD81f9f5DbF71Ce54D63f96eE45231D97d6B086" target="_blank" rel="noopener noreferrer">Open PLITE/WETH pair</a>
+      </article>
+
+      <article class="panel status-card">
+        <p class="eyebrow">DEX INDEX</p>
+        <h2>GeckoTerminal</h2>
+        <strong id="gecko-status" class="provider-state">Checking...</strong>
+        <p class="fine">Public Base token indexing. Indexing is separate from a provider-controlled verified badge.</p>
+        <a href="https://www.geckoterminal.com/base/pools/0xDAD81f9f5DbF71Ce54D63f96eE45231D97d6B086" target="_blank" rel="noopener noreferrer">Open pool</a>
+      </article>
+
+      <article class="panel status-card">
+        <p class="eyebrow">EXPLORER</p>
+        <h2>Blockscout</h2>
+        <strong id="blockscout-status" class="provider-state">Checking...</strong>
+        <p class="fine">Public Base token index for the official PLITE address.</p>
+        <a href="https://base.blockscout.com/token/0xb15A460142c77b42cDF57815b0eeFEb24b593196" target="_blank" rel="noopener noreferrer">Open Blockscout</a>
+      </article>
+
+      <article class="panel status-card">
+        <p class="eyebrow">EXPLORER</p>
+        <h2>BaseScan</h2>
+        <strong class="provider-state">Public token page</strong>
+        <p class="fine">BaseScan profile/source badges remain controlled by BaseScan/Etherscan and are separate from PumpLite verification.</p>
+        <a href="https://basescan.org/token/0xb15A460142c77b42cDF57815b0eeFEb24b593196" target="_blank" rel="noopener noreferrer">Open BaseScan</a>
+      </article>
+
+      <article class="panel status-card">
+        <p class="eyebrow">OFFICIAL EVIDENCE</p>
+        <h2>PumpLite</h2>
+        <strong id="website-status" class="provider-state">Checking...</strong>
+        <p class="fine">Checks the official verification manifest and public token list published by PumpLite.</p>
+        <a href="./verification.html">Open verification page</a>
+      </article>
+    </section>
+
+    <section class="panel status-boundary">
+      <h2>What this page means</h2>
+      <p class="fine">A provider shown as indexed means its public API currently recognizes the official PLITE address. "Verified" is used only when the provider itself exposes source-verification evidence. PumpLite does not manufacture external badges, ratings, listings or endorsements.</p>
+      <p class="fine">Official market: <code>0xa522A4Ef81fD31daec390ab46A32D4886e1461C7</code></p>
+      <p class="fine">Official Uniswap V2 PLITE/WETH pair: <code>0xDAD81f9f5DbF71Ce54D63f96eE45231D97d6B086</code></p>
+      <p id="last-checked" class="fine">Not checked yet.</p>
+    </section>
+  </main>
+
+  <footer>
+    <b>PumpLite</b>
+    <span>Public read-only status</span>
+    <p><a href="./">Home</a> | <a href="./verification.html">Verification</a> | <a href="./token-list.json">Token list</a> | <a href="./.well-known/security.txt">Security contact</a></p>
+  </footer>
+</body>
+</html>

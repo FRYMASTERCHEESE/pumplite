@@ -385,3 +385,25 @@ footer{border-color:#20232d}
 .recent-trade-row strong{font-size:12px}
 .recent-trade-row span,.recent-trade-row small{font-size:11px;color:var(--muted);overflow-wrap:anywhere}
 @media(max-width:740px){.recent-trade-row{grid-template-columns:auto 1fr}.recent-trade-row span:nth-of-type(2),.recent-trade-row small{grid-column:1/-1}}
+
+/* Additive public verification/status UX upgrade. */
+.utility-header-link{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:9px 13px;border:1px solid #3b3f4c;border-radius:12px;background:#151721;color:#f3f4f8;font-size:13px;font-weight:750;text-decoration:none;white-space:nowrap}
+.utility-header-link:hover{border-color:var(--purple,#ab9bf9);color:#fff}
+.status-page main{display:grid;gap:20px}
+.status-hero{margin-top:24px}
+.status-address{display:grid;gap:10px;margin-top:20px}
+.status-address code,.status-boundary code{overflow-wrap:anywhere}
+.status-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.status-actions .primary{width:auto;margin-top:0}
+.status-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.status-card{min-width:0}
+.status-card h2{margin-bottom:10px}
+.status-card a{display:inline-block;margin-top:10px}
+.provider-state{display:inline-block;margin:4px 0 8px;overflow-wrap:anywhere}
+.provider-state[data-state="good"]{color:#c1ec83}
+.provider-state[data-state="pending"]{color:#f2d58b}
+.provider-state[data-state="bad"]{color:#ffaaa5}
+@media(max-width:900px){.status-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:740px){.utility-header-link{flex:1 1 130px}.status-grid{grid-template-columns:1fr}.status-actions>*{flex:1 1 150px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition-duration:.001ms!important;animation-duration:.001ms!important;animation-iteration-count:1!important}}
+@media(prefers-contrast:more){button,a,input,select,textarea,.panel{border-color:currentColor}.muted,.fine{color:#d2d7df}}

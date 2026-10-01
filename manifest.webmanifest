@@ -1,0 +1,28 @@
+{
+  "name": "PumpLite",
+  "short_name": "PumpLite",
+  "description": "PumpLite Base Mainnet token launchpad with transparent on-chain markets and PLITE verification.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#090a0f",
+  "theme_color": "#090a0f",
+  "categories": [
+    "finance",
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "./assets/plite-logo-200.png",
+      "sizes": "200x200",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./assets/plite-icon-48.svg",
+      "sizes": "48x48",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

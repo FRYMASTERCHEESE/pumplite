@@ -6,12 +6,25 @@
 <meta name="referrer" content="no-referrer">
 <meta name="theme-color" content="#090a0f">
 <meta name="description" content="PumpLite: a Base Mainnet token launchpad with fixed or permanently capped mintable supply, Mayhem support, and wallet-signed trading.">
+<meta name="application-name" content="PumpLite">
+<meta name="robots" content="index,follow">
+<meta name="color-scheme" content="dark">
+<meta name="format-detection" content="telephone=no">
 <link rel="canonical" href="https://frymastercheese.github.io/pumplite/">
 <link rel="icon" type="image/svg+xml" href="./assets/plite-icon-48.svg">
+<link rel="apple-touch-icon" href="./assets/plite-logo-200.png">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="alternate" type="application/json" title="PumpLite official token list" href="./token-list.json">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="PumpLite">
 <meta property="og:title" content="PumpLite · Base Mainnet token launchpad">
 <meta property="og:description" content="Launch and trade Base tokens with wallet-signed transactions and transparent on-chain bonding-curve data.">
 <meta property="og:url" content="https://frymastercheese.github.io/pumplite/">
 <meta property="og:image" content="https://frymastercheese.github.io/pumplite/assets/plite-logo-200.png">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="PumpLite  -  Base Mainnet token launchpad">
+<meta name="twitter:description" content="Launch and trade Base tokens with transparent on-chain market data and official PLITE verification evidence.">
+<meta name="twitter:image" content="https://frymastercheese.github.io/pumplite/assets/plite-logo-200.png">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://pumplite-rpc.coreyedge123.workers.dev https://solana-rpc.publicnode.com wss://solana-rpc.publicnode.com https://mainnet.base.org https://base-rpc.publicnode.com https://api.coinbase.com; object-src 'none'; base-uri 'none'; form-action 'none'">
 <title>PumpLite · Token launches, kept simple</title>
 <link rel="stylesheet" href="./assets/styles.css">
@@ -27,6 +40,8 @@
     <select id="chain"><option value="solana">Solana Mainnet</option><option value="base">Base Mainnet</option></select>
     <label id="wallet-choice-label" hidden>Wallet <select id="wallet-choice" aria-label="EVM wallet"></select></label>
     <a class="claim-header-link" href="./claim.html">PLITE Claim</a>
+    <a class="utility-header-link" href="./verification.html">Verify PLITE</a>
+    <a class="utility-header-link" href="./status.html">Live status</a>
     <button id="connect" class="outline">Connect wallet</button>
   </div>
 </header>
@@ -517,6 +532,6 @@
 
   <div id="status" class="status" role="status" aria-live="polite"><span id="status-text">No wallet connected. No transactions submitted.</span><a id="status-link" target="_blank" rel="noopener noreferrer" hidden>View transaction ↗</a></div>
 </main>
-<footer><b>PumpLite</b><span>Solana + Base - Mainnet only</span><p><a href="./terms.html">Terms</a> | <a href="./privacy.html">Privacy</a> | <a href="./risk.html">Risk disclosure</a></p><p>Official project contact: <a href="mailto:coreyedge123@gmail.com">coreyedge123@gmail.com</a></p><p>Tokens can lose all value. Wallet approval spends real funds. The current contracts have not received an independent third-party smart-contract audit; availability depends on the selected network deployment.</p></footer>
+<footer><b>PumpLite</b><span>Solana + Base - Mainnet only</span><p><a href="./terms.html">Terms</a> | <a href="./privacy.html">Privacy</a> | <a href="./risk.html">Risk disclosure</a> | <a href="./verification.html">Verification</a> | <a href="./status.html">Status</a> | <a href="./.well-known/security.txt">Security</a></p><p>Official project contact: <a href="mailto:coreyedge123@gmail.com">coreyedge123@gmail.com</a></p><p>Tokens can lose all value. Wallet approval spends real funds. The current contracts have not received an independent third-party smart-contract audit; availability depends on the selected network deployment.</p></footer>
 </body>
 </html>

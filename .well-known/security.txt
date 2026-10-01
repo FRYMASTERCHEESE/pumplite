@@ -1,0 +1,5 @@
+Contact: https://github.com/FRYMASTERCHEESE/pumplite/security/advisories/new
+Expires: 2027-10-02T00:00:00.000Z
+Preferred-Languages: en
+Canonical: https://frymastercheese.github.io/pumplite/.well-known/security.txt
+Policy: https://github.com/FRYMASTERCHEESE/pumplite/blob/main/docs/SECURITY.md

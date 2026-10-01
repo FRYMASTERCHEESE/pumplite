@@ -1,32 +1,37 @@
 {
-  "name": "PumpLite Official Token List",
-  "timestamp": "2026-10-02T00:00:00Z",
-  "version": {
-    "major": 1,
-    "minor": 0,
-    "patch": 0
-  },
-  "keywords": [
-    "pumplite",
-    "plite",
-    "base"
-  ],
-  "tokens": [
-    {
-      "chainId": 8453,
-      "address": "0xb15A460142c77b42cDF57815b0eeFEb24b593196",
-      "name": "PumpLite",
-      "symbol": "PLITE",
-      "decimals": 18,
-      "logoURI": "https://frymastercheese.github.io/pumplite/assets/plite-logo-200.png",
-      "extensions": {
-        "website": "https://frymastercheese.github.io/pumplite/",
-        "verification": "https://frymastercheese.github.io/pumplite/verification.html",
-        "market": "0xa522A4Ef81fD31daec390ab46A32D4886e1461C7",
-        "factory": "0xdA8c34819ae397FD4bE3C95947DEA64f4A3278f4",
-        "uniswapV2Pair": "0xDAD81f9f5DbF71Ce54D63f96eE45231D97d6B086",
-        "sourcify": "https://sourcify.dev/server/v2/contract/8453/0xb15A460142c77b42cDF57815b0eeFEb24b593196?fields=all"
-      }
-    }
-  ]
+    "name":  "PumpLite Official Token List",
+    "timestamp":  "2026-10-02T00:00:00Z",
+    "version":  {
+                    "major":  1,
+                    "minor":  0,
+                    "patch":  0
+                },
+    "keywords":  [
+                     "pumplite",
+                     "plite",
+                     "base"
+                 ],
+    "tokens":  [
+                   {
+                       "chainId":  8453,
+                       "address":  "0xb15A460142c77b42cDF57815b0eeFEb24b593196",
+                       "name":  "PumpLite",
+                       "symbol":  "PLITE",
+                       "decimals":  18,
+                       "logoURI":  "https://frymastercheese.github.io/pumplite/assets/plite-logo-200.png",
+                       "extensions":  {
+                                          "website":  "https://frymastercheese.github.io/pumplite/",
+                                          "verification":  "https://frymastercheese.github.io/pumplite/verification.html",
+                                          "market":  "0xa522A4Ef81fD31daec390ab46A32D4886e1461C7",
+                                          "factory":  "0xdA8c34819ae397FD4bE3C95947DEA64f4A3278f4",
+                                          "uniswapV2Pair":  "0xDAD81f9f5DbF71Ce54D63f96eE45231D97d6B086",
+                                          "sourcify":  "https://sourcify.dev/server/v2/contract/8453/0xb15A460142c77b42cDF57815b0eeFEb24b593196?fields=all",
+                                          "status":  "https://frymastercheese.github.io/pumplite/status.html",
+                                          "security":  "https://frymastercheese.github.io/pumplite/.well-known/security.txt",
+                                          "blockscout":  "https://base.blockscout.com/token/0xb15A460142c77b42cDF57815b0eeFEb24b593196",
+                                          "geckoTerminal":  "https://www.geckoterminal.com/base/pools/0xDAD81f9f5DbF71Ce54D63f96eE45231D97d6B086",
+                                          "dexScreener":  "https://dexscreener.com/base/0xDAD81f9f5DbF71Ce54D63f96eE45231D97d6B086"
+                                      }
+                   }
+               ]
 }

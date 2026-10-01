@@ -1,7 +1,10 @@
 User-agent: *
 Allow: /
 Allow: /verification.html
+Allow: /status.html
 Allow: /token-list.json
 Allow: /.well-known/plite-token.json
+Allow: /.well-known/security.txt
+Allow: /manifest.webmanifest
 
 Sitemap: https://frymastercheese.github.io/pumplite/sitemap.xml
