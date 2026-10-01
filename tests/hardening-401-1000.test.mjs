@@ -92,3 +92,40 @@ test(
     );
   }
 );
+test(
+  'hardening inventory never pins generated chunk hashes',
+  async () => {
+    const source =
+      await readFile(
+        'scripts/verify-hardening-401-1000.mjs',
+        'utf8'
+      );
+
+    assert.doesNotMatch(
+      source,
+      /assets\/chunks\/[A-Za-z0-9_-]+\.js/,
+      'Hardening inventory must use stable source paths, not esbuild hash filenames'
+    );
+
+    for (const path of [
+      'contracts/base/v3/CurveMarketV3.sol',
+      'contracts/base/v3/LaunchFactoryV3.sol',
+      'contracts/base/v3/LaunchTokenV3.sol',
+      'docs/MAYHEM_V3.md',
+      'scripts/compile-base-v3.mjs',
+      'tests/base-v3-candidate.mjs',
+      'tests/base-v3-static-candidate.mjs',
+      'tests/v3-deploy-page.test.mjs',
+      'v3-deploy.html',
+      'web/adapters/base-v3.js'
+    ]) {
+      assert.ok(
+        source.includes(
+          JSON.stringify(path)
+        ),
+        'Stable V3 hardening inventory path missing: ' +
+          path
+      );
+    }
+  }
+);
