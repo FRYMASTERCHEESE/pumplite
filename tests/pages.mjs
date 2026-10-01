@@ -128,6 +128,18 @@ try {
       1
     );
     assert.equal(
+      await page.locator('#mobile-phantom').count(),
+      1
+    );
+    assert.equal(
+      await page.locator('#mobile-coinbase').count(),
+      1
+    );
+    assert.equal(
+      await page.locator('#mobile-open').count(),
+      1
+    );
+    assert.equal(
       await page.locator('#side').inputValue(),
       'sell'
     );

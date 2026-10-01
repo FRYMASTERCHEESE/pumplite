@@ -43,6 +43,9 @@ function controls() {
   const mobileLink = mobileBrowseLink(state.chain, location.href);
   $('mobile-open').hidden = !mobileLink || state.busy;
   if (mobileLink) { $('mobile-open').href = mobileLink; $('mobile-open').textContent = 'Open in ' + (state.chain === 'solana' ? 'Phantom' : 'MetaMask'); }
+  const phLink = state.chain === 'base' ? mobileBrowseLink('base', location.href, 'phantom') : null;
+  $('mobile-phantom').hidden = !phLink || state.busy;
+  if (phLink) $('mobile-phantom').href = phLink;
   const cbLink = state.chain === 'base' ? mobileBrowseLink('base', location.href, 'coinbase') : null;
   $('mobile-coinbase').hidden = !cbLink || state.busy;
   if (cbLink) $('mobile-coinbase').href = cbLink;

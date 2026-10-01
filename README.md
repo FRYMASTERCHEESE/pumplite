@@ -152,7 +152,7 @@ is available through the configured metadata/IPFS service.
 Solana name/symbol/URI are stored immutably in the market account. Metaplex wallet metadata is **not published yet**.
 Base tokens expose standard ERC-20 names/symbols; optional metadata URI remains on the market.
 Metadata URLs are not fetched automatically, avoiding untrusted downloads and mobile data use.
-Mobile support currently means an injected-wallet browser, not WalletConnect or mobile deep-link handoff.
+Base mobile handoff links are available for Phantom, Coinbase Wallet and MetaMask, with injected EVM-provider discovery inside compatible wallet browsers. WalletConnect is not implemented.
 
 See [architecture](docs/ARCHITECTURE.md), [security and release gates](docs/SECURITY.md),
 and [implementation/verification report](docs/IMPLEMENTATION_REPORT.md).

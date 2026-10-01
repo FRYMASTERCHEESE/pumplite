@@ -12,8 +12,22 @@ export function discoverEvm(scope = globalThis.window, changed = () => {}) {
   scope?.addEventListener?.('eip6963:announceProvider', announced);
   function refresh() {
     scope?.dispatchEvent?.(new Event('eip6963:requestProvider'));
-    for (const p of [...(Array.isArray(scope?.ethereum?.providers) ? scope.ethereum.providers : []), scope?.coinbaseWalletExtension, scope?.ethereum])
-      add(p, p?.isCoinbaseWallet || p?.isCoinbaseBrowser ? 'Coinbase Wallet' : p?.isMetaMask ? 'MetaMask' : 'EVM wallet');
+    for (const p of [
+      scope?.phantom?.ethereum,
+      ...(Array.isArray(scope?.ethereum?.providers) ? scope.ethereum.providers : []),
+      scope?.coinbaseWalletExtension,
+      scope?.ethereum
+    ])
+      add(
+        p,
+        p === scope?.phantom?.ethereum || p?.isPhantom
+          ? 'Phantom'
+          : p?.isCoinbaseWallet || p?.isCoinbaseBrowser
+            ? 'Coinbase Wallet'
+            : p?.isMetaMask
+              ? 'MetaMask'
+              : 'EVM wallet'
+      );
     return entries;
   }
   refresh();

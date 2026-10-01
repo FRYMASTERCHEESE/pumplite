@@ -98,3 +98,75 @@ test('fallback on wrong chain cannot authorize reads',async t=>{
  t.mock.method(Connection.prototype,'getGenesisHash',async function(){if(this.rpcEndpoint===config.solana.rpcUrl)throw Error('HTTP 429');return 'wrong-chain';});
  await assert.rejects(solana(config.solana,()=>{}).list(),/not Solana Mainnet/);
 });
+
+test('Phantom Base mobile handoff preserves route and strips query secrets', () => {
+  const link = new URL(
+    mobileBrowseLink(
+      'base',
+      'https://example.com/pumplite/?private=x#base/0x123',
+      'phantom'
+    )
+  );
+
+  assert.equal(
+    link.origin,
+    'https://phantom.app'
+  );
+
+  assert.match(
+    link.pathname,
+    /^\/ul\/browse\//
+  );
+
+  const encodedTarget =
+    link.pathname.slice('/ul/browse/'.length);
+
+  assert.equal(
+    decodeURIComponent(encodedTarget),
+    'https://example.com/pumplite/#base/0x123'
+  );
+
+  assert.equal(
+    link.searchParams.get('ref'),
+    'https://example.com/pumplite/'
+  );
+});
+
+test('Phantom Ethereum provider is discovered without requesting wallet access', () => {
+  let requests = 0;
+
+  const phantomEthereum = {
+    isPhantom: true,
+    request() {
+      requests++;
+      throw Error('Wallet access must not be requested during discovery');
+    }
+  };
+
+  const win = new EventTarget();
+  win.phantom = {
+    ethereum: phantomEthereum
+  };
+
+  const discovered =
+    discoverEvm(win);
+
+  assert.equal(
+    discovered.entries.length,
+    1
+  );
+
+  assert.equal(
+    discovered.entries[0].provider,
+    phantomEthereum
+  );
+
+  assert.equal(
+    discovered.entries[0].name,
+    'Phantom'
+  );
+
+  assert.equal(requests, 0);
+
+  discovered.dispose();
+});
