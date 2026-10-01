@@ -194,3 +194,54 @@ test('public-site health verifier stays strictly wallet-action free', async () =
     );
   }
 });
+test('verification page identity and encoding stay aligned with live health', async () => {
+  const html =
+    await read('verification.html');
+
+  const publicCheck =
+    await read(
+      'scripts/verify-public-site.mjs'
+    );
+
+  assert.ok(
+    html.includes(
+      '<h1>Verify PLITE</h1>'
+    ),
+    'Verification page stable heading is missing'
+  );
+
+  assert.ok(
+    publicCheck.includes(
+      "'<h1>Verify PLITE</h1>'"
+    ),
+    'Live health verifier is not checking the real verification-page heading'
+  );
+
+  assert.equal(
+    publicCheck.includes(
+      'PLITE Token Verification'
+    ),
+    false,
+    'Obsolete verification-page marker returned'
+  );
+
+  for (const broken of [
+    '\u00e2\u20ac\u0153',
+    '\u00e2\u20ac\u009d',
+    '\uFFFD'
+  ]) {
+    assert.equal(
+      html.includes(broken),
+      false,
+      'Verification page contains encoding corruption: ' +
+        broken
+    );
+  }
+
+  assert.ok(
+    html.includes(
+      '&ldquo;Verified by PumpLite&rdquo;'
+    ),
+    'Verification disclosure quote is not encoded safely'
+  );
+});

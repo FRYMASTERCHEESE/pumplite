@@ -179,7 +179,7 @@ async function verifyOnce() {
 
   assert.ok(
     verificationPage.includes(
-      'PLITE Token Verification'
+      '<h1>Verify PLITE</h1>'
     ),
     'Live verification page marker missing'
   );
