@@ -113,3 +113,8 @@ PumpLite now checks the primary and fallback Base read RPC endpoints independent
 ## Base economic quote health
 
 PumpLite now independently recomputes the live Base V2 bonding-curve quote math and compares it with each registered market's on-chain quote functions. The monitor verifies the fixed platform fee, Mayhem support rate, virtual-native pricing offset, initial Mayhem timing behavior and live manual/initial Mayhem state. Buy and sell probes are read-only calls at a common block and never submit transactions.
+
+
+## Base write-path simulation health
+
+PumpLite now performs live Base Mainnet `eth_call` simulations of important state-changing V2 paths without persisting any state. The monitor exercises valid fixed/mintable factory creation and invalid creation rejection, then checks controller/creator/token-market authority boundaries across every registered market. Authorized simulations are required to reach the expected live state path while unauthorized callers must fail. No wallet or transaction is used.

@@ -115,3 +115,8 @@ The `Base RPC redundancy` workflow checks each configured Base read endpoint ind
 ## Economic quote monitoring
 
 The `Base economic health` workflow independently calculates expected buy and sell outputs/fees from live reserves and compares them with the deployed market quote functions. It also checks the fixed fee constants, virtual-native parameter and Mayhem timing/state logic. This is a read-only production consistency monitor, not an oracle and not a substitute for independent economic review. It does not submit trades, approve tokens, connect a wallet or spend ETH.
+
+
+## Write-path simulation monitoring
+
+The `Base write simulation` workflow uses `eth_call` against live Base Mainnet contracts to exercise state-changing code paths without committing state. It verifies factory validation and important controller, creator and market-only authorization boundaries. The simulation is useful for detecting regressions or unexpected live behavior but it is not a real transaction, does not prove wallet-provider UX, does not model mempool/MEV conditions and does not replace independent security review.

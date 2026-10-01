@@ -201,3 +201,10 @@ The `Base RPC redundancy` GitHub workflow runs this read-only check after releva
 `pnpm verify:base-economic-health` independently recomputes Base V2 buy/sell quote economics from live market state and compares the results with each market's on-chain `quoteBuy` and `quoteSell` views. It also verifies the immutable 0.25% platform fee, 0.75% Mayhem support rate, 1 ETH virtual-native pricing parameter, 24-hour initial Mayhem window and the live Mayhem state implied by launch time plus manual state.
 
 The `Base economic health` GitHub workflow runs this read-only monitor after relevant V2/economic changes, manually, and daily. It never submits a trade: quote probes are public view calls only and use no wallet, signing secret or ETH.
+
+
+## Base write-path simulation health
+
+`pnpm verify:base-write-sim` uses Base Mainnet `eth_call` to execute state-changing code paths ephemerally without broadcasting a transaction. It simulates valid fixed and mintable market creation, rejects invalid creation inputs, verifies Mayhem controller authorization/timing, creator-only mint/lock boundaries, and the token's market-only mint/burn authority for every registered Base V2 market.
+
+These simulations execute against live contract code and current state but are discarded by the RPC node after each call. They do not connect a wallet, request a signature, broadcast a transaction or spend ETH. The `Base write simulation` workflow runs the checks after relevant V2 changes, manually, and daily.
