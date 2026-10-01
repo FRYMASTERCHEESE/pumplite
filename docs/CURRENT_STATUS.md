@@ -156,3 +156,7 @@ PumpLite now has a second bundled hardening verifier covering Steps 28 through 5
 ## Production hardening Steps 51-130
 
 A fast static/local bundle now covers 80 additional production gates from Step 51 through Step 130. It verifies locked package/dependency state, active Base and locked Solana identities, PLITE/claim/DEX/registry consistency, Solidity authority/economic/supply protections, frontend wallet/metadata/RPC safety boundaries, Pages/security-header publication controls, CI supply-chain pinning and the complete monitoring/release mesh. The verifier is intentionally network-free and uses no wallet, signature, transaction or funds.
+
+## Production hardening Steps 131-400
+
+A single static/local bundle now adds 270 numbered gates from Step 131 through Step 400. It checks critical repository files, package/toolchain locks, Base and locked-Solana configuration, PLITE/claim/DEX/reviewed identity consistency, contract safety boundaries, wallet/mobile/metadata/RPC safeguards, CI action pinning and permissions, supporting verification files and release cross-checks. The verifier performs no network request, wallet action, signature, transaction or funds movement.

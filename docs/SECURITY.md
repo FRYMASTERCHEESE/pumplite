@@ -158,3 +158,7 @@ The `Production hardening 28-50` workflow provides 23 additional static/local fa
 ## Production hardening bundle 51-130
 
 The `Production hardening 51-130` workflow performs 80 static/local fail-closed checks across configuration, deployed-address records, contract source boundaries, claim rules, wallet/provider code, metadata upload limits, RPC/fetch bounds, Pages publishing, response-header source policy, dependency locking and GitHub Actions permissions/action pinning. It intentionally avoids live historical RPC scans so transient public-provider errors do not masquerade as source regressions. These checks strengthen regression detection but do not replace independent third-party smart-contract/economic/frontend review, operational wallet security, or live-chain monitoring.
+
+## Production hardening bundle 131-400
+
+The `Production hardening 131-400` workflow adds 270 fail-closed static/local regression gates. It verifies repository-file retention, production identities/configuration, contract source boundaries, claim constraints, frontend wallet/provider behavior, metadata and bounded-fetch controls, GitHub Actions supply-chain pinning/permissions, verification-test presence and cross-file invariants. It deliberately makes no live network request and therefore does not replace the existing live-chain health/provenance monitors, independent third-party smart-contract/economic/frontend review, or operational controller/treasury wallet security.
