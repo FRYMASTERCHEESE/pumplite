@@ -295,6 +295,32 @@ await writeFile(
   ) + "\n"
 );
 
+const factoryArtifact =
+  output.contracts[
+    "LaunchFactoryV3.sol"
+  ].LaunchFactoryV3;
+
+await writeFile(
+  "web/generated/base-v3-deploy.json",
+  JSON.stringify(
+    {
+      compiler: solc.version(),
+      abi: factoryArtifact.abi,
+      bytecode:
+        "0x" +
+        factoryArtifact.evm.bytecode.object,
+      deployedBytecode:
+        "0x" +
+        factoryArtifact.evm.deployedBytecode.object,
+      immutableReferences:
+        factoryArtifact.evm.deployedBytecode
+          .immutableReferences
+    },
+    null,
+    2
+  ) + "\n"
+);
+
 await writeFile(
   "build/base-v3/build-manifest.json",
   JSON.stringify(

@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#090a0f">
+<meta name="color-scheme" content="dark">
+<meta name="robots" content="noindex,nofollow">
+<meta name="description" content="Controller-only PumpLite V3 Base Mainnet deployment page.">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
+<title>PumpLite V3 - Base Mainnet Deployment</title>
+<link rel="icon" type="image/svg+xml" href="./assets/plite-icon-48.svg">
+<link rel="stylesheet" href="./assets/styles.css">
+<script type="module" src="./assets/v3-deploy.js"></script>
+</head>
+<body class="v3-deploy-page">
+<a class="skip-link" href="#v3-main">Skip to deployment tool</a>
+
+<header>
+  <a class="brand" href="./" aria-label="Back to PumpLite"><span class="mark" aria-hidden="true">PL</span> PumpLite<span class="beta">V3 MAINNET</span></a>
+  <div class="header-controls">
+    <a class="utility-header-link" href="./">Back to PumpLite</a>
+    <a class="utility-header-link" href="./verification.html">Verification</a>
+  </div>
+</header>
+
+<main id="v3-main" class="v3-deploy-shell" tabindex="-1">
+  <section class="panel v3-deploy-hero">
+    <p class="eyebrow">REAL BASE MAINNET</p>
+    <h1>Deploy PumpLite V3</h1>
+    <p class="intro">This is a real Base Mainnet deployment tool for the reviewed PumpLite V3 Classic + Mayhem contracts. It is not a simulation.</p>
+
+    <div class="v3-real-warning" role="alert">
+      <strong>REAL TRANSACTION</strong>
+      <span>Your wallet will show the actual Base deployment gas before you approve.</span>
+      <span>Never enter a seed phrase or private key here.</span>
+      <span>V2 stays live until the new factory is separately verified and activated.</span>
+    </div>
+
+    <p id="v3-page-status" class="notice" role="status" aria-live="polite">Loading the current PumpLite configuration...</p>
+  </section>
+
+  <section class="v3-deploy-grid">
+    <article class="panel">
+      <p class="eyebrow">01 - WALLET</p>
+      <h2>Connect the PumpLite treasury wallet</h2>
+      <p class="fine">Deployment is restricted in this page to the treasury address already published in PumpLite config. The deployment transaction is still permissionless on-chain; this restriction protects the official PumpLite deployment flow.</p>
+
+      <label for="v3-wallet-choice">Detected wallet</label>
+      <select id="v3-wallet-choice"></select>
+
+      <button id="v3-connect" class="primary full" type="button">Connect Base wallet</button>
+
+      <dl class="stats">
+        <div><dt>Required deployer</dt><dd><code id="v3-required-deployer">-</code></dd></div>
+        <div><dt>Connected wallet</dt><dd><code id="v3-connected">Not connected</code></dd></div>
+        <div><dt>Network</dt><dd id="v3-network">Base Mainnet required</dd></div>
+      </dl>
+    </article>
+
+    <article class="panel">
+      <p class="eyebrow">02 - MAYHEM CONTROLLER</p>
+      <h2>Choose the real Auto/Manual controller</h2>
+
+      <label for="v3-controller">Mayhem controller public Base address</label>
+      <input id="v3-controller" autocomplete="off" spellcheck="false" placeholder="0x...">
+
+      <p class="fine">For real Mayhem Auto, use the PUBLIC address of a dedicated low-balance controller/keeper wallet. Do not paste its private key, seed phrase, or recovery words into PumpLite or this chat.</p>
+
+      <label for="v3-fee-treasury">Mayhem fee treasury</label>
+      <input id="v3-fee-treasury" autocomplete="off" spellcheck="false" placeholder="0x...">
+
+      <p class="fine">The normal PumpLite treasury and Mayhem fee treasury are immutable constructor values in this V3 factory.</p>
+    </article>
+  </section>
+
+  <section class="panel">
+    <p class="eyebrow">03 - IMMUTABLE MAYHEM LIMITS</p>
+    <h2>Review the deployed limits</h2>
+    <p class="fine">These values become part of the V3 factory configuration. Review them before approving the deployment. They do not create fake users or organic volume; Mayhem agent activity remains separately labeled on-chain.</p>
+
+    <div class="v3-limit-grid">
+      <label>Minimum agent buy (ETH)<input id="v3-min-buy" inputmode="decimal" value="0.001"></label>
+      <label>Maximum agent buy (ETH)<input id="v3-max-buy" inputmode="decimal" value="0.01"></label>
+      <label>Maximum total agent buys (ETH)<input id="v3-max-total-buy" inputmode="decimal" value="0.10"></label>
+      <label>Maximum total agent sells (ETH)<input id="v3-max-total-sell" inputmode="decimal" value="0.10"></label>
+      <label>Pause below curve reserve (ETH)<input id="v3-pause-reserve" inputmode="decimal" value="0.001"></label>
+      <label>Minimum agent interval (seconds)<input id="v3-min-interval" inputmode="numeric" value="300"></label>
+      <label>Maximum Mayhem trades<input id="v3-max-trades" inputmode="numeric" value="48"></label>
+      <label>Minimum sell size (basis points)<input id="v3-min-sell-bps" inputmode="numeric" value="100"></label>
+      <label>Maximum sell size (basis points)<input id="v3-max-sell-bps" inputmode="numeric" value="500"></label>
+    </div>
+  </section>
+
+  <section class="panel">
+    <p class="eyebrow">04 - ESTIMATE &amp; DEPLOY</p>
+    <h2>Deploy the real V3 factory</h2>
+
+    <label class="v3-confirm">
+      <input id="v3-confirm-real" type="checkbox">
+      <span>I understand this creates a real Base Mainnet contract and my wallet will spend Base ETH on network gas.</span>
+    </label>
+
+    <div class="v3-deploy-actions">
+      <button id="v3-estimate" class="outline" type="button" disabled>Estimate deployment gas</button>
+      <button id="v3-deploy" class="primary" type="button" disabled>Deploy PumpLite V3 on Base</button>
+    </div>
+
+    <dl class="stats">
+      <div><dt>Estimated gas units</dt><dd id="v3-gas">Not estimated</dd></div>
+      <div><dt>Compiler</dt><dd id="v3-compiler">-</dd></div>
+      <div><dt>Current production</dt><dd id="v3-current-production">Base V2 remains active</dd></div>
+    </dl>
+  </section>
+
+  <section id="v3-result" class="panel" hidden>
+    <p class="eyebrow">DEPLOYED &amp; READ BACK</p>
+    <h2>V3 factory deployment confirmed</h2>
+
+    <p class="fine">The page read the deployed contract back from Base and checked the controller, treasury, fee treasury and zero initial market count. Do not activate V3 until the factory address is recorded and the full repository verification passes.</p>
+
+    <dl class="stats">
+      <div><dt>V3 factory</dt><dd><code id="v3-result-factory">-</code></dd></div>
+      <div><dt>Transaction</dt><dd><code id="v3-result-tx">-</code></dd></div>
+      <div><dt>Block</dt><dd id="v3-result-block">-</dd></div>
+      <div><dt>Controller</dt><dd><code id="v3-result-controller">-</code></dd></div>
+    </dl>
+
+    <div class="v3-deploy-actions">
+      <button id="v3-copy-result" class="outline" type="button">Copy deployment details</button>
+      <a id="v3-explorer-factory" class="utility-header-link" target="_blank" rel="noopener noreferrer">Open factory on BaseScan</a>
+      <a id="v3-explorer-tx" class="utility-header-link" target="_blank" rel="noopener noreferrer">Open deployment transaction</a>
+    </div>
+
+    <p id="v3-activation-next" class="notice">Next step: verify this exact factory against the committed V3 compiler output, record the deployment, then switch production from V2 to V3 in one reviewed activation commit.</p>
+  </section>
+</main>
+
+<footer>
+  <p>PumpLite V3 deployment tool - Base Mainnet.</p>
+  <p><a href="./">PumpLite</a> <span aria-hidden="true">-</span> <a href="./risk.html">Risk disclosure</a> <span aria-hidden="true">-</span> <a href="./verification.html">Verification</a></p>
+</footer>
+</body>
+</html>

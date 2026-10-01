@@ -31,3 +31,7 @@ docs/MAYHEM_V3.md text eol=lf
 mayhem-playground.html text eol=lf
 web/mayhem-playground.js text eol=lf
 tests/mayhem-playground.test.mjs text eol=lf
+v3-deploy.html text eol=lf
+web/v3-deploy.js text eol=lf
+web/generated/base-v3-deploy.json text eol=lf
+tests/v3-deploy-page.test.mjs text eol=lf

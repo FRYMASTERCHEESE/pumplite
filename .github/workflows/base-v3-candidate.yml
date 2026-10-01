@@ -35,7 +35,7 @@ jobs:
         run: node scripts/compile-base-v3.mjs
 
       - name: Verify committed V3 ABI is reproducible
-        run: git diff --exit-code -- web/generated/base-v3-abi.json
+        run: git diff --exit-code -- web/generated/base-v3-abi.json web/generated/base-v3-deploy.json
 
       - name: Run V3 candidate contract and safety tests
         run: node --test tests/base-v3-candidate.mjs tests/base-v3-static-candidate.mjs

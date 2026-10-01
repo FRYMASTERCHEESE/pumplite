@@ -11,7 +11,7 @@ const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright')
 const fixture = await mkdtemp(join(tmpdir(), 'pumplite-pages-'));
 let browser, server;
 try {
-  for (const file of ['index.html', 'claim.html', 'verification.html', 'status.html', 'mayhem-playground.html', 'terms.html', 'privacy.html', 'risk.html', 'config.json', '.nojekyll']) await copyFile(file, join(fixture, file));
+  for (const file of ['index.html', 'claim.html', 'verification.html', 'status.html', 'v3-deploy.html', 'terms.html', 'privacy.html', 'risk.html', 'config.json', '.nojekyll']) await copyFile(file, join(fixture, file));
   await cp('assets', join(fixture, 'assets'), { recursive: true });
   const mount = '/pumplite/';
   const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json' };
