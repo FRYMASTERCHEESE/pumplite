@@ -162,3 +162,9 @@ The `Production hardening 51-130` workflow performs 80 static/local fail-closed 
 ## Production hardening bundle 131-400
 
 The `Production hardening 131-400` workflow adds 270 fail-closed static/local regression gates. It verifies repository-file retention, production identities/configuration, contract source boundaries, claim constraints, frontend wallet/provider behavior, metadata and bounded-fetch controls, GitHub Actions supply-chain pinning/permissions, verification-test presence and cross-file invariants. It deliberately makes no live network request and therefore does not replace the existing live-chain health/provenance monitors, independent third-party smart-contract/economic/frontend review, or operational controller/treasury wallet security.
+
+## Production verification hardening bundle 401-1000
+
+The `Production verification hardening 401-1000` workflow runs 600 additional static/local fail-closed verification gates. It checks the tracked release and verification inventory, bounded file-size policy, immutable production identities, First-50 claim configuration, PLITE market/token/pair/review identities, Solana deployment lock, clean HTTPS Base RPC configuration, audit-RPC fallback retention, GitHub Actions commit pinning, workflow write-permission isolation and documentation continuity. The workflow uses repository `contents: read`, persists no checkout credential and contains no wallet, signing, deployment or transaction capability.
+
+These gates are regression evidence only. They do not make a security or economic guarantee, do not prove that an external RPC/explorer/indexer is available, do not protect an authorized key from compromise, and do not replace the independent third-party smart-contract/economic/frontend review still identified as remaining security work.

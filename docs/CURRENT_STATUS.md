@@ -160,3 +160,9 @@ A fast static/local bundle now covers 80 additional production gates from Step 5
 ## Production hardening Steps 131-400
 
 A single static/local bundle now adds 270 numbered gates from Step 131 through Step 400. It checks critical repository files, package/toolchain locks, Base and locked-Solana configuration, PLITE/claim/DEX/reviewed identity consistency, contract safety boundaries, wallet/mobile/metadata/RPC safeguards, CI action pinning and permissions, supporting verification files and release cross-checks. The verifier performs no network request, wallet action, signature, transaction or funds movement.
+
+## Production verification hardening Steps 401-1000
+
+A single verification-only bundle now covers Steps 401 through 1000. It adds 600 numbered static/local fail-closed gates without changing PumpLite product behavior. The bundle freezes the complete tracked release/verification inventory, applies bounded file-integrity checks, and cross-checks package/configuration identity, Base V2/PLITE/First-50 claim identities, locked Solana state, reviewed-token EAS proof shape, Base RPC safety, privileged-verifier fallback retention, GitHub Actions pinning/permissions and verification-document continuity.
+
+The verifier intentionally performs no network request and no wallet action. It cannot deploy, sign, transact, move funds, repair live state, prove third-party provider availability or replace an independent smart-contract/economic/frontend audit. Live-chain and external-provider verification remain the responsibility of the separate read-only production monitors and external verification processes.

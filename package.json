@@ -33,7 +33,8 @@
     "verify:public-site": "node scripts/verify-public-site.mjs",
     "build:claim": "node scripts/compile-base-v2.mjs && node scripts/compile-plite-holder-claim.mjs",
     "test:claim": "node scripts/compile-base-v2.mjs && node scripts/compile-plite-holder-claim.mjs && node --test tests/plite-holder-claim.test.mjs",
-    "verify:hardening-28-50": "node scripts/verify-hardening-28-50.mjs"
+    "verify:hardening-28-50": "node scripts/verify-hardening-28-50.mjs",
+    "verify:hardening-401-1000": "node scripts/verify-hardening-401-1000.mjs"
   },
   "dependencies": {
     "@solana/web3.js": "1.98.4",
