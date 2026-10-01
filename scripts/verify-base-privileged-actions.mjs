@@ -112,9 +112,18 @@ const privilegedTopics =
       marketInterface.getEvent(name).topicHash
   );
 
+// Historical provenance checks can require archive/log access.
+// These endpoints are audit-only fallbacks. They do not change
+// PumpLite frontend RPCs, wallet behaviour or transaction routing.
+const auditRpcFallbackUrls = [
+  'https://public.1rpc.io/base',
+  'https://base.drpc.org'
+];
+
 const rpcUrls = [
   config.base.rpcUrl,
-  ...(config.base.rpcFallbackUrls || [])
+  ...(config.base.rpcFallbackUrls || []),
+  ...auditRpcFallbackUrls
 ].filter(
   (value, index, values) =>
     typeof value === 'string' &&
