@@ -133,3 +133,8 @@ PumpLite now independently verifies the external PLITE/WETH Uniswap V2 pool agai
 ## Metadata infrastructure health
 
 PumpLite now monitors the live metadata authorization/upload service without creating a grant or publishing content. The health check verifies the Worker endpoint, capability negotiation, PumpLite-origin CORS restriction, configured image/JSON upload authorization gates, and challenge/issue service-binding availability through deliberately invalid fail-closed requests. This provides an operational signal for Cloudflare/service-binding configuration while keeping provider secrets server-side.
+
+
+## Base privileged-action provenance
+
+PumpLite now audits the historical transaction provenance for factory creation and Base V2 privileged actions. Creation transactions are matched to the event creator and active factory calldata. Controller-only Mayhem/support actions and creator-only inventory/lock actions are matched to each market's immutable roles, transaction sender/target, decoded function input, successful receipt and emitted event parameters. This is a read-only provenance check; it does not infer whether a wallet owner intended an action or whether a privileged wallet has been compromised.

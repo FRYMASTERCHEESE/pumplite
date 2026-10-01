@@ -135,3 +135,8 @@ The `PLITE DEX health` workflow confirms that the published PLITE/WETH external 
 ## Metadata infrastructure monitoring
 
 The `Metadata infrastructure health` workflow probes only public/fail-closed routes. It confirms exact-origin behavior, public capability negotiation, that upload relays remain authorization-gated, and that challenge/issue requests reach the configured internal guard path. The verifier intentionally never obtains a valid grant or uploads a file, so it does not consume Pinata quota and cannot prove upstream pinning availability, account quota, or long-term IPFS persistence. Those remain external operational dependencies.
+
+
+## Privileged-action provenance monitoring
+
+The `Base privileged actions` workflow independently checks transaction sender, target, decoded calldata, successful receipt and emitted event fields for V2 creation and controller/creator-only actions. This helps detect provenance drift or an unexpected privileged caller in recorded history. It does not establish operational custody security for the controller/treasury/creator wallets and cannot determine whether a valid-key transaction was authorized by the human owner; wallet security remains an operational responsibility.

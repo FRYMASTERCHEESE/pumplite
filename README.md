@@ -229,3 +229,10 @@ The `PLITE DEX health` GitHub workflow runs this public read-only verification a
 `pnpm verify:metadata-health` checks the live PumpLite metadata service without creating an authorization grant or uploading content. It verifies the Worker health endpoint, extended-metadata capability negotiation, exact-origin CORS enforcement, the image/JSON upload routes' authorization gate, and the challenge/issue service binding using deliberately invalid requests that must fail closed with the reviewed status.
 
 A 401 from the unauthenticated upload probes is intentional: it confirms the public relay is configured while refusing an upload without a short-lived grant. The challenge/issue probes similarly use invalid empty requests and must reject them; no wallet signature is requested. The `Metadata infrastructure health` GitHub workflow runs after relevant client/Worker changes, manually, and daily. It does not expose provider secrets, consume a valid upload grant, pin content or spend ETH.
+
+
+## Base privileged-action provenance
+
+`pnpm verify:base-privileged-actions` audits the transaction provenance behind Base V2 market creation and privileged controller/creator events. Each `MarketCreatedV2` transaction must come from the event's creator, target the active factory and decode to `createMarketV2`. Each `MayhemChanged` and `MarketSupported` transaction must come from the market's immutable Mayhem controller and decode to the matching controller function. Each `InventoryMinted` and `MintingLocked` transaction must come from the immutable creator and decode to the matching creator function. Support transaction ETH value and event parameters are cross-checked, and every audited receipt must have succeeded.
+
+The `Base privileged actions` workflow runs this public read-only audit after relevant V2 changes, manually, and daily. It does not sign or submit a transaction and does not prove that the controller/creator wallets themselves are uncompromised; it proves that recorded privileged actions came from the roles the deployed contracts recognize.
