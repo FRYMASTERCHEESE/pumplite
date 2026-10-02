@@ -1,4 +1,4 @@
-﻿#![no_std]
+#![no_std]
 
 use pinocchio::{
     cpi::{Seed, Signer},
@@ -17,7 +17,7 @@ use pinocchio_token::instructions::{
     Transfer as TokenTransfer,
 };
 
-program_entrypoint!(process_instruction);
+program_entrypoint!(process_instruction, 4);
 no_allocator!();
 nostd_panic_handler!();
 
