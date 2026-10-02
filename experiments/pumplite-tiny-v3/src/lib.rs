@@ -6,7 +6,6 @@ use pinocchio::{
     no_allocator,
     nostd_panic_handler,
     program_entrypoint,
-    sysvars::{clock::Clock, Sysvar},
     AccountView,
     Address,
     ProgramResult,
@@ -19,26 +18,23 @@ program_entrypoint!(process_instruction, 6);
 no_allocator!();
 nostd_panic_handler!();
 
-// PumpLite economics.
 const FEE_BPS: u64 = 25;
 const BPS: u64 = 10_000;
 const SUPPLY: u64 = 1_000_000_000_000_000;
 const VIRTUAL_NATIVE: u64 = 30_000_000_000;
 const DECIMALS: u8 = 6;
 
-// The market account always keeps this SOL floor.
-// It is excluded from curve liquidity.
-const MARKET_FLOOR: u64 = 700_000;
+// 64-byte market state:
+// [0..32]  mint
+// [32..64] exact vault
+const MARKET_STATE_LEN: usize = 64;
 
-// Fixed PDA bump.
-//
-// PumpLite's frontend will generate a mint for which the two required
-// fixed-bump PDAs are valid. This removes canonical-bump search code
-// from every on-chain transaction.
+// Fixed amount that always remains in the market account.
+// Current 64-byte account rent is below this amount.
+const MARKET_FLOOR: u64 = 1_000_000;
+
 const FIXED_BUMP: [u8; 1] = [255];
-
 const MARKET_SEED: &[u8] = b"market";
-const VAULT_SEED: &[u8] = b"vault";
 
 // BNpFPPuy2h12dryy4dayemjA4YS17ccVaF82jBDuiwct
 const TREASURY: [u8; 32] = [
@@ -50,10 +46,9 @@ const TREASURY: [u8; 32] = [
 
 const ERR_QUOTE: u32 = 6000;
 const ERR_SLIPPAGE: u32 = 6001;
-const ERR_EXPIRED: u32 = 6002;
-const ERR_ACCOUNT: u32 = 6003;
-const ERR_BACKING: u32 = 6004;
-const ERR_OVERFLOW: u32 = 6005;
+const ERR_ACCOUNT: u32 = 6002;
+const ERR_BACKING: u32 = 6003;
+const ERR_OVERFLOW: u32 = 6004;
 
 #[inline(always)]
 fn err(code: u32) -> ProgramError {
@@ -128,7 +123,11 @@ fn quote_buy(
         .and_then(|v| v.checked_add(net))
         .ok_or(err(ERR_OVERFLOW))?;
 
-    let output = mul_div(tokens, net, denominator)?;
+    let output = mul_div(
+        tokens,
+        net,
+        denominator,
+    )?;
 
     if output == 0 || output >= tokens {
         return Err(err(ERR_QUOTE));
@@ -172,18 +171,8 @@ fn quote_sell(
     Ok((gross, fee(gross)?))
 }
 
-// Validate a legacy SPL mint without pulling Anchor account machinery in.
-//
-// Legacy SPL Mint layout:
-// mint authority COption: 0..36
-// supply:                 36..44
-// decimals:               44
-// initialized:            45
-// freeze authority:       46..82
 #[inline(always)]
-fn check_mint(
-    mint: &AccountView,
-) -> ProgramResult {
+fn check_mint(mint: &AccountView) -> ProgramResult {
     if !mint.owned_by(&pinocchio_token::ID) {
         return Err(ProgramError::IncorrectProgramId);
     }
@@ -194,21 +183,13 @@ fn check_mint(
         return Err(ProgramError::InvalidAccountData);
     }
 
-    // Mint authority must be None.
-    if data[0] != 0
-        || data[1] != 0
-        || data[2] != 0
-        || data[3] != 0
-    {
+    // Mint authority None.
+    if data[0..4] != [0, 0, 0, 0] {
         return Err(err(ERR_ACCOUNT));
     }
 
-    // Freeze authority must be None.
-    if data[46] != 0
-        || data[47] != 0
-        || data[48] != 0
-        || data[49] != 0
-    {
+    // Freeze authority None.
+    if data[46..50] != [0, 0, 0, 0] {
         return Err(err(ERR_ACCOUNT));
     }
 
@@ -216,8 +197,8 @@ fn check_mint(
         return Err(err(ERR_ACCOUNT));
     }
 
-    // Burning tokens is allowed, but the supply can never exceed
-    // PumpLite's original fixed supply.
+    // Supply may fall through user burns but must never exceed
+    // the original fixed PumpLite supply.
     if read_u64(&data, 36)? > SUPPLY {
         return Err(err(ERR_ACCOUNT));
     }
@@ -225,13 +206,6 @@ fn check_mint(
     Ok(())
 }
 
-// Validate a legacy SPL token account and return its real balance.
-//
-// Legacy SPL TokenAccount:
-// mint:    0..32
-// owner:  32..64
-// amount: 64..72
-// state:  108
 #[inline(always)]
 fn token_amount(
     account: &AccountView,
@@ -248,15 +222,15 @@ fn token_amount(
         return Err(ProgramError::InvalidAccountData);
     }
 
-    if data.get(0..32) != Some(mint.as_ref()) {
+    if &data[0..32] != mint.as_ref() {
         return Err(err(ERR_ACCOUNT));
     }
 
-    if data.get(32..64) != Some(owner.as_ref()) {
+    if &data[32..64] != owner.as_ref() {
         return Err(err(ERR_ACCOUNT));
     }
 
-    // Initialized, and not frozen.
+    // Initialized; frozen accounts are rejected.
     if data[108] != 1 {
         return Err(err(ERR_ACCOUNT));
     }
@@ -264,37 +238,6 @@ fn token_amount(
     read_u64(&data, 64)
 }
 
-#[inline(always)]
-fn check_deadline(
-    minimum_output: u64,
-    deadline: i64,
-) -> ProgramResult {
-    if minimum_output == 0 {
-        return Err(err(ERR_SLIPPAGE));
-    }
-
-    let now = Clock::get()?.unix_timestamp;
-
-    let max = now
-        .checked_add(300)
-        .ok_or(err(ERR_OVERFLOW))?;
-
-    if deadline < now || deadline > max {
-        return Err(err(ERR_EXPIRED));
-    }
-
-    Ok(())
-}
-
-// Validate all accounts shared by BUY and SELL.
-//
-// Accounts:
-// 0 trader
-// 1 market PDA
-// 2 mint
-// 3 canonical PumpLite vault PDA
-// 4 trader's token account
-// 5 fixed PumpLite treasury
 #[inline(always)]
 fn check_accounts(
     program_id: &Address,
@@ -313,55 +256,45 @@ fn check_accounts(
         return Err(err(ERR_ACCOUNT));
     }
 
-    if !market.owned_by(program_id) || market.data_len() != 0 {
+    if !market.owned_by(program_id) {
         return Err(err(ERR_ACCOUNT));
     }
 
-    let expected_market = Address::derive_address(
-        &[
-            MARKET_SEED,
-            mint.address().as_ref(),
-        ],
-        Some(FIXED_BUMP[0]),
-        program_id,
-    );
+    // Market identity is written once by init_market.
+    // This replaces runtime SHA-256 PDA derivation.
+    {
+        let state = market.try_borrow()?;
 
-    if market.address() != &expected_market {
-        return Err(ProgramError::InvalidSeeds);
-    }
+        if state.len() != MARKET_STATE_LEN {
+            return Err(err(ERR_ACCOUNT));
+        }
 
-    let expected_vault = Address::derive_address(
-        &[
-            VAULT_SEED,
-            mint.address().as_ref(),
-        ],
-        Some(FIXED_BUMP[0]),
-        program_id,
-    );
+        if &state[0..32] != mint.address().as_ref() {
+            return Err(err(ERR_ACCOUNT));
+        }
 
-    if vault.address() != &expected_vault {
-        return Err(ProgramError::InvalidSeeds);
+        if &state[32..64] != vault.address().as_ref() {
+            return Err(err(ERR_ACCOUNT));
+        }
     }
 
     check_mint(mint)?;
 
-    // Real vault balance is the curve's token reserve.
+    // Exact stored vault must contain this mint and be owned by market.
     let tokens = token_amount(
         vault,
         mint.address(),
         market.address(),
     )?;
 
-    // Trader may use any initialized legacy SPL token account,
-    // but it must belong to this trader and this exact mint.
+    // Trader account must contain this mint and be owned by signer.
     token_amount(
         trader_tokens,
         mint.address(),
         trader.address(),
     )?;
 
-    // Real PDA lamports are the curve's native reserve.
-    // MARKET_FLOOR can never be sold.
+    // Actual SOL is actual curve backing.
     let native = market
         .lamports()
         .checked_sub(MARKET_FLOOR)
@@ -389,12 +322,10 @@ fn buy(
 
     let input = read_u64(data, 0)?;
     let minimum_output = read_u64(data, 8)?;
-    let deadline = read_u64(data, 16)? as i64;
 
-    check_deadline(
-        minimum_output,
-        deadline,
-    )?;
+    if minimum_output == 0 {
+        return Err(err(ERR_SLIPPAGE));
+    }
 
     let (native, tokens) = check_accounts(
         program_id,
@@ -420,7 +351,6 @@ fn buy(
         .checked_sub(fees)
         .ok_or(err(ERR_OVERFLOW))?;
 
-    // Fee goes to PumpLite's fixed treasury.
     SolTransfer {
         from: trader,
         to: treasury,
@@ -428,7 +358,6 @@ fn buy(
     }
     .invoke()?;
 
-    // Real curve liquidity goes into the market PDA.
     SolTransfer {
         from: trader,
         to: market,
@@ -436,7 +365,9 @@ fn buy(
     }
     .invoke()?;
 
-    // Release real inventory from the canonical vault.
+    // This CPI also proves that market is the expected market PDA:
+    // the SPL Token program accepts the transfer only if the
+    // invoke_signed seeds produce market.address().
     let seeds = [
         Seed::from(MARKET_SEED),
         Seed::from(mint.address().as_ref()),
@@ -476,12 +407,10 @@ fn sell(
 
     let input = read_u64(data, 0)?;
     let minimum_output = read_u64(data, 8)?;
-    let deadline = read_u64(data, 16)? as i64;
 
-    check_deadline(
-        minimum_output,
-        deadline,
-    )?;
+    if minimum_output == 0 {
+        return Err(err(ERR_SLIPPAGE));
+    }
 
     let (native, tokens) = check_accounts(
         program_id,
@@ -507,7 +436,8 @@ fn sell(
         return Err(err(ERR_SLIPPAGE));
     }
 
-    // Return sold tokens to the real inventory first.
+    // Tokens first. Transaction atomicity rolls this back if
+    // any later operation fails.
     TokenTransfer {
         multisig_signers: &[] as &[&AccountView],
         from: trader_tokens,
@@ -517,9 +447,7 @@ fn sell(
     }
     .invoke()?;
 
-    // The market account is owned by PumpLite, so PumpLite can debit
-    // its lamports directly. gross <= native guarantees MARKET_FLOOR
-    // remains untouched.
+    // gross <= native means MARKET_FLOOR remains untouched.
     let market_after = market
         .lamports()
         .checked_sub(gross)
@@ -552,16 +480,8 @@ fn process_instruction(
         .ok_or(ProgramError::InvalidInstructionData)?;
 
     match *tag {
-        0 => buy(
-            program_id,
-            accounts,
-            data,
-        ),
-        1 => sell(
-            program_id,
-            accounts,
-            data,
-        ),
+        0 => buy(program_id, accounts, data),
+        1 => sell(program_id, accounts, data),
         _ => Err(ProgramError::InvalidInstructionData),
     }
 }
@@ -579,119 +499,86 @@ mod tests {
     }
 
     #[test]
-    fn zero_trades_fail() {
-        assert!(quote_buy(0, SUPPLY, 0).is_err());
-        assert!(quote_sell(1, SUPPLY, 0).is_err());
-    }
-
-    #[test]
-    fn round_trip_cannot_profit() {
+    fn round_trip_preserves_inventory_and_cannot_profit() {
         for amount in [
             1_000u64,
             1_000_000,
             1_000_000_000,
             50_000_000_000,
         ] {
-            let (bought, buy_fee) =
+            let (out, buy_fee) =
                 quote_buy(0, SUPPLY, amount).unwrap();
 
-            let native =
-                amount - buy_fee;
-
-            let tokens =
-                SUPPLY - bought;
+            let reserve = amount - buy_fee;
 
             let (gross, sell_fee) =
                 quote_sell(
-                    native,
-                    tokens,
-                    bought,
+                    reserve,
+                    SUPPLY - out,
+                    out,
                 )
                 .unwrap();
 
-            let returned =
-                gross - sell_fee;
+            assert!(gross <= reserve);
+            assert!(gross - sell_fee < amount);
+            assert_eq!((SUPPLY - out) + out, SUPPLY);
 
-            assert!(returned < amount);
-            assert!(gross <= native);
-            assert_eq!(
-                tokens + bought,
-                SUPPLY
-            );
+            let k_before =
+                (VIRTUAL_NATIVE as u128) *
+                SUPPLY as u128;
+
+            let k_after =
+                (VIRTUAL_NATIVE as u128 + reserve as u128) *
+                (SUPPLY - out) as u128;
+
+            assert!(k_after >= k_before);
         }
     }
 
     #[test]
-    fn backing_and_overflow_fail_closed() {
-        assert!(
-            quote_sell(
-                0,
-                SUPPLY,
-                1
-            )
-            .is_err()
-        );
-
-        assert!(
-            quote_buy(
-                u64::MAX,
-                SUPPLY,
-                1
-            )
-            .is_err()
-        );
-
-        assert!(
-            quote_sell(
-                1,
-                u64::MAX,
-                1
-            )
-            .is_err()
-        );
+    fn rejects_unbacked_and_overflow() {
+        assert!(quote_sell(0, SUPPLY, 1).is_err());
+        assert!(quote_buy(u64::MAX, SUPPLY, 1).is_err());
+        assert!(quote_buy(0, SUPPLY, 0).is_err());
+        assert!(quote_sell(1, u64::MAX, 1).is_err());
     }
 
     #[test]
-    fn many_trades_preserve_inventory() {
+    fn many_trades_conserve_supply_and_backing() {
         let mut native = 0u64;
         let mut tokens = SUPPLY;
         let mut held = 0u64;
 
-        for i in 1..=500u64 {
-            let input =
-                i * 7_919 + 10_000;
+        for i in 1..=1000u64 {
+            let input = i * 7919 + 10000;
 
-            let (out, fees) =
-                quote_buy(
-                    native,
-                    tokens,
-                    input,
-                )
-                .unwrap();
+            let (out, f) =
+                quote_buy(native, tokens, input).unwrap();
 
-            native += input - fees;
+            native += input - f;
             tokens -= out;
             held += out;
+
+            let old_k =
+                (VIRTUAL_NATIVE as u128 + native as u128) *
+                tokens as u128;
 
             let sold = held / 3;
 
             if sold != 0 {
                 let (gross, _) =
-                    quote_sell(
-                        native,
-                        tokens,
-                        sold,
-                    )
-                    .unwrap();
+                    quote_sell(native, tokens, sold).unwrap();
 
                 native -= gross;
                 tokens += sold;
                 held -= sold;
             }
 
-            assert_eq!(
-                tokens + held,
-                SUPPLY
+            assert_eq!(tokens + held, SUPPLY);
+
+            assert!(
+                (VIRTUAL_NATIVE as u128 + native as u128) *
+                tokens as u128 >= old_k
             );
         }
     }
