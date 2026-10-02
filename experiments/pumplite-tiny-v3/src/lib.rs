@@ -317,29 +317,27 @@ fn check_accounts(
         return Err(err(ERR_ACCOUNT));
     }
 
-    let expected_market = Address::create_program_address(
+    let expected_market = Address::derive_address(
         &[
             MARKET_SEED,
             mint.address().as_ref(),
-            &FIXED_BUMP,
         ],
+        Some(FIXED_BUMP[0]),
         program_id,
-    )
-    .map_err(|_| ProgramError::InvalidSeeds)?;
+    );
 
     if market.address() != &expected_market {
         return Err(ProgramError::InvalidSeeds);
     }
 
-    let expected_vault = Address::create_program_address(
+    let expected_vault = Address::derive_address(
         &[
             VAULT_SEED,
             mint.address().as_ref(),
-            &FIXED_BUMP,
         ],
+        Some(FIXED_BUMP[0]),
         program_id,
-    )
-    .map_err(|_| ProgramError::InvalidSeeds)?;
+    );
 
     if vault.address() != &expected_vault {
         return Err(ProgramError::InvalidSeeds);
