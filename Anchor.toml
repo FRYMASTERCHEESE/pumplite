@@ -8,7 +8,7 @@ skip-lint = false
 
 # Final program identity selected locally; not yet deployed.
 [programs.localnet]
-pumplite = "Y7kugrkxDgMV8GxrkcY95LzCPMvmzcCfhYzhuCWrGd9"
+pumplite = "3CHqrdJzwWQj1QikCzpjBhC8iQ3paaMtD1x9kwoW1rku"
 
 # Required by the Anchor CLI parser for IDL generation. No wallet exists at this path.
 # Verification never reads it, starts a validator, or uses the provider's RPC.
