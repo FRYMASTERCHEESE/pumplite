@@ -1,4 +1,4 @@
-﻿name: PumpLite tiny sBPFv3 benchmark
+name: PumpLite tiny sBPFv3 benchmark
 
 on:
   push:
@@ -52,7 +52,14 @@ jobs:
           cargo generate-lockfile \
             --manifest-path experiments/pumplite-tiny-v3/Cargo.toml
 
-      - name: Build tiny PumpLite core for sBPFv3
+      - name: Test bonding curve
+        shell: bash
+        run: |
+          cargo test \
+            --manifest-path experiments/pumplite-tiny-v3/Cargo.toml \
+            --lib
+
+      - name: Build real PumpLite trade core for sBPFv3
         shell: bash
         run: |
           set -euo pipefail
@@ -82,48 +89,78 @@ jobs:
           hash="$(sha256sum "$so" | awk '{print $1}')"
 
           baseline=239976
-          target=14000
+
+          # At the planned final rent rate:
+          # (program bytes + 128) * 696 lamports
+          #
+          # 14,239 bytes => 9,999,432 lamports
+          # 14,240 bytes => 10,000,128 lamports
+          target=14239
 
           saved=$((baseline - size))
+          bond_lamports=$(((size + 128) * 696))
 
-          printf 'Binary: %s\n' "$so"
-          printf 'Size: %s bytes\n' "$size"
-          printf 'Previous optimized Anchor build: %s bytes\n' "$baseline"
-          printf 'Bytes removed: %s\n' "$saved"
-          printf 'Hard target: <= %s bytes\n' "$target"
-          printf 'SHA-256: %s\n' "$hash"
+          bond_sol="$(awk \
+            -v l="$bond_lamports" \
+            'BEGIN { printf "%.9f", l / 1000000000 }')"
+
+          echo ""
+          echo "========================================="
+          echo "PUMPLITE REAL TRADE CORE"
+          echo "========================================="
+          echo "Binary: $so"
+          echo "Size: $size bytes"
+          echo "Previous Anchor build: $baseline bytes"
+          echo "Bytes removed: $saved"
+          echo "0.01 SOL byte ceiling: $target bytes"
+          echo "Projected final-rate storage bond: $bond_sol SOL"
+          echo "SHA-256: $hash"
+          echo "========================================="
 
           {
-            echo "## PumpLite tiny sBPFv3 benchmark"
+            echo "## PumpLite real sBPFv3 trade core"
             echo ""
             echo "- Binary size: **${size} bytes**"
-            echo "- Previous optimized Anchor build: **${baseline} bytes**"
+            echo "- Previous Anchor build: **${baseline} bytes**"
             echo "- Bytes removed: **${saved} bytes**"
-            echo "- 0.01-SOL-class target: **<= ${target} bytes**"
+            echo "- Maximum for <0.01 SOL at 696 lamports/byte: **${target} bytes**"
+            echo "- Projected final-rate storage bond: **${bond_sol} SOL**"
             echo "- SHA-256: \`${hash}\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
           echo "size=$size" >> "$GITHUB_OUTPUT"
           echo "so=$so" >> "$GITHUB_OUTPUT"
+          echo "bond_sol=$bond_sol" >> "$GITHUB_OUTPUT"
 
           if [ "$size" -le "$target" ]; then
-            echo "PASS - CORE IS WITHIN 14 KB TARGET"
+            echo "PASS - UNDER 0.01 SOL SIZE CEILING"
           else
-            echo "CORE ABOVE 14 KB - continue slimming"
+            echo "FAIL - ABOVE 0.01 SOL SIZE CEILING"
           fi
 
       - name: Upload benchmark binary
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: pumplite-tiny-v3-benchmark
+          name: pumplite-real-trade-core-v3
           retention-days: 30
           if-no-files-found: error
           path: |
             target/tiny-v3-deploy/*.so
 
-# Benchmark only.
+      - name: Enforce 0.01 SOL byte ceiling
+        shell: bash
+        run: |
+          size="${{ steps.benchmark.outputs.size }}"
+
+          if [ "$size" -gt 14239 ]; then
+            echo "FAIL - ${size} bytes exceeds 14,239-byte ceiling"
+            exit 1
+          fi
+
+          echo "PASS - ${size} bytes stays below 0.01 SOL storage ceiling"
+
+# Benchmark/test only.
 # No RPC.
 # No wallet.
-# No signing key.
 # No Mainnet transaction.
 # No deployment.
