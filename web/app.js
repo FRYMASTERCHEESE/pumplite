@@ -114,7 +114,22 @@ function controls() {
       ? 'No creator allocation. Choose Fixed / No Mint or a permanently capped Mintable supply.'
       : 'No creator allocation. All supply starts in the market vault. No future minting.';
 
-  $('v2-supply-mode').disabled = state.busy || !baseModern;
+  if (
+    state.chain === 'solana' &&
+    state.config?.solana?.clientVersion === 3
+  ) {
+    $('create-supply-fact').textContent =
+      '1 billion';
+
+    $('create-supply-mode-fact').textContent =
+      'Fixed hard maximum';
+
+    $('create-supply-help').textContent =
+      'No creator allocation. Circulating supply starts at 0. Buys mint only through the PumpLite market PDA; sells burn tokens. Hard maximum: 1 billion. No freeze authority.';
+  }
+
+  $('v2-supply-mode').disabled =
+    state.busy || !baseModern;
   $('v2-initial-supply').disabled = state.busy || !baseModern;
   $('v2-initial-mayhem').disabled = state.busy || !baseModern;
 
@@ -187,7 +202,16 @@ function controls() {
     !state.wallet ? 'Tap Publish. PumpLite will request access to your Base wallet, then ask for authorization signatures. These signatures do not spend ETH.' :
     'Ready to publish with your connected wallet. Authorization signatures do not spend ETH.';
   $('chain').disabled = state.busy; $('connect').disabled = state.busy;
-  $('create').disabled = state.busy || !transactionConfigEnabled(state.config, state.chain);
+  $('create').disabled =
+    state.busy ||
+    !transactionConfigEnabled(
+      state.config,
+      state.chain
+    ) ||
+    (
+      state.chain === 'solana' &&
+      !state.wallet
+    );
   $('trade').disabled = !writable() || !state.quote;
   $('create-action-status').textContent =
     state.chain !== 'base' || !transactionConfigEnabled(state.config, state.chain)
@@ -195,7 +219,25 @@ function controls() {
       : state.wallet
         ? 'Wallet connected: ' + state.wallet.slice(0, 6) + '…' + state.wallet.slice(-4) + '. Create coin will open the optional first-buy step.'
         : 'Create coin is ready. If needed, tapping it will request access to your Base wallet first.';
-  $('get-quote').disabled = !ready() || !state.market || state.busy;
+  if (state.chain === 'solana') {
+    $('create-action-status').textContent =
+      !transactionConfigEnabled(
+        state.config,
+        'solana'
+      )
+        ? 'Tiny Solana client prepared. Token creation remains locked until the Mainnet program deployment is verified.'
+        : state.wallet
+          ? 'Solana wallet connected. Create coin will open the optional first-buy step.'
+          : 'Connect your Solana wallet first, then Create coin.';
+
+    $('creation-review').textContent =
+      'Check the name, ticker and metadata first. PumpLite charges 0% to create; Solana network fees and account rent still apply. Every transaction requires wallet approval.';
+  }
+
+  $('get-quote').disabled =
+    !ready() ||
+    !state.market ||
+    state.busy;
   $('refresh').disabled = !ready() || state.busy; $('refresh-market').disabled = !ready() || state.busy;
   $('home-refresh-live').disabled = !ready() || state.busy;
   $('more').disabled = state.busy; $('verified-only').disabled = state.busy;
@@ -824,7 +866,7 @@ async function getAdapter() {
   if (chain === 'solana') { diagnostic('Loading Solana SDK…'); status('Loading Solana wallet support…'); }
   const module =
     chain === 'solana'
-      ? await import('./adapters/solana.js')
+      ? await import('./adapters/solana-tiny.js')
       : state.config?.base?.contractVersion === 3
         ? await import('./adapters/base-v3.js')
         : state.config?.base?.contractVersion === 2
@@ -1599,7 +1641,14 @@ function renderMarket(m) {
     m.id;
 
   const c = state.config[state.chain];
-  $('market-link').href = c.explorer + (state.chain === 'solana' ? '/account/' : '/address/') + m.id;
+  $('market-link').href =
+    c.explorer +
+    (
+      state.chain === 'solana'
+        ? '/account/' +
+          (m.marketAddress || m.id)
+        : '/address/' + m.id
+    );
   $('token-link').href = c.explorer + '/token/' + m.token;
   $('amount-label').textContent = $('side').value === 'buy' ? 'Amount (' + m.unit + ')' : 'Amount (' + m.symbol + ')';
   $('trade-quick-buy-title').textContent = 'Buy ' + m.symbol + ' simply';
@@ -1744,7 +1793,10 @@ async function route() {
 function switchChain(chain) {
   state.adapter?.disconnect();
   state.chain = chain; state.epoch++; state.adapter = null; state.wallet = null; state.market = null; state.next = null; state.markets=[]; state.registry=null; state.platformStats=null;
-  $('create-network').textContent=chain==='base'?'Base Mainnet · ETH pair':'Solana Mainnet · deployment pending';
+  $('create-network').textContent =
+    chain === 'base'
+      ? 'Base Mainnet · ETH pair'
+      : 'Solana Mainnet · SOL pair';
   $('chain').value = chain; $('connect').textContent = 'Connect wallet';
   const configured = ready();
   const writes = transactionConfigEnabled(state.config, chain);
@@ -2161,6 +2213,36 @@ function creationData() {
     uri: $('uri').value.trim()
   };
 
+  if (state.chain === 'solana') {
+    validateMetadata(
+      data.name,
+      data.symbol,
+      data.uri
+    );
+
+    const extras =
+      metadataExtras(
+        projectLinks(),
+        $('banner-uri').value.trim()
+      );
+
+    if (
+      !data.uri &&
+      (
+        $('description').value ||
+        $('metadata-image').files?.length ||
+        Object.keys(extras).length ||
+        $('image-uri').value
+      )
+    ) {
+      throw Error(
+        'Publish image + metadata to IPFS first. The Published metadata URI must be filled before this token can be created.'
+      );
+    }
+
+    return data;
+  }
+
   const creationVersion =
     Number(state.config?.base?.contractVersion || 0);
 
@@ -2252,10 +2334,51 @@ function creationData() {
 function updateInitialBuySymbol() {
   $('initial-buy-symbol').textContent =
     $('symbol').value.trim() || 'TOKEN';
+
+  const native =
+    state.chain === 'solana'
+      ? 'SOL'
+      : 'ETH';
+
+  const unit =
+    $('initial-buy-dialog')
+      .querySelector(
+        '.initial-buy-amount strong'
+      );
+
+  if (unit) {
+    unit.textContent = native;
+  }
+
+  const label =
+    $('initial-buy-dialog')
+      .querySelector(
+        'label[for="initial-buy-eth"]'
+      );
+
+  if (label) {
+    label.textContent =
+      'Optional first buy amount in ' +
+      native;
+  }
+
+  const intro =
+    $('initial-buy-dialog')
+      .querySelector('p.muted');
+
+  if (intro) {
+    intro.textContent =
+      'Use 0 ' +
+      native +
+      ' to create only. Enter more than 0 ' +
+      native +
+      ' if you also want your connected wallet to buy the new token after creation.';
+  }
 }
 
 let initialBuyRates = null;
 let initialBuyRatesAt = 0;
+let initialBuyRatesNative = null;
 let initialBuyEstimateSequence = 0;
 
 function formatInitialBuyFiat(value, currency) {
@@ -2269,14 +2392,18 @@ function formatInitialBuyFiat(value, currency) {
   ).format(value);
 }
 
-async function loadInitialBuyRates() {
+async function loadInitialBuyRates(native) {
   if (
     initialBuyRates &&
+    initialBuyRatesNative === native &&
     Date.now() - initialBuyRatesAt < 60_000
-  ) return initialBuyRates;
+  ) {
+    return initialBuyRates;
+  }
 
   const response = await fetch(
-    'https://api.coinbase.com/v2/exchange-rates?currency=ETH',
+    'https://api.coinbase.com/v2/exchange-rates?currency=' +
+      encodeURIComponent(native),
     {
       cache: 'no-store',
       credentials: 'omit',
@@ -2285,15 +2412,18 @@ async function loadInitialBuyRates() {
   );
 
   if (!response.ok) {
-    throw Error('Live fiat estimate unavailable');
+    throw Error(
+      'Live fiat estimate unavailable'
+    );
   }
 
   const value = await response.json();
-  const nzd = Number(value?.data?.rates?.NZD);
-  const usd = Number(value?.data?.rates?.USD);
-  const btc = Number(value?.data?.rates?.BTC);
-  const sol = Number(value?.data?.rates?.SOL);
-  const doge = Number(value?.data?.rates?.DOGE);
+
+  const nzd =
+    Number(value?.data?.rates?.NZD);
+
+  const usd =
+    Number(value?.data?.rates?.USD);
 
   if (
     !Number.isFinite(nzd) ||
@@ -2301,61 +2431,111 @@ async function loadInitialBuyRates() {
     nzd <= 0 ||
     usd <= 0
   ) {
-    throw Error('Live fiat estimate unavailable');
+    throw Error(
+      'Live fiat estimate unavailable'
+    );
   }
 
   initialBuyRates = {
     NZD: nzd,
-    USD: usd,
-    BTC: btc,
-    SOL: sol,
-    DOGE: doge
+    USD: usd
   };
+
+  initialBuyRatesNative = native;
   initialBuyRatesAt = Date.now();
+
   return initialBuyRates;
 }
 
 async function updateInitialBuyEstimate() {
-  const sequence = ++initialBuyEstimateSequence;
-  const text = $('initial-buy-eth').value.trim() || '0';
-  const amount = Number(text);
-  const currency = $('initial-buy-currency').value;
-  const output = $('initial-buy-fiat-estimate');
+  const sequence =
+    ++initialBuyEstimateSequence;
+
+  const text =
+    $('initial-buy-eth')
+      .value
+      .trim() || '0';
+
+  const amount =
+    Number(text);
+
+  const currency =
+    $('initial-buy-currency')
+      .value;
+
+  const output =
+    $('initial-buy-fiat-estimate');
+
+  const native =
+    state.chain === 'solana'
+      ? 'SOL'
+      : 'ETH';
 
   $('initial-buy-submit').textContent =
-    Number.isFinite(amount) && amount > 0
+    Number.isFinite(amount) &&
+    amount > 0
       ? 'Create coin + buy'
       : 'Create coin only';
 
-  if (!Number.isFinite(amount) || amount < 0) {
+  if (
+    !Number.isFinite(amount) ||
+    amount < 0
+  ) {
     output.textContent =
-      'Enter a valid ETH amount. The transaction itself is always in ETH.';
+      'Enter a valid ' +
+      native +
+      ' amount.';
     return;
   }
 
   if (amount === 0) {
     output.textContent =
-      '0 ETH · creation only. Base gas still applies.';
+      '0 ' +
+      native +
+      ' · creation only. Network fees still apply.';
     return;
   }
 
   output.textContent =
-    'Loading approximate ' + currency + ' value…';
+    'Loading approximate ' +
+    currency +
+    ' value…';
 
   try {
-    const rates = await loadInitialBuyRates();
-    if (sequence !== initialBuyEstimateSequence) return;
+    const rates =
+      await loadInitialBuyRates(native);
+
+    if (
+      sequence !==
+      initialBuyEstimateSequence
+    ) {
+      return;
+    }
 
     output.textContent =
       text +
-      ' ETH ≈ ' +
-      formatInitialBuyFiat(amount * rates[currency], currency) +
-      ' (approximate). The wallet transaction is still in ETH.';
+      ' ' +
+      native +
+      ' ≈ ' +
+      formatInitialBuyFiat(
+        amount * rates[currency],
+        currency
+      ) +
+      ' (approximate). The wallet transaction is still in ' +
+      native +
+      '.';
   } catch {
-    if (sequence !== initialBuyEstimateSequence) return;
+    if (
+      sequence !==
+      initialBuyEstimateSequence
+    ) {
+      return;
+    }
 
     output.textContent =
-      'Fiat estimate is temporarily unavailable. The ETH amount is unchanged.';
+      'Fiat estimate is temporarily unavailable. The ' +
+      native +
+      ' amount is unchanged.';
   }
 }
 
@@ -2642,9 +2822,19 @@ $('create-form').addEventListener('submit', e => {
       creationData();
 
       if (!state.wallet) {
-        inline.textContent =
-          'Requesting access to your Base wallet…';
-        await connectBaseWalletFromGesture();
+        if (state.chain === 'base') {
+          inline.textContent =
+            'Requesting access to your Base wallet…';
+
+          await connectBaseWalletFromGesture();
+        } else {
+          inline.textContent =
+            'Connect your Solana wallet first.';
+
+          throw Error(
+            'Connect your Solana wallet first'
+          );
+        }
       }
 
       requireWrite();
@@ -2683,9 +2873,19 @@ $('initial-buy-form').addEventListener('submit', e => {
 
     try {
       if (!state.wallet) {
-        inline.textContent =
-          'Requesting access to your Base wallet…';
-        await connectBaseWalletFromGesture();
+        if (state.chain === 'base') {
+          inline.textContent =
+            'Requesting access to your Base wallet…';
+
+          await connectBaseWalletFromGesture();
+        } else {
+          inline.textContent =
+            'Connect your Solana wallet first.';
+
+          throw Error(
+            'Connect your Solana wallet first'
+          );
+        }
       }
 
       requireWrite();
@@ -2698,7 +2898,12 @@ $('initial-buy-form').addEventListener('submit', e => {
       const initialBuy =
         /^(?:0+)(?:\.0+)?$/.test(initialBuyText)
           ? 0n
-          : parseUnits(initialBuyText, 18);
+          : parseUnits(
+          initialBuyText,
+          state.chain === 'solana'
+            ? 9
+            : 18
+        );
 
       if (initialBuy < 0n) {
         throw Error(
@@ -2727,11 +2932,19 @@ $('initial-buy-form').addEventListener('submit', e => {
           await adapter.market(createdId);
 
         const q =
-          quoteBaseV2(
-            market,
-            'buy',
-            initialBuy
-          );
+          [2, 3].includes(
+            market.contractVersion
+          )
+            ? quoteBaseV2(
+                market,
+                'buy',
+                initialBuy
+              )
+            : quote(
+                market,
+                'buy',
+                initialBuy
+              );
 
         const min =
           minimumOutput(q.output, 100);
