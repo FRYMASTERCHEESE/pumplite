@@ -94,7 +94,7 @@ function gate(label, condition) {
 }
 
 /*
- * Steps 401-684:
+ * Steps 401-682:
  * Every tracked release/verification file plus the three files introduced
  * by this bundle must still exist as a regular file.
  */
@@ -112,7 +112,7 @@ for (const path of expectedFiles) {
 }
 
 /*
- * Steps 685-968:
+ * Steps 683-964:
  * Every inventory file must satisfy a conservative size policy.
  * .nojekyll is intentionally the one zero-byte tracked marker file.
  * Everything else must be non-empty and <= 25 MiB.
@@ -420,6 +420,26 @@ gate(
     /has not received an independent third-party smart-contract\/economic audit/i.test(
       securitySource
     )
+);
+
+gate(
+  'obsolete root PLITE icon remains excluded from verification inventory',
+  !expectedFiles.includes('plite-icon.svg')
+);
+
+gate(
+  'obsolete metadata cleanup script remains excluded from verification inventory',
+  !expectedFiles.includes('pumplite-mobile-metadata-fix.ps1')
+);
+
+gate(
+  'maintained published PLITE icon remains inventoried',
+  expectedFiles.includes('assets/plite-icon-48.svg')
+);
+
+gate(
+  'maintained source PLITE icon remains inventoried',
+  expectedFiles.includes('web/plite-icon-48.svg')
 );
 
 assert.equal(
