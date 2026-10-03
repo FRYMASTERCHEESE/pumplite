@@ -90,7 +90,7 @@ test('Base V2 frontend contains gated V2 features', async () => {
   assert.match(adapter, /personal_sign/);
   assert.match(html, /initial-buy-dialog/);
   assert.match(html, /initial-buy-eth/);
-  assert.match(html, /0% PumpLite creation fee/);
+  assert.match(html, /0 SOL PumpLite creator cost/);
   assert.match(html, /create-action-status/);
   assert.match(html, /initial-buy-currency/);
   assert.match(html, /initial-buy-fiat-estimate/);

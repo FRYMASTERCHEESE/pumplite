@@ -1377,6 +1377,136 @@ export function adapter(
       };
     },
 
+    async createFreeDraft({
+      name,
+      symbol,
+      uri
+    }) {
+      const owner =
+        await wallet();
+
+      if (
+        typeof selected?.signMessage !==
+        'function'
+      ) {
+        throw Error(
+          'Phantom message signing is required for free PumpLite creation'
+        );
+      }
+
+      const nonceBytes =
+        new Uint8Array(16);
+
+      crypto.getRandomValues(
+        nonceBytes
+      );
+
+      const nonce =
+        Buffer.from(
+          nonceBytes
+        ).toString('hex');
+
+      const createdAt =
+        Date.now();
+
+      const record = {
+        version: 1,
+        chain: 'solana',
+        programId:
+          program().toBase58(),
+        creator:
+          owner.toBase58(),
+        name,
+        symbol,
+        uri,
+        nonce,
+        createdAt
+      };
+
+      const canonical =
+        JSON.stringify(record);
+
+      const message =
+        'PumpLite Free Solana Launch\n' +
+        'version=1\n' +
+        canonical;
+
+      notify(
+        'Sign the free PumpLite launch message in Phantom. This is NOT a transaction and cannot spend SOL.'
+      );
+
+      const result =
+        await selected.signMessage(
+          enc.encode(message),
+          'utf8'
+        );
+
+      const rawSignature =
+        result?.signature ??
+        result;
+
+      let signature;
+
+      try {
+        signature =
+          Buffer.from(
+            rawSignature
+          );
+      } catch {
+        throw Error(
+          'Phantom returned an invalid launch signature'
+        );
+      }
+
+      if (
+        signature.length !== 64
+      ) {
+        throw Error(
+          'Phantom returned an invalid launch signature'
+        );
+      }
+
+      if (
+        result?.publicKey &&
+        !new PublicKey(
+          result.publicKey
+        ).equals(owner)
+      ) {
+        throw Error(
+          'Phantom signed with a different wallet'
+        );
+      }
+
+      const digest =
+        new Uint8Array(
+          await crypto.subtle.digest(
+            'SHA-256',
+            enc.encode(
+              canonical
+            )
+          )
+        );
+
+      const id =
+        Array.from(
+          digest,
+          byte =>
+            byte
+              .toString(16)
+              .padStart(2, '0')
+        ).join('');
+
+      return {
+        ...record,
+        id,
+        message,
+        signature:
+          signature.toString(
+            'base64'
+          )
+      };
+    },
+
     async create({
       name,
       symbol,

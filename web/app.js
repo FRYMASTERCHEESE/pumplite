@@ -227,13 +227,16 @@ function controls() {
   $('chain').disabled = state.busy; $('connect').disabled = state.busy;
   $('create').disabled =
     state.busy ||
-    !transactionConfigEnabled(
-      state.config,
-      state.chain
-    ) ||
     (
-      state.chain === 'solana' &&
-      !state.wallet
+      state.chain === 'solana'
+        ? (
+            !ready() ||
+            !state.wallet
+          )
+        : !transactionConfigEnabled(
+            state.config,
+            state.chain
+          )
     );
   $('trade').disabled = !writable() || !state.quote;
   $('create-action-status').textContent =
@@ -254,7 +257,7 @@ function controls() {
           : 'Connect Phantom first, then create your Pump Mainnet coin.';
 
     $('creation-review').textContent =
-      'Pump lists coin creation at 0 SOL platform fee. Solana rent and network fees can still apply. Pump protocol and creator fees apply to trades. PumpLite shows the transaction for Phantom approval before anything is sent.';
+      'PumpLite Solana creator cost is 0 SOL. Creating a launch uses a Phantom message signature only. No Solana transaction, rent payment or network fee is submitted by the creator.';
   }
 
   $('get-quote').disabled =
@@ -266,6 +269,16 @@ function controls() {
   $('more').disabled = state.busy; $('verified-only').disabled = state.busy;
   $('show-home').disabled=state.busy; $('show-create').disabled=state.busy; $('show-explore').disabled=state.busy; $('show-help').disabled=state.busy;
   for (const id of ['description','image-uri','banner-uri','website','twitter','telegram','discord','name','symbol','uri','side','amount','slippage','market-address','market-filter','market-sort','initial-buy-eth','initial-buy-currency','trade-display-amount','trade-display-currency','v3-support-amount']) $(id).disabled = state.busy;
+
+  if (
+    state.chain === 'solana'
+  ) {
+    $('initial-buy-eth').value =
+      '0';
+
+    $('initial-buy-eth').disabled =
+      true;
+  }
   $('trade-use-display').disabled =
     state.busy ||
     state.chain !== 'base' ||
@@ -2585,6 +2598,25 @@ async function updateInitialBuyEstimate() {
       ? 'SOL'
       : 'ETH';
 
+  if (
+    state.chain === 'solana'
+  ) {
+    $('initial-buy-eth').value =
+      '0';
+
+    $('initial-buy-eth').disabled =
+      true;
+
+    $('initial-buy-submit')
+      .textContent =
+      'Create for 0 SOL';
+
+    output.textContent =
+      '0 SOL · creator pays $0. Phantom will request a message signature only; no transaction is submitted.';
+
+    return;
+  }
+
   $('initial-buy-submit').textContent =
     Number.isFinite(amount) &&
     amount > 0
@@ -2951,7 +2983,13 @@ $('create-form').addEventListener('submit', e => {
         }
       }
 
-      requireWrite();
+      if (
+        state.chain === 'solana'
+      ) {
+        requireDeployment();
+      } else {
+        requireWrite();
+      }
 
       updateInitialBuySymbol();
       $('initial-buy-eth').value = '0';
@@ -2961,7 +2999,7 @@ $('create-form').addEventListener('submit', e => {
       void updateInitialBuyEstimate();
 
       inline.textContent =
-        'Wallet ready. Choose 0 ETH to create only, or enter an optional first-buy amount.';
+        'Wallet ready. PumpLite Solana creation is fixed at 0 SOL. No creator transaction will be submitted.';
 
       $('initial-buy-dialog').showModal();
     } catch (error) {
@@ -2976,6 +3014,47 @@ $('create-form').addEventListener('submit', e => {
     }
   });
 });
+
+function saveFreeSolanaDraft(
+  draft
+) {
+  const key =
+    'pumplite.solana.freeLaunchDrafts.v1';
+
+  let drafts = [];
+
+  try {
+    const current =
+      JSON.parse(
+        localStorage.getItem(key) ||
+        '[]'
+      );
+
+    if (Array.isArray(current)) {
+      drafts =
+        current.filter(
+          item =>
+            item?.id !==
+            draft.id
+        );
+    }
+  } catch {
+    drafts = [];
+  }
+
+  drafts.unshift(draft);
+
+  drafts =
+    drafts.slice(0, 25);
+
+  localStorage.setItem(
+    key,
+    JSON.stringify(drafts)
+  );
+
+  window.__pumpliteLastFreeDraft =
+    draft;
+}
 
 $('initial-buy-form').addEventListener('submit', e => {
   e.preventDefault();
@@ -3002,7 +3081,13 @@ $('initial-buy-form').addEventListener('submit', e => {
         }
       }
 
-      requireWrite();
+      if (
+        state.chain === 'solana'
+      ) {
+        requireDeployment();
+      } else {
+        requireWrite();
+      }
 
       const data = creationData();
 
@@ -3026,6 +3111,44 @@ $('initial-buy-form').addEventListener('submit', e => {
       }
 
       const adapter = await getAdapter();
+
+      if (
+        state.chain === 'solana'
+      ) {
+        if (initialBuy !== 0n) {
+          throw Error(
+            'PumpLite creator cost is fixed at 0 SOL. The first buyer will fund on-chain activation.'
+          );
+        }
+
+        flow.textContent =
+          'Sign the free PumpLite launch message in Phantom. This is not a transaction and cannot spend SOL.';
+
+        inline.textContent =
+          'Creator cost: 0 SOL. Phantom will request a message signature only.';
+
+        const draft =
+          await adapter
+            .createFreeDraft(data);
+
+        saveFreeSolanaDraft(
+          draft
+        );
+
+        $('initial-buy-dialog')
+          .close();
+
+        inline.textContent =
+          'Free PumpLite launch created. Creator cost: 0 SOL. No Solana transaction was submitted.';
+
+        status(
+          'Free PumpLite launch signed and saved. Creator cost: 0 SOL. Draft ' +
+          draft.id.slice(0, 12) +
+          '… No transaction was submitted.'
+        );
+
+        return;
+      }
 
       flow.textContent =
         'Step 1: review token creation in your wallet. This dialog will stay here until the result is known.';

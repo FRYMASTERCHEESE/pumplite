@@ -744,8 +744,8 @@ try {
 
   assert.equal(
     await phantom.locator('#create').isDisabled(),
-    true,
-    'PumpLite Solana writes remain intentionally locked during frontend verification'
+    false,
+    'Free PumpLite Solana launch creation remains available while paid on-chain writes stay locked'
   );
   await phantom.close();
 
