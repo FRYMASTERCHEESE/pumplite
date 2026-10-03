@@ -10,6 +10,13 @@ const PREFIX =
   "PumpLite Free Solana Launch\n" +
   "version=1\n";
 
+const RESERVATION_PREFIX =
+  "PumpLite First Buyer Reservation\n" +
+  "version=1\n";
+
+const RESERVATION_TTL_MS =
+  120_000;
+
 const enc =
   new TextEncoder();
 
@@ -36,6 +43,25 @@ CREATE INDEX IF NOT EXISTS solana_launches_creator_registered
 ON solana_launches(
   creator,
   registered_at DESC
+);
+
+CREATE TABLE IF NOT EXISTS solana_launch_reservations (
+  launch_id TEXT PRIMARY KEY,
+  mint TEXT NOT NULL UNIQUE,
+  market TEXT NOT NULL UNIQUE,
+  buyer TEXT NOT NULL,
+  nonce TEXT NOT NULL,
+  signed_at INTEGER NOT NULL,
+  reserved_at INTEGER NOT NULL,
+  expires_at INTEGER NOT NULL,
+  signature TEXT NOT NULL,
+  status TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS
+  solana_launch_reservations_expiry
+ON solana_launch_reservations(
+  expires_at
 );
 `;
 
@@ -362,6 +388,182 @@ validateSignedLaunch(
   };
 }
 
+export async function
+validateBuyerReservation(
+  body,
+  now = Date.now()
+) {
+  if (
+    !body ||
+    typeof body !== "object" ||
+    Array.isArray(body)
+  ) {
+    fail(
+      "Invalid reservation"
+    );
+  }
+
+  const address = value => {
+    if (
+      typeof value !== "string"
+    ) {
+      return null;
+    }
+
+    const decoded =
+      decodeBase58(value);
+
+    return (
+      decoded &&
+      decoded.length === 32
+    )
+      ? value
+      : null;
+  };
+
+  const record = {
+    version:
+      body.version,
+
+    chain:
+      body.chain,
+
+    programId:
+      body.programId,
+
+    launchId:
+      body.launchId,
+
+    mint:
+      body.mint,
+
+    market:
+      body.market,
+
+    buyer:
+      body.buyer,
+
+    nonce:
+      body.nonce,
+
+    signedAt:
+      body.signedAt
+  };
+
+  if (
+    record.version !== 1 ||
+    record.chain !== "solana" ||
+    record.programId !== PROGRAM_ID ||
+    typeof record.launchId !== "string" ||
+    !/^[0-9a-f]{64}$/
+      .test(record.launchId) ||
+    !address(record.mint) ||
+    !address(record.market) ||
+    !address(record.buyer) ||
+    typeof record.nonce !== "string" ||
+    !/^[0-9a-f]{32}$/
+      .test(record.nonce) ||
+    !Number.isSafeInteger(
+      record.signedAt
+    )
+  ) {
+    fail(
+      "Invalid reservation"
+    );
+  }
+
+  if (
+    record.signedAt <
+      now - 300_000 ||
+    record.signedAt >
+      now + 60_000
+  ) {
+    fail(
+      "Reservation signature has expired"
+    );
+  }
+
+  const canonical =
+    JSON.stringify(record);
+
+  const message =
+    RESERVATION_PREFIX +
+    canonical;
+
+  if (
+    body.message !== message
+  ) {
+    fail(
+      "Reservation message mismatch"
+    );
+  }
+
+  const publicKey =
+    decodeBase58(
+      record.buyer
+    );
+
+  const signature =
+    decodeBase64(
+      body.signature
+    );
+
+  if (
+    !publicKey ||
+    publicKey.length !== 32 ||
+    !signature ||
+    signature.length !== 64
+  ) {
+    fail(
+      "Invalid reservation signature"
+    );
+  }
+
+  let key;
+
+  try {
+    key =
+      await crypto.subtle
+        .importKey(
+          "raw",
+          publicKey,
+          {
+            name: "Ed25519"
+          },
+          false,
+          ["verify"]
+        );
+  } catch {
+    fail(
+      "Invalid buyer key"
+    );
+  }
+
+  const valid =
+    await crypto.subtle.verify(
+      {
+        name: "Ed25519"
+      },
+      key,
+      signature,
+      enc.encode(message)
+    );
+
+  if (!valid) {
+    fail(
+      "Reservation signature verification failed",
+      403
+    );
+  }
+
+  return {
+    ...record,
+    message,
+    signature:
+      body.signature
+  };
+}
+
 async function readBody(
   request
 ) {
@@ -609,6 +811,194 @@ function registerLaunch(
     );
 }
 
+function loadReservation(
+  sql,
+  launchId
+) {
+  return one(
+    sql.exec(
+      `SELECT
+         launch_id,
+         mint,
+         market,
+         buyer,
+         nonce,
+         signed_at,
+         reserved_at,
+         expires_at,
+         signature,
+         status
+       FROM solana_launch_reservations
+       WHERE launch_id = ?`,
+      launchId
+    )
+  );
+}
+
+function publicReservation(
+  row
+) {
+  return {
+    launchId:
+      String(
+        row.launch_id
+      ),
+
+    mint:
+      String(row.mint),
+
+    market:
+      String(row.market),
+
+    buyer:
+      String(row.buyer),
+
+    signedAt:
+      Number(
+        row.signed_at
+      ),
+
+    reservedAt:
+      Number(
+        row.reserved_at
+      ),
+
+    expiresAt:
+      Number(
+        row.expires_at
+      ),
+
+    status:
+      String(row.status)
+  };
+}
+
+function reserveLaunch(
+  ctx,
+  reservation,
+  now
+) {
+  return ctx.storage
+    .transactionSync(
+      () => {
+        const sql =
+          ctx.storage.sql;
+
+        const launch =
+          loadLaunch(
+            sql,
+            reservation.launchId
+          );
+
+        if (
+          !launch ||
+          launch.status !==
+            "pending"
+        ) {
+          return {
+            ok: false,
+            missing: true
+          };
+        }
+
+        const existing =
+          loadReservation(
+            sql,
+            reservation.launchId
+          );
+
+        if (
+          existing &&
+          Number(
+            existing.expires_at
+          ) > now
+        ) {
+          const same =
+            existing.mint ===
+              reservation.mint &&
+            existing.market ===
+              reservation.market &&
+            existing.buyer ===
+              reservation.buyer;
+
+          if (!same) {
+            return {
+              ok: false,
+              conflict: true
+            };
+          }
+
+          return {
+            ok: true,
+            reservation:
+              publicReservation(
+                existing
+              )
+          };
+        }
+
+        if (existing) {
+          sql.exec(
+            `DELETE FROM
+               solana_launch_reservations
+             WHERE launch_id = ?`,
+            reservation.launchId
+          );
+        }
+
+        const expiresAt =
+          now +
+          RESERVATION_TTL_MS;
+
+        try {
+          sql.exec(
+            `INSERT INTO
+               solana_launch_reservations
+               (
+                 launch_id,
+                 mint,
+                 market,
+                 buyer,
+                 nonce,
+                 signed_at,
+                 reserved_at,
+                 expires_at,
+                 signature,
+                 status
+               )
+             VALUES
+               (?, ?, ?, ?, ?, ?, ?, ?, ?, 'reserved')`,
+            reservation.launchId,
+            reservation.mint,
+            reservation.market,
+            reservation.buyer,
+            reservation.nonce,
+            reservation.signedAt,
+            now,
+            expiresAt,
+            reservation.signature
+          );
+        } catch {
+          return {
+            ok: false,
+            conflict: true
+          };
+        }
+
+        return {
+          ok: true,
+          reservation:
+            publicReservation(
+              loadReservation(
+                sql,
+                reservation.launchId
+              )
+            )
+        };
+      }
+    );
+}
+
 function parseOffset(
   pathname
 ) {
@@ -685,8 +1075,12 @@ export function isLaunchRoute(
   return Boolean(
     (
       method === "POST" &&
-      pathname ===
-        "/launch/register"
+      (
+        pathname ===
+          "/launch/register" ||
+        pathname ===
+          "/launch/reserve"
+      )
     ) ||
     (
       method === "GET" &&
@@ -758,6 +1152,53 @@ handleLaunchRequest(
         result.launch.id,
       launch:
         result.launch
+    });
+  }
+
+  if (
+    request.method === "POST" &&
+    url.pathname ===
+      "/launch/reserve"
+  ) {
+    const reservation =
+      await validateBuyerReservation(
+        await readBody(
+          request
+        ),
+        now
+      );
+
+    const result =
+      reserveLaunch(
+        ctx,
+        reservation,
+        now
+      );
+
+    if (result.missing) {
+      return json(
+        {
+          error:
+            "Pending launch not found"
+        },
+        404
+      );
+    }
+
+    if (result.conflict) {
+      return json(
+        {
+          error:
+            "Launch already has an active buyer reservation"
+        },
+        409
+      );
+    }
+
+    return json({
+      ok: true,
+      reservation:
+        result.reservation
     });
   }
 

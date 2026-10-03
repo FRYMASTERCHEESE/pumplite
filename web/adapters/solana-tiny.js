@@ -36,6 +36,7 @@ import {
   TINY_TOKEN_PROGRAM,
   TINY_METADATA_PROGRAM,
   TINY_MINT_SIZE,
+  generateCompatibleMint,
   tinyAta,
   tinyMarketAddress,
   tinyMetadataAddress,
@@ -220,6 +221,14 @@ export function adapter(
   let preparedProvider;
   let connected;
   let selected;
+
+  /*
+   * Ephemeral first-buyer mint signers live only in this browser
+   * adapter instance and are destroyed on disconnect/reload.
+   */
+  const localFirstBuyer =
+    new Map();
+
   let revision = 0;
   let unwatch = () => {};
 
@@ -239,6 +248,8 @@ export function adapter(
     revision++;
     connected = undefined;
     selected = undefined;
+
+    localFirstBuyer.clear();
     unwatch();
     unwatch = () => {};
     changed();
@@ -1592,6 +1603,227 @@ export function adapter(
       );
 
       return draft;
+    },
+
+    async reserveFirstBuyer({
+      launchId
+    }) {
+      const owner =
+        await wallet();
+
+      if (
+        typeof launchId !==
+          'string' ||
+        !/^[0-9a-f]{64}$/
+          .test(launchId)
+      ) {
+        throw Error(
+          'Invalid PumpLite launch ID'
+        );
+      }
+
+      if (
+        typeof selected
+          ?.signMessage !==
+        'function'
+      ) {
+        throw Error(
+          'Phantom message signing is required to reserve first-buyer activation'
+        );
+      }
+
+      let local =
+        localFirstBuyer.get(
+          launchId
+        );
+
+      if (!local) {
+        local =
+          generateCompatibleMint(
+            program()
+          );
+
+        localFirstBuyer.set(
+          launchId,
+          local
+        );
+      }
+
+      const nonceBytes =
+        new Uint8Array(16);
+
+      crypto.getRandomValues(
+        nonceBytes
+      );
+
+      const record = {
+        version: 1,
+        chain: 'solana',
+        programId:
+          program().toBase58(),
+        launchId,
+        mint:
+          local.mint.toBase58(),
+        market:
+          local.market.toBase58(),
+        buyer:
+          owner.toBase58(),
+        nonce:
+          Buffer.from(
+            nonceBytes
+          ).toString('hex'),
+        signedAt:
+          Date.now()
+      };
+
+      const canonical =
+        JSON.stringify(record);
+
+      const message =
+        'PumpLite First Buyer Reservation\n' +
+        'version=1\n' +
+        canonical;
+
+      notify(
+        'Sign the PumpLite first-buyer reservation message. This is NOT a transaction and cannot spend SOL.'
+      );
+
+      const signed =
+        await selected.signMessage(
+          enc.encode(message),
+          'utf8'
+        );
+
+      const rawSignature =
+        signed?.signature ??
+        signed;
+
+      const signature =
+        Buffer.from(
+          rawSignature
+        );
+
+      if (
+        signature.length !== 64
+      ) {
+        throw Error(
+          'Phantom returned an invalid reservation signature'
+        );
+      }
+
+      if (
+        signed?.publicKey &&
+        !new PublicKey(
+          signed.publicKey
+        ).equals(owner)
+      ) {
+        throw Error(
+          'Phantom signed the reservation with a different wallet'
+        );
+      }
+
+      const body = {
+        ...record,
+        message,
+        signature:
+          signature.toString(
+            'base64'
+          )
+      };
+
+      /*
+       * body contains PUBLIC reservation data only.
+       * local.mintKeypair is never serialized or transmitted.
+       */
+      const url =
+        new URL(
+          config.rpcUrl
+        );
+
+      url.pathname =
+        '/launch/reserve';
+
+      url.search = '';
+      url.hash = '';
+
+      const response =
+        await boundedFetch(
+          url,
+          {
+            method:
+              'POST',
+
+            headers: {
+              'Content-Type':
+                'application/json'
+            },
+
+            body:
+              JSON.stringify(body)
+          },
+          {
+            maxBytes:
+              8192
+          }
+        );
+
+      let reply;
+
+      try {
+        reply =
+          await response.json();
+      } catch {
+        throw Error(
+          'PumpLite reservation service returned an invalid response'
+        );
+      }
+
+      const reservation =
+        reply?.reservation;
+
+      if (
+        !response.ok ||
+        reply?.ok !== true ||
+        reservation?.launchId !==
+          launchId ||
+        reservation?.mint !==
+          record.mint ||
+        reservation?.market !==
+          record.market ||
+        reservation?.buyer !==
+          record.buyer ||
+        !Number.isSafeInteger(
+          reservation?.expiresAt
+        )
+      ) {
+        throw Error(
+          'PumpLite first-buyer reservation failed'
+        );
+      }
+
+      local.reservation =
+        reservation;
+
+      notify(
+        'First-buyer mint reserved for this PumpLite launch. No transaction has been submitted.'
+      );
+
+      return {
+        launchId:
+          reservation.launchId,
+
+        mint:
+          reservation.mint,
+
+        market:
+          reservation.market,
+
+        buyer:
+          reservation.buyer,
+
+        expiresAt:
+          reservation.expiresAt
+      };
     },
 
     async create({

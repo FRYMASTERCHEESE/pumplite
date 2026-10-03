@@ -149,8 +149,12 @@ export default {
 
     if (
       request.method === "POST" &&
-      url.pathname ===
-        "/launch/register"
+      (
+        url.pathname ===
+          "/launch/register" ||
+        url.pathname ===
+          "/launch/reserve"
+      )
     ) {
       return launchProxy(
         request,
