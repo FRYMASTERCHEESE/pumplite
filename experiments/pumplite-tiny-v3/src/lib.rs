@@ -47,7 +47,7 @@ fn bad<T>() -> Result<T, ProgramError> {
 unsafe fn read64(p: *const u8) -> u64 {
     u64::from_le(core::ptr::read_unaligned(p as *const u64))
 }
-#[inline(always)]
+#[inline(never)]
 unsafe fn invoke_cpi_checked(
     instruction: &InstructionView,
     accounts: &[CpiAccount],
@@ -89,7 +89,7 @@ unsafe fn invoke_cpi_checked(
         if result == 0 {
             Ok(())
         } else {
-            Err(result.into())
+            Err(ProgramError::InvalidArgument)
         }
     }
 
