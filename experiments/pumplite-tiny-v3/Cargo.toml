@@ -1,4 +1,4 @@
-﻿[package]
+[package]
 name = "pumplite-tiny-v3"
 version = "0.1.0"
 edition = "2021"
@@ -10,9 +10,7 @@ crate-type = ["cdylib", "rlib"]
 [workspace]
 
 [dependencies]
-pinocchio = { version = "=0.11.2", features = ["cpi"] }
-pinocchio-system = "=0.6.1"
-pinocchio-token = "=0.6.0"
+pinocchio = { version = "=0.11.2", default-features = false, features = ["cpi"] }
 
 [profile.release]
 opt-level = "z"
@@ -20,12 +18,10 @@ lto = "fat"
 codegen-units = 1
 panic = "abort"
 strip = "symbols"
-overflow-checks = true
+overflow-checks = false
 
 [features]
 default = []
-custom-heap = []
-custom-panic = []
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("solana"))'] }

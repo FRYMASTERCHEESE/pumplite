@@ -1,0 +1,157 @@
+name: PumpLite own Solana sBPFv3 final build
+
+on:
+  push:
+    branches:
+      - solana-own-v3-final-20261004
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+
+      - name: Install pinned Agave 4.3.0
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mkdir -p "$RUNNER_TEMP/agave"
+          cd "$RUNNER_TEMP/agave"
+
+          curl --fail --location --retry 3 \
+            -o agave.tar.bz2 \
+            https://github.com/anza-xyz/agave/releases/download/v4.3.0/solana-release-x86_64-unknown-linux-gnu.tar.bz2
+
+          echo "c97289a8abb1d0efb497d8b5cb285baabd9b7f8ea6647f5d145c5dc8ff3611e8  agave.tar.bz2" \
+            | sha256sum --check --strict
+
+          tar -xjf agave.tar.bz2
+
+          echo "$RUNNER_TEMP/agave/solana-release/bin" >> "$GITHUB_PATH"
+
+      - name: Tool versions
+        shell: bash
+        run: |
+          set -euo pipefail
+          solana --version
+          cargo-build-sbf --version
+
+      - name: Verify own-program source
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          grep -F 'default-features = false' \
+            experiments/pumplite-tiny-v3/Cargo.toml
+
+          if grep -E 'pinocchio-system|pinocchio-token' \
+            experiments/pumplite-tiny-v3/Cargo.toml; then
+            echo "Old wrapper crates detected"
+            exit 1
+          fi
+
+          grep -F 'compact_math_matches_reference' \
+            experiments/pumplite-tiny-v3/src/lib.rs
+
+      - name: Generate isolated lockfile
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo generate-lockfile \
+            --manifest-path experiments/pumplite-tiny-v3/Cargo.toml
+
+      - name: Run own-program tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo test \
+            --manifest-path experiments/pumplite-tiny-v3/Cargo.toml \
+            --lib
+
+      - name: Build sBPFv3 optimized executable
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mkdir -p target/own-v3-final
+
+          cargo-build-sbf \
+            --manifest-path experiments/pumplite-tiny-v3/Cargo.toml \
+            --arch v3 \
+            --optimize-size \
+            --sbf-out-dir target/own-v3-final
+
+      - name: Measure final executable
+        id: size
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          so="$(find target/own-v3-final -maxdepth 1 -type f -name '*.so' -print -quit)"
+
+          test -n "$so"
+
+          bytes="$(stat -c%s "$so")"
+          sha="$(sha256sum "$so" | awk '{print $1}')"
+
+          echo ""
+          echo "========================================="
+          echo "PUMPLITE OWN SOLANA PROGRAM"
+          echo "========================================="
+          echo "Size: $bytes bytes"
+          echo "SHA256: $sha"
+          echo "0.04 SOL storage target: <= 7450 bytes"
+          echo "========================================="
+
+          echo "bytes=$bytes" >> "$GITHUB_OUTPUT"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## PumpLite own Solana program"
+            echo ""
+            echo "- Program ID target: \`3CHqrdJzwWQj1QikCzpjBhC8iQ3paaMtD1x9kwoW1rku\`"
+            echo "- sBPF: **v3**"
+            echo "- Size: **$bytes bytes**"
+            echo "- SHA-256: \`$sha\`"
+            echo "- 0.04 SOL storage target: **<= 7,450 bytes**"
+            echo ""
+            echo "Build only. No wallet, no keypair, no deployment."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload exact executable
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: pumplite-own-solana-v3-final
+          retention-days: 30
+          if-no-files-found: error
+          path: target/own-v3-final/*.so
+
+      - name: Enforce 0.04 SOL size target
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          bytes="${{ steps.size.outputs.bytes }}"
+
+          if [ "$bytes" -gt 7450 ]; then
+            echo "FAIL - $bytes bytes is still above the 7,450-byte budget target"
+            exit 1
+          fi
+
+          echo "PASS - $bytes bytes fits the 0.04 SOL storage target"
+
+# NO WALLET
+# NO PRIVATE KEY
+# NO RPC WRITE
+# NO SIGNING
+# NO DEPLOYMENT
+# NO SOL SPEND

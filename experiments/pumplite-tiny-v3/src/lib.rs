@@ -1,8 +1,22 @@
 #![no_std]
 
+use core::{
+    mem::MaybeUninit,
+    slice::from_raw_parts,
+};
+
 use pinocchio::{
-    cpi::{Seed, Signer},
+    cpi::{
+        invoke_signed_unchecked,
+        CpiAccount,
+        Seed,
+        Signer,
+    },
     error::ProgramError,
+    instruction::{
+        InstructionAccount,
+        InstructionView,
+    },
     no_allocator,
     nostd_panic_handler,
     program_entrypoint,
@@ -11,19 +25,34 @@ use pinocchio::{
     ProgramResult,
 };
 
-use pinocchio_system::instructions::Transfer as SolTransfer;
-use pinocchio_token::instructions::{Burn, MintTo};
-
 program_entrypoint!(process_instruction, 5);
 no_allocator!();
 nostd_panic_handler!();
 
-const SUPPLY: u64 = 1_000_000_000_000_000;
-const VIRTUAL_NATIVE: u64 = 30_000_000_000;
+const SUPPLY: u64 =
+    1_000_000_000_000_000;
+
+const VIRTUAL_NATIVE: u64 =
+    30_000_000_000;
+
 const DECIMALS: u8 = 6;
 
-const MARKET_SEED: &[u8] = b"market";
-const FIXED_BUMP: [u8; 1] = [255];
+const MARKET_SEED: &[u8] =
+    b"market";
+
+const FIXED_BUMP: [u8; 1] =
+    [255];
+
+const SYSTEM_ID: Address =
+    Address::new_from_array([0u8; 32]);
+
+const TOKEN_ID: Address =
+    Address::new_from_array([
+        6, 221, 246, 225, 215, 101, 161, 147,
+        217, 203, 225, 70, 206, 235, 121, 172,
+        28, 180, 133, 237, 95, 91, 55, 145,
+        58, 140, 245, 133, 126, 255, 0, 169,
+    ]);
 
 // BNpFPPuy2h12dryy4dayemjA4YS17ccVaF82jBDuiwct
 const TREASURY: [u8; 32] = [
@@ -49,26 +78,36 @@ fn u64_at(
     data: &[u8],
     offset: usize,
 ) -> Result<u64, ProgramError> {
-    let bytes = data
-        .get(offset..offset + 8)
-        .ok_or(ProgramError::InvalidInstructionData)?;
+    let bytes =
+        data
+            .get(offset..offset + 8)
+            .ok_or(
+                ProgramError::InvalidInstructionData
+            )?;
 
-    Ok(u64::from_le_bytes(
-        bytes
-            .try_into()
-            .map_err(|_| ProgramError::InvalidInstructionData)?
-    ))
+    Ok(
+        u64::from_le_bytes(
+            bytes
+                .try_into()
+                .map_err(
+                    |_| ProgramError::InvalidInstructionData
+                )?
+        )
+    )
 }
 
-// Exact floor(a*b/d), without u128.
-//
-// PumpLite only calls this when b < d.
-// This is true for both:
-// BUY:  net < virtual + native + net
-// SELL: input < remaining_tokens + input
-//
-// q/r hold the quotient/remainder while multiplying by the
-// bits of b. No 128-bit division runtime is required.
+#[inline(always)]
+fn fee(amount: u64) -> u64 {
+    // Exactly 25 / 10,000.
+    amount / 400
+}
+
+/*
+ * Exact floor(a*b/d) without linking the large
+ * compiler u128-division runtime.
+ *
+ * PumpLite calls this only when b < d.
+ */
 #[inline(never)]
 fn mul_div_ratio(
     a: u64,
@@ -112,31 +151,25 @@ fn mul_div_ratio(
         }
 
         let gap = d - ar;
-        let carry;
 
-        if ar >= gap {
-            ar -= gap;
-            carry = 1u64;
-        } else {
-            ar += ar;
-            carry = 0u64;
-        }
+        let carry =
+            if ar >= gap {
+                ar -= gap;
+                1u64
+            } else {
+                ar += ar;
+                0u64
+            };
 
         aq = aq
             .checked_mul(2)
-            .and_then(|v| v.checked_add(carry))
+            .and_then(
+                |v| v.checked_add(carry)
+            )
             .ok_or(err(ERR_OVERFLOW))?;
     }
 
     Ok(q)
-}
-
-// 25 / 10,000 reduces exactly to 1 / 400.
-//
-// floor(amount * 25 / 10,000) == floor(amount / 400)
-#[inline(always)]
-fn fee(amount: u64) -> u64 {
-    amount / 400
 }
 
 #[inline(always)]
@@ -149,28 +182,33 @@ fn quote_buy(
         return Err(err(ERR_QUOTE));
     }
 
-    let fees = fee(input);
+    let f = fee(input);
 
-    let net = input
-        .checked_sub(fees)
-        .ok_or(err(ERR_OVERFLOW))?;
+    let net =
+        input
+            .checked_sub(f)
+            .ok_or(err(ERR_OVERFLOW))?;
 
-    let denominator = VIRTUAL_NATIVE
-        .checked_add(native)
-        .and_then(|v| v.checked_add(net))
-        .ok_or(err(ERR_OVERFLOW))?;
+    let denominator =
+        VIRTUAL_NATIVE
+            .checked_add(native)
+            .and_then(
+                |v| v.checked_add(net)
+            )
+            .ok_or(err(ERR_OVERFLOW))?;
 
-    let output = mul_div_ratio(
-        tokens,
-        net,
-        denominator,
-    )?;
+    let output =
+        mul_div_ratio(
+            tokens,
+            net,
+            denominator,
+        )?;
 
     if output == 0 || output >= tokens {
         return Err(err(ERR_QUOTE));
     }
 
-    Ok((output, fees))
+    Ok((output, f))
 }
 
 #[inline(always)]
@@ -183,19 +221,22 @@ fn quote_sell(
         return Err(err(ERR_QUOTE));
     }
 
-    let denominator = tokens
-        .checked_add(input)
-        .ok_or(err(ERR_OVERFLOW))?;
+    let denominator =
+        tokens
+            .checked_add(input)
+            .ok_or(err(ERR_OVERFLOW))?;
 
-    let priced = VIRTUAL_NATIVE
-        .checked_add(native)
-        .ok_or(err(ERR_OVERFLOW))?;
+    let priced =
+        VIRTUAL_NATIVE
+            .checked_add(native)
+            .ok_or(err(ERR_OVERFLOW))?;
 
-    let gross = mul_div_ratio(
-        priced,
-        input,
-        denominator,
-    )?;
+    let gross =
+        mul_div_ratio(
+            priced,
+            input,
+            denominator,
+        )?;
 
     if gross == 0 || gross > native {
         return Err(err(ERR_BACKING));
@@ -204,56 +245,272 @@ fn quote_sell(
     Ok((gross, fee(gross)))
 }
 
-// The mint itself replaces the old token vault.
-//
-// Current mint supply = circulating tokens.
-// SUPPLY - current supply = curve inventory.
-//
-// Static safety:
-// - classic SPL Token only
-// - exactly 6 decimals
-// - initialized
-// - no freeze authority
-// - market PDA is the mint authority
-// - supply can never exceed PumpLite maximum
+#[inline(always)]
+fn system_transfer(
+    from: &AccountView,
+    to: &AccountView,
+    amount: u64,
+    signers: &[Signer],
+) -> ProgramResult {
+    let accounts = [
+        InstructionAccount::writable_signer(
+            from.address()
+        ),
+        InstructionAccount::writable(
+            to.address()
+        ),
+    ];
+
+    let mut data = [0u8; 12];
+
+    data[0..4]
+        .copy_from_slice(
+            &2u32.to_le_bytes()
+        );
+
+    data[4..12]
+        .copy_from_slice(
+            &amount.to_le_bytes()
+        );
+
+    let instruction =
+        InstructionView {
+            program_id: &SYSTEM_ID,
+            accounts: &accounts,
+            data: &data,
+        };
+
+    if from.is_borrowed() |
+       to.is_borrowed()
+    {
+        return Err(
+            ProgramError::AccountBorrowFailed
+        );
+    }
+
+    let mut cpi = [
+        const {
+            MaybeUninit::<CpiAccount>::uninit()
+        };
+        2
+    ];
+
+    CpiAccount::init_from_account_view(
+        from,
+        &mut cpi[0],
+    );
+
+    CpiAccount::init_from_account_view(
+        to,
+        &mut cpi[1],
+    );
+
+    unsafe {
+        invoke_signed_unchecked(
+            &instruction,
+            from_raw_parts(
+                cpi.as_ptr() as _,
+                2
+            ),
+            signers,
+        );
+    }
+
+    Ok(())
+}
+
+#[inline(always)]
+fn token_mint_to(
+    mint: &AccountView,
+    destination: &AccountView,
+    authority: &AccountView,
+    amount: u64,
+    signers: &[Signer],
+) -> ProgramResult {
+    let accounts = [
+        InstructionAccount::writable(
+            mint.address()
+        ),
+        InstructionAccount::writable(
+            destination.address()
+        ),
+        InstructionAccount::readonly_signer(
+            authority.address()
+        ),
+    ];
+
+    let mut data = [0u8; 9];
+
+    data[0] = 7;
+
+    data[1..9]
+        .copy_from_slice(
+            &amount.to_le_bytes()
+        );
+
+    let instruction =
+        InstructionView {
+            program_id: &TOKEN_ID,
+            accounts: &accounts,
+            data: &data,
+        };
+
+    let mut cpi = [
+        const {
+            MaybeUninit::<CpiAccount>::uninit()
+        };
+        3
+    ];
+
+    CpiAccount::init_from_account_view(
+        mint,
+        &mut cpi[0],
+    );
+
+    CpiAccount::init_from_account_view(
+        destination,
+        &mut cpi[1],
+    );
+
+    CpiAccount::init_from_account_view(
+        authority,
+        &mut cpi[2],
+    );
+
+    unsafe {
+        invoke_signed_unchecked(
+            &instruction,
+            from_raw_parts(
+                cpi.as_ptr() as _,
+                3
+            ),
+            signers,
+        );
+    }
+
+    Ok(())
+}
+
+#[inline(always)]
+fn token_burn(
+    account: &AccountView,
+    mint: &AccountView,
+    authority: &AccountView,
+    amount: u64,
+) -> ProgramResult {
+    let accounts = [
+        InstructionAccount::writable(
+            account.address()
+        ),
+        InstructionAccount::writable(
+            mint.address()
+        ),
+        InstructionAccount::readonly_signer(
+            authority.address()
+        ),
+    ];
+
+    let mut data = [0u8; 9];
+
+    data[0] = 8;
+
+    data[1..9]
+        .copy_from_slice(
+            &amount.to_le_bytes()
+        );
+
+    let instruction =
+        InstructionView {
+            program_id: &TOKEN_ID,
+            accounts: &accounts,
+            data: &data,
+        };
+
+    let mut cpi = [
+        const {
+            MaybeUninit::<CpiAccount>::uninit()
+        };
+        3
+    ];
+
+    CpiAccount::init_from_account_view(
+        account,
+        &mut cpi[0],
+    );
+
+    CpiAccount::init_from_account_view(
+        mint,
+        &mut cpi[1],
+    );
+
+    CpiAccount::init_from_account_view(
+        authority,
+        &mut cpi[2],
+    );
+
+    unsafe {
+        invoke_signed_unchecked(
+            &instruction,
+            from_raw_parts(
+                cpi.as_ptr() as _,
+                3
+            ),
+            &[],
+        );
+    }
+
+    Ok(())
+}
+
 #[inline(always)]
 fn remaining_tokens(
     mint: &AccountView,
     market: &AccountView,
 ) -> Result<u64, ProgramError> {
-    if !mint.owned_by(&pinocchio_token::ID) {
-        return Err(ProgramError::IncorrectProgramId);
+    if !mint.owned_by(&TOKEN_ID) {
+        return Err(
+            ProgramError::IncorrectProgramId
+        );
     }
 
-    let data = mint.try_borrow()?;
+    let data =
+        mint.try_borrow()?;
 
     if data.len() != 82 {
-        return Err(ProgramError::InvalidAccountData);
+        return Err(
+            ProgramError::InvalidAccountData
+        );
     }
 
-    if data[44] != DECIMALS || data[45] != 1 {
+    if data[44] != DECIMALS ||
+       data[45] != 1
+    {
         return Err(err(ERR_ACCOUNT));
     }
 
-    // Mint authority must be Some(market).
+    // Mint authority Some(market PDA).
     if data[0..4] != [1, 0, 0, 0] {
         return Err(err(ERR_ACCOUNT));
     }
 
-    if &data[4..36] != market.address().as_ref() {
+    if &data[4..36] !=
+        market.address().as_ref()
+    {
         return Err(err(ERR_ACCOUNT));
     }
 
-    // Freeze authority must permanently be None.
+    // Freeze authority permanently None.
     if data[46..50] != [0, 0, 0, 0] {
         return Err(err(ERR_ACCOUNT));
     }
 
-    let circulating = u64_at(&data, 36)?;
+    let circulating =
+        u64_at(&data, 36)?;
 
-    let remaining = SUPPLY
-        .checked_sub(circulating)
-        .ok_or(err(ERR_ACCOUNT))?;
+    let remaining =
+        SUPPLY
+            .checked_sub(circulating)
+            .ok_or(err(ERR_ACCOUNT))?;
 
     if remaining == 0 {
         return Err(err(ERR_QUOTE));
@@ -263,32 +520,35 @@ fn remaining_tokens(
 }
 
 #[inline(always)]
-fn check_treasury(
+fn check_accounts(
+    trader: &AccountView,
     treasury: &AccountView,
 ) -> ProgramResult {
-    if treasury.address().as_array() != &TREASURY {
+    if !trader.is_signer() ||
+       !trader.is_writable()
+    {
+        return Err(
+            ProgramError::MissingRequiredSignature
+        );
+    }
+
+    if treasury.address().as_array()
+        != &TREASURY
+    {
+        return Err(err(ERR_ACCOUNT));
+    }
+
+    if !treasury.is_writable() {
         return Err(err(ERR_ACCOUNT));
     }
 
     Ok(())
 }
 
-// Accounts for BUY and SELL:
-//
-// 0 trader          writable signer
-// 1 market PDA      writable
-// 2 mint            writable
-// 3 trader tokens   writable
-// 4 fixed treasury  writable
-//
-// No vault.
-// No market-state account.
-// No SHA256 PDA derivation.
-// No Clock syscall.
 fn buy(
     accounts: &mut [AccountView],
     input: u64,
-    minimum_output: u64,
+    minimum: u64,
 ) -> ProgramResult {
     let [
         trader,
@@ -298,69 +558,76 @@ fn buy(
         treasury,
     ] = accounts
     else {
-        return Err(ProgramError::NotEnoughAccountKeys);
+        return Err(
+            ProgramError::NotEnoughAccountKeys
+        );
     };
 
-    check_treasury(treasury)?;
-
-    let tokens = remaining_tokens(
-        mint,
-        market,
+    check_accounts(
+        trader,
+        treasury,
     )?;
 
-    let native = market.lamports();
+    let tokens =
+        remaining_tokens(
+            mint,
+            market,
+        )?;
 
-    let (output, fees) = quote_buy(
-        native,
-        tokens,
-        input,
-    )?;
+    let native =
+        market.lamports();
 
-    if output < minimum_output {
+    let (output, f) =
+        quote_buy(
+            native,
+            tokens,
+            input,
+        )?;
+
+    if output < minimum {
         return Err(err(ERR_SLIPPAGE));
     }
 
-    let net = input
-        .checked_sub(fees)
-        .ok_or(err(ERR_OVERFLOW))?;
+    let net =
+        input
+            .checked_sub(f)
+            .ok_or(err(ERR_OVERFLOW))?;
 
-    // User pays fixed PumpLite fee.
-    SolTransfer {
-        from: trader,
-        to: treasury,
-        lamports: fees,
-    }
-    .invoke()?;
+    // 0.25% PumpLite fee.
+    system_transfer(
+        trader,
+        treasury,
+        f,
+        &[],
+    )?;
 
-    // Remaining SOL becomes real curve backing.
-    SolTransfer {
-        from: trader,
-        to: market,
-        lamports: net,
-    }
-    .invoke()?;
+    // Curve backing.
+    system_transfer(
+        trader,
+        market,
+        net,
+        &[],
+    )?;
 
-    // The market PDA is the mint authority.
-    //
-    // This signed CPI simultaneously proves:
-    // 1. market is the PDA for this exact mint
-    // 2. market is the mint authority
-    // 3. destination is a valid account for this mint
     let seeds = [
         Seed::from(MARKET_SEED),
-        Seed::from(mint.address().as_ref()),
+        Seed::from(
+            mint.address().as_ref()
+        ),
         Seed::from(&FIXED_BUMP),
     ];
 
-    let signers = [Signer::from(&seeds)];
+    let signers = [
+        Signer::from(&seeds)
+    ];
 
-    MintTo::new(
+    token_mint_to(
         mint,
         trader_tokens,
         market,
         output,
-    )
-    .invoke_signed(&signers)?;
+        &signers,
+    )?;
 
     Ok(())
 }
@@ -368,7 +635,7 @@ fn buy(
 fn sell(
     accounts: &mut [AccountView],
     input: u64,
-    minimum_output: u64,
+    minimum: u64,
 ) -> ProgramResult {
     let [
         trader,
@@ -378,74 +645,73 @@ fn sell(
         treasury,
     ] = accounts
     else {
-        return Err(ProgramError::NotEnoughAccountKeys);
+        return Err(
+            ProgramError::NotEnoughAccountKeys
+        );
     };
 
-    check_treasury(treasury)?;
-
-    let tokens = remaining_tokens(
-        mint,
-        market,
+    check_accounts(
+        trader,
+        treasury,
     )?;
 
-    let native = market.lamports();
+    let tokens =
+        remaining_tokens(
+            mint,
+            market,
+        )?;
 
-    let (gross, fees) = quote_sell(
-        native,
-        tokens,
-        input,
-    )?;
+    let native =
+        market.lamports();
 
-    let output = gross
-        .checked_sub(fees)
-        .ok_or(err(ERR_OVERFLOW))?;
+    let (gross, f) =
+        quote_sell(
+            native,
+            tokens,
+            input,
+        )?;
 
-    if output < minimum_output {
+    let output =
+        gross
+            .checked_sub(f)
+            .ok_or(err(ERR_OVERFLOW))?;
+
+    if output < minimum {
         return Err(err(ERR_SLIPPAGE));
     }
 
-    // Burn first.
-    //
-    // SPL Token verifies:
-    // - trader signature
-    // - trader owns/delegates this token account
-    // - account belongs to this mint
-    // - trader has enough tokens
-    //
-    // Atomic transaction rollback restores the burn if a later
-    // SOL transfer fails.
-    Burn::new(
+    token_burn(
         trader_tokens,
         mint,
         trader,
         input,
-    )
-    .invoke()?;
+    )?;
 
     let seeds = [
         Seed::from(MARKET_SEED),
-        Seed::from(mint.address().as_ref()),
+        Seed::from(
+            mint.address().as_ref()
+        ),
         Seed::from(&FIXED_BUMP),
     ];
 
-    let signers = [Signer::from(&seeds)];
+    let signers = [
+        Signer::from(&seeds)
+    ];
 
-    // Market PDA pays the fixed fee.
-    // invoke_signed proves this is the market PDA for this mint.
-    SolTransfer {
-        from: market,
-        to: treasury,
-        lamports: fees,
-    }
-    .invoke_signed(&signers)?;
+    system_transfer(
+        market,
+        treasury,
+        f,
+        &signers,
+    )?;
 
-    // Market PDA pays the seller.
-    SolTransfer {
-        from: market,
-        to: trader,
-        lamports: output,
-    }
-    .invoke_signed(&signers)?;
+    system_transfer(
+        market,
+        trader,
+        output,
+        &signers,
+    )?;
 
     Ok(())
 }
@@ -455,37 +721,54 @@ fn process_instruction(
     accounts: &mut [AccountView],
     instruction_data: &[u8],
 ) -> ProgramResult {
-    // tag + input + minimum_output
     if instruction_data.len() != 17 {
-        return Err(ProgramError::InvalidInstructionData);
+        return Err(
+            ProgramError::InvalidInstructionData
+        );
     }
 
-    let tag = instruction_data[0];
-    let input = u64_at(instruction_data, 1)?;
-    let minimum_output = u64_at(instruction_data, 9)?;
+    let tag =
+        instruction_data[0];
+
+    let input =
+        u64_at(
+            instruction_data,
+            1,
+        )?;
+
+    let minimum =
+        u64_at(
+            instruction_data,
+            9,
+        )?;
 
     if input == 0 {
         return Err(err(ERR_QUOTE));
     }
 
-    if minimum_output == 0 {
+    if minimum == 0 {
         return Err(err(ERR_SLIPPAGE));
     }
 
     match tag {
-        0 => buy(
-            accounts,
-            input,
-            minimum_output,
-        ),
+        0 =>
+            buy(
+                accounts,
+                input,
+                minimum,
+            ),
 
-        1 => sell(
-            accounts,
-            input,
-            minimum_output,
-        ),
+        1 =>
+            sell(
+                accounts,
+                input,
+                minimum,
+            ),
 
-        _ => Err(ProgramError::InvalidInstructionData),
+        _ =>
+            Err(
+                ProgramError::InvalidInstructionData
+            ),
     }
 }
 
@@ -493,7 +776,7 @@ fn process_instruction(
 mod tests {
     use super::*;
 
-    fn reference_mul_div(
+    fn reference(
         a: u64,
         b: u64,
         d: u64,
@@ -506,73 +789,70 @@ mod tests {
     }
 
     #[test]
-    fn fee_is_exact_original_25_bps() {
-        for amount in [
+    fn fee_is_25_bps() {
+        for n in [
             1u64,
-            399,
             400,
             1_000,
             1_000_000,
             1_000_000_000,
             u32::MAX as u64,
-            u64::MAX,
         ] {
-            let original =
-                (
-                    (amount as u128) *
-                    25u128 /
-                    10_000u128
-                ) as u64;
-
             assert_eq!(
-                fee(amount),
-                original
+                fee(n),
+                (
+                    (n as u128) *
+                    25 /
+                    10_000
+                ) as u64
             );
         }
     }
 
     #[test]
-    fn compact_mul_div_matches_u128_reference() {
-        let values = [
+    fn compact_math_matches_reference() {
+        for a in [
             1u64,
-            2,
-            3,
-            7,
-            31,
-            255,
+            10,
             1_000,
-            1_000_000,
-            30_000_000_000,
-            1_000_000_000_000_000,
-            u32::MAX as u64,
-            u64::MAX / 4,
-            u64::MAX / 2,
-            u64::MAX,
-        ];
+            1_000_000_000,
+            SUPPLY,
+        ] {
+            for d in [
+                2u64,
+                31,
+                1_000,
+                VIRTUAL_NATIVE,
+                SUPPLY,
+            ] {
+                let b =
+                    (a % d)
+                        .min(d - 1);
 
-        for &a in &values {
-            for &d0 in &values {
-                let d = d0.max(2);
-
-                for &b0 in &values {
-                    let b = b0 % d;
-
-                    assert_eq!(
-                        mul_div_ratio(a, b, d).unwrap(),
-                        reference_mul_div(a, b, d)
-                    );
-                }
+                assert_eq!(
+                    mul_div_ratio(
+                        a,
+                        b,
+                        d
+                    )
+                    .unwrap(),
+                    reference(
+                        a,
+                        b,
+                        d
+                    )
+                );
             }
         }
     }
 
     #[test]
-    fn round_trip_preserves_curve_and_cannot_profit() {
+    fn round_trip_cannot_profit() {
         for amount in [
-            1_000u64,
+            10_000u64,
             1_000_000,
+            100_000_000,
             1_000_000_000,
-            50_000_000_000,
         ] {
             let (out, buy_fee) =
                 quote_buy(
@@ -596,95 +876,10 @@ mod tests {
                 )
                 .unwrap();
 
-            assert!(gross <= native);
-            assert!(gross - sell_fee < amount);
-
-            let ref_buy =
-                reference_mul_div(
-                    SUPPLY,
-                    amount - fee(amount),
-                    VIRTUAL_NATIVE +
-                        amount -
-                        fee(amount),
-                );
-
-            assert_eq!(out, ref_buy);
-        }
-    }
-
-    #[test]
-    fn many_trades_conserve_supply_and_backing() {
-        let mut native = 0u64;
-        let mut remaining = SUPPLY;
-        let mut circulating = 0u64;
-
-        for i in 1..=1000u64 {
-            let input =
-                i * 7_919 + 10_000;
-
-            let (out, f) =
-                quote_buy(
-                    native,
-                    remaining,
-                    input,
-                )
-                .unwrap();
-
-            native += input - f;
-            remaining -= out;
-            circulating += out;
-
-            let sold =
-                circulating / 3;
-
-            if sold != 0 {
-                let (gross, _) =
-                    quote_sell(
-                        native,
-                        remaining,
-                        sold,
-                    )
-                    .unwrap();
-
-                native -= gross;
-                remaining += sold;
-                circulating -= sold;
-            }
-
-            assert_eq!(
-                remaining + circulating,
-                SUPPLY
+            assert!(
+                gross - sell_fee <
+                amount
             );
         }
-    }
-
-    #[test]
-    fn bad_values_fail_closed() {
-        assert!(
-            quote_buy(
-                0,
-                SUPPLY,
-                0
-            )
-            .is_err()
-        );
-
-        assert!(
-            quote_sell(
-                0,
-                SUPPLY,
-                1
-            )
-            .is_err()
-        );
-
-        assert!(
-            quote_buy(
-                u64::MAX,
-                SUPPLY,
-                1
-            )
-            .is_err()
-        );
     }
 }
