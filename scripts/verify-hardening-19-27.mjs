@@ -469,32 +469,44 @@ async function step21IdentitySeal() {
 
   assert.equal(
     config.solana.protocol,
-    'pump',
+    'tiny',
     'Solana protocol drift'
   );
 
   assert.equal(
     config.solana.programId,
-    '6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P',
-    'Reviewed Pump program drift'
+    '3CHqrdJzwWQj1QikCzpjBhC8iQ3paaMtD1x9kwoW1rku',
+    'Reviewed PumpLite program drift'
+  );
+
+  assert.equal(
+    config.solana.treasury,
+    'BNpFPPuy2h12dryy4dayemjA4YS17ccVaF82jBDuiwct',
+    'Reviewed PumpLite treasury drift'
+  );
+
+  assert.equal(
+    config.solana.clientVersion,
+    5,
+    'PumpLite client version drift'
   );
 
   assert.equal(
     config.solana.ammProgramId,
-    'pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA',
-    'Reviewed PumpSwap program drift'
+    undefined,
+    'Legacy PumpSwap program must not be active'
   );
 
   assert.equal(
     config.solana.mayhemProgramId,
-    'MAyhSmzXzV1pTf7LsNkrNwkWKTo4ougAJ1PPg47MD4e',
-    'Reviewed Mayhem program drift'
+    undefined,
+    'Legacy Pump Mayhem program must not be active'
   );
 
   assert.equal(
     config.solana.transactionsEnabled,
-    true,
-    'Reviewed Pump Mainnet transactions unexpectedly disabled'
+    false,
+    'PumpLite Solana public writes must remain safety locked'
   );
 
   assert.equal(

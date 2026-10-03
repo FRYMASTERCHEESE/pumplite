@@ -72,11 +72,13 @@ function controls() {
   $('base-v3-mode-options').hidden = !baseV3;
 
   $('solana-pump-options').hidden =
-    state.chain !== 'solana';
+    state.chain !== 'solana' ||
+    state.config?.solana?.protocol !== 'pump';
 
   $('solana-mayhem').disabled =
     state.busy ||
-    state.chain !== 'solana';
+    state.chain !== 'solana' ||
+    state.config?.solana?.protocol !== 'pump';
   $('v2-initial-mayhem-row').hidden = baseV3;
   $('base-contract-version-label').textContent =
     baseV3 ? 'V3' : 'V2';
@@ -120,6 +122,20 @@ function controls() {
     baseModern
       ? 'No creator allocation. Choose Fixed / No Mint or a permanently capped Mintable supply.'
       : 'No creator allocation. All supply starts in the market vault. No future minting.';
+
+  if (
+    state.chain === 'solana' &&
+    state.config?.solana?.protocol === 'tiny'
+  ) {
+    $('create-supply-fact').textContent =
+      '1 billion';
+
+    $('create-supply-mode-fact').textContent =
+      'PumpLite · fixed curve';
+
+    $('create-supply-help').textContent =
+      'PumpLite uses the deployed Solana Mainnet bonding curve with fixed 1 billion supply capacity, 30 SOL virtual reserve and 0.25% trading fee.';
+  }
 
   if (
     state.chain === 'solana' &&
@@ -900,9 +916,13 @@ async function getAdapter() {
      * submit a transaction or spend SOL.
      */
     module =
-      await import(
-        './adapters/solana-pump-loader.js'
-      );
+      state.config?.solana?.protocol === 'tiny'
+        ? await import(
+            './adapters/solana-tiny.js'
+          )
+        : await import(
+            './adapters/solana-pump-loader.js'
+          );
   } else {
     module =
       state.config?.base?.contractVersion === 3
@@ -3190,7 +3210,13 @@ $('get-quote').addEventListener('click', () => action(async () => {
   $('quote-min').textContent = formatUnits(min, decimals, decimals) + ' ' + unit;
   $('quote-fee').textContent =
     state.chain === 'solana'
-      ? 'Pump protocol + creator fees are included in the on-chain quote'
+      ? state.config?.solana?.protocol === 'tiny'
+        ? formatUnits(
+            q.fee,
+            m.nativeDecimals,
+            m.nativeDecimals
+          ) + ' SOL · PumpLite 0.25% fee'
+        : 'Pump protocol + creator fees are included in the on-chain quote'
       : formatUnits(
           q.fee,
           m.nativeDecimals,

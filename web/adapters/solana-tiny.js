@@ -321,41 +321,24 @@ export function adapter(
       );
     }
 
-    const localSignatures =
-      localSigners.map(
-        signer => {
-          const item =
-            tx.signatures.find(
-              entry =>
-                entry.publicKey.equals(
-                  signer.publicKey
-                )
-            );
-
-          if (!item?.signature) {
-            throw Error(
-              'Local Solana signer was not applied'
-            );
-          }
-
-          return {
-            publicKey:
-              signer.publicKey,
-            signature:
-              Buffer.from(
-                item.signature
-              )
-          };
-        }
-      );
-
-    const message =
-      Buffer.from(
-        tx.serializeMessage()
+    /*
+     * Normalize the authored transaction through Solana wire format
+     * before comparing it with Phantom's returned transaction.
+     *
+     * Wallets may recompile account metas when they prepend
+     * Compute Budget instructions. This preserves the exact message
+     * semantics while avoiding false per-instruction meta mismatches.
+     */
+    const original =
+      Transaction.from(
+        tx.serialize({
+          requireAllSignatures: false,
+          verifySignatures: false
+        })
       );
 
     notify(
-      'Review and approve the transaction in your Solana wallet.'
+      'Review and approve the PumpLite transaction in Phantom.'
     );
 
     const signed =
@@ -363,42 +346,262 @@ export function adapter(
         .signTransaction(tx);
 
     if (
-      !signed?.serializeMessage ||
-      !message.equals(
-        Buffer.from(
-          signed.serializeMessage()
-        )
-      )
+      !signed?.feePayer ||
+      !signed.feePayer.equals(owner)
     ) {
       throw Error(
-        'Wallet changed the transaction'
+        'Wallet changed the fee payer'
+      );
+    }
+
+    if (
+      signed.recentBlockhash !==
+      tx.recentBlockhash
+    ) {
+      throw Error(
+        'Wallet changed the blockhash'
+      );
+    }
+
+    const computeBudget =
+      new PublicKey(
+        'ComputeBudget111111111111111111111111111111'
+      );
+
+    const extra =
+      signed.instructions.length -
+      original.instructions.length;
+
+    if (
+      extra < 0 ||
+      extra > 2
+    ) {
+      throw Error(
+        'Wallet added unexpected instructions'
+      );
+    }
+
+    let limitSeen = false;
+    let priceSeen = false;
+
+    for (
+      let i = 0;
+      i < extra;
+      i++
+    ) {
+      const ix =
+        signed.instructions[i];
+
+      if (
+        !ix.programId.equals(
+          computeBudget
+        ) ||
+        ix.keys.length !== 0
+      ) {
+        throw Error(
+          'Wallet added unsupported instruction'
+        );
+      }
+
+      const data =
+        Buffer.from(
+          ix.data
+        );
+
+      if (
+        data.length === 5 &&
+        data[0] === 2
+      ) {
+        if (limitSeen) {
+          throw Error(
+            'Duplicate compute limit'
+          );
+        }
+
+        limitSeen = true;
+
+        const limit =
+          data.readUInt32LE(1);
+
+        if (
+          limit < 1_000 ||
+          limit > 1_400_000
+        ) {
+          throw Error(
+            'Unsafe compute limit'
+          );
+        }
+      }
+      else if (
+        data.length === 9 &&
+        data[0] === 3
+      ) {
+        if (priceSeen) {
+          throw Error(
+            'Duplicate compute price'
+          );
+        }
+
+        priceSeen = true;
+      }
+      else {
+        throw Error(
+          'Unsupported Compute Budget instruction'
+        );
+      }
+    }
+
+    if (
+      extra > 0 &&
+      (!limitSeen || !priceSeen)
+    ) {
+      throw Error(
+        'Incomplete Compute Budget prefix'
       );
     }
 
     for (
-      const local of
-      localSignatures
+      let i = 0;
+      i < original.instructions.length;
+      i++
     ) {
-      const item =
-        signed.signatures.find(
-          entry =>
-            entry.publicKey.equals(
-              local.publicKey
-            )
-        );
+      const expected =
+        original.instructions[i];
+
+      const actual =
+        signed.instructions[
+          i + extra
+        ];
 
       if (
-        !item?.signature ||
-        !local.signature.equals(
+        !actual ||
+        !expected.programId.equals(
+          actual.programId
+        ) ||
+        !Buffer.from(
+          expected.data
+        ).equals(
           Buffer.from(
-            item.signature
+            actual.data
           )
-        )
+        ) ||
+        expected.keys.length !==
+          actual.keys.length
       ) {
         throw Error(
-          'Wallet removed a required mint signature'
+          'Wallet changed a PumpLite instruction'
         );
       }
+
+      for (
+        let k = 0;
+        k < expected.keys.length;
+        k++
+      ) {
+        const a =
+          expected.keys[k];
+
+        const b =
+          actual.keys[k];
+
+        if (
+          !a.pubkey.equals(
+            b.pubkey
+          ) ||
+          a.isSigner !==
+            b.isSigner ||
+          a.isWritable !==
+            b.isWritable
+        ) {
+          throw Error(
+            'Wallet changed a PumpLite account'
+          );
+        }
+      }
+    }
+
+    /*
+     * If Phantom normalized the message, reapply only the
+     * disposable local mint signature. Phantom's wallet
+     * signature remains over this exact message.
+     */
+    if (localSigners.length) {
+      signed.partialSign(
+        ...localSigners
+      );
+    }
+
+    if (
+      !signed.verifySignatures()
+    ) {
+      throw Error(
+        'Wallet returned invalid signatures'
+      );
+    }
+
+    const fee =
+      await connection
+        .getFeeForMessage(
+          signed.compileMessage(),
+          'confirmed'
+        );
+
+    if (
+      !Number.isSafeInteger(
+        fee.value
+      ) ||
+      fee.value > 200_000
+    ) {
+      throw Error(
+        'Transaction fee exceeds PumpLite safety limit'
+      );
+    }
+
+    const raw =
+      signed.serialize();
+
+    const simulation =
+      await connection
+        ._rpcRequest(
+          'simulateTransaction',
+          [
+            Buffer.from(raw)
+              .toString('base64'),
+            {
+              encoding:
+                'base64',
+              sigVerify:
+                true,
+              replaceRecentBlockhash:
+                false,
+              commitment:
+                'confirmed'
+            }
+          ]
+        );
+
+    if (simulation.error) {
+      throw Error(
+        'PumpLite simulation RPC error: ' +
+        JSON.stringify(
+          simulation.error
+        )
+      );
+    }
+
+    const sim =
+      simulation.result?.value;
+
+    if (
+      !sim ||
+      sim.err !== null
+    ) {
+      throw Error(
+        'PumpLite simulation failed: ' +
+        JSON.stringify(
+          sim?.err ?? 'missing simulation result'
+        )
+      );
     }
 
     await wallet();
@@ -409,7 +612,7 @@ export function adapter(
       );
 
     notify(
-      'Submitting to Solana. If the response is interrupted, inspect this transaction before retrying.',
+      'Simulation passed. Submitting to Solana Mainnet.',
       config.explorer +
       '/tx/' +
       expectedSignature
@@ -418,7 +621,15 @@ export function adapter(
     const signature =
       await connection
         .sendRawTransaction(
-          signed.serialize()
+          raw,
+          {
+            skipPreflight:
+              false,
+            preflightCommitment:
+              'confirmed',
+            maxRetries:
+              0
+          }
         );
 
     if (
@@ -617,6 +828,7 @@ export function adapter(
       );
 
     return {
+      protocol: 'tiny',
       id: mint.toBase58(),
       token: mint.toBase58(),
       marketAddress:
@@ -1064,6 +1276,104 @@ export function adapter(
         native:
           BigInt(native),
         tokens
+      };
+    },
+
+    async quote(
+      m,
+      side,
+      input
+    ) {
+      if (
+        !['buy', 'sell'].includes(
+          side
+        ) ||
+        typeof input !== 'bigint' ||
+        input <= 0n ||
+        input >
+          18_446_744_073_709_551_615n
+      ) {
+        throw Error(
+          'Invalid PumpLite quote amount'
+        );
+      }
+
+      const fresh =
+        await market(
+          m.id
+        );
+
+      const native =
+        fresh.nativeReserve;
+
+      const tokens =
+        fresh.tokenReserve;
+
+      const virtualNative =
+        30_000_000_000n;
+
+      if (side === 'buy') {
+        const fee =
+          input / 400n;
+
+        const net =
+          input - fee;
+
+        const denominator =
+          virtualNative +
+          native +
+          net;
+
+        const output =
+          tokens *
+          net /
+          denominator;
+
+        if (output <= 0n) {
+          throw Error(
+            'Trade amount is too small'
+          );
+        }
+
+        return {
+          output,
+          fee
+        };
+      }
+
+      const denominator =
+        tokens +
+        input;
+
+      const gross =
+        (
+          virtualNative +
+          native
+        ) *
+        input /
+        denominator;
+
+      if (gross > native) {
+        throw Error(
+          'Insufficient PumpLite curve backing'
+        );
+      }
+
+      const fee =
+        gross / 400n;
+
+      const output =
+        gross - fee;
+
+      if (output <= 0n) {
+        throw Error(
+          'Trade amount is too small'
+        );
+      }
+
+      return {
+        output,
+        fee
       };
     },
 

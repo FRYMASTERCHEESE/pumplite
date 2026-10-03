@@ -3,22 +3,18 @@
   "feeBps": 25,
   "solana": {
     "name": "Solana Mainnet",
-    "protocol": "pump",
+    "protocol": "tiny",
     "rpcUrl": "https://pumplite-rpc.coreyedge123.workers.dev/rpc",
     "rpcFallbackUrls": [
       "https://solana-rpc.publicnode.com"
     ],
     "genesisHash": "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d",
-    "programId": "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P",
-    "ammProgramId": "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA",
-    "mayhemProgramId": "MAyhSmzXzV1pTf7LsNkrNwkWKTo4ougAJ1PPg47MD4e",
+    "programId": "3CHqrdJzwWQj1QikCzpjBhC8iQ3paaMtD1x9kwoW1rku",
     "treasury": "BNpFPPuy2h12dryy4dayemjA4YS17ccVaF82jBDuiwct",
     "explorer": "https://solscan.io",
     "discoveryUrl": null,
-    "transactionsEnabled": true,
-    "clientVersion": 4,
-    "pumpSdkVersion": "2.0.0",
-    "pumpSwapSdkVersion": "1.20.0"
+    "transactionsEnabled": false,
+    "clientVersion": 5
   },
   "base": {
     "name": "Base Mainnet",

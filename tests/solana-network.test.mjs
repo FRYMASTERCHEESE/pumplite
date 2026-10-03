@@ -119,7 +119,7 @@ async function rpc(t, reply) {
 }
 
 test(
-  'production pins full Mainnet identity and reviewed Pump programs',
+  'production pins full Mainnet identity and reviewed PumpLite program',
   () => {
     assert.equal(
       SOLANA_MAINNET_GENESIS_HASH,
@@ -133,7 +133,7 @@ test(
 
     assert.equal(
       config.solana.transactionsEnabled,
-      true
+      false
     );
 
     assert.equal(
@@ -143,22 +143,17 @@ test(
 
     assert.equal(
       config.solana.protocol,
-      'pump'
+      'tiny'
     );
 
     assert.equal(
       config.solana.programId,
-      '6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P'
+      '3CHqrdJzwWQj1QikCzpjBhC8iQ3paaMtD1x9kwoW1rku'
     );
 
     assert.equal(
-      config.solana.ammProgramId,
-      'pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA'
-    );
-
-    assert.equal(
-      config.solana.mayhemProgramId,
-      'MAyhSmzXzV1pTf7LsNkrNwkWKTo4ougAJ1PPg47MD4e'
+      config.solana.treasury,
+      'BNpFPPuy2h12dryy4dayemjA4YS17ccVaF82jBDuiwct'
     );
   }
 );

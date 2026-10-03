@@ -4,9 +4,14 @@ import { readFile } from 'node:fs/promises';
 
 test('Steps 19-27 hardening verifier covers all nine production gates and stays read-only', async () => {
   const source =
-    await readFile(
-      'scripts/verify-hardening-19-27.mjs',
-      'utf8'
+    (
+      await readFile(
+        'scripts/verify-hardening-19-27.mjs',
+        'utf8'
+      )
+    ).replace(
+      /\r\n?/g,
+      '\n'
     );
 
   for (const required of [

@@ -74,7 +74,7 @@ test('maintainer helpers require manual checks and portable UID', () => {
   assert.equal(declined.base[id].status, 'declined');
 });
 
-test('shipped registry is valid and reviewed Base + Pump Mainnet deployments remain pinned', async () => {
+test('shipped registry is valid and reviewed Base + PumpLite Mainnet deployments remain pinned', async () => {
   const reviewed = validateRegistry(JSON.parse(await readFile('web/verified-tokens.json')));
   assert.equal(reviewed.version, 1);
 
@@ -97,26 +97,36 @@ test('shipped registry is valid and reviewed Base + Pump Mainnet deployments rem
 
   assert.equal(
     live.solana.protocol,
-    'pump'
+    'tiny'
   );
 
   assert.equal(
     live.solana.programId,
-    '6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P'
+    '3CHqrdJzwWQj1QikCzpjBhC8iQ3paaMtD1x9kwoW1rku'
+  );
+
+  assert.equal(
+    live.solana.treasury,
+    'BNpFPPuy2h12dryy4dayemjA4YS17ccVaF82jBDuiwct'
+  );
+
+  assert.equal(
+    live.solana.clientVersion,
+    5
   );
 
   assert.equal(
     live.solana.ammProgramId,
-    'pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA'
+    undefined
   );
 
   assert.equal(
     live.solana.mayhemProgramId,
-    'MAyhSmzXzV1pTf7LsNkrNwkWKTo4ougAJ1PPg47MD4e'
+    undefined
   );
 
   assert.equal(
     live.solana.transactionsEnabled,
-    true
+    false
   );
 });

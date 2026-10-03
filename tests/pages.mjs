@@ -92,6 +92,12 @@ try {
           /^(solana|base)-.*\.js$/.test(name)
       );
 
+  const tinyBundles =
+    chunks.filter(
+      name =>
+        /^solana-tiny-.*\.js$/.test(name)
+    );
+
   const pumpBundles =
     chunks.filter(
       name =>
@@ -105,15 +111,21 @@ try {
     );
 
   assert.equal(
+    tinyBundles.length,
+    1,
+    'PumpLite tiny production bundle must exist exactly once'
+  );
+
+  assert.equal(
     pumpBundles.length,
     1,
-    'Pump SDK bundle must exist exactly once'
+    'Legacy Pump compatibility SDK bundle must exist exactly once'
   );
 
   assert.equal(
     pumpLoaderBundles.length,
     1,
-    'Pump loader bundle must exist exactly once'
+    'Legacy Pump compatibility loader must exist exactly once'
   );
 
   assert.equal(
@@ -122,7 +134,7 @@ try {
         /^solana-pump-/.test(name)
     ).length,
     2,
-    'Solana production build must contain exactly the Pump SDK and its loader'
+    'Legacy Pump compatibility build must contain exactly its SDK and loader'
   );
   assert.equal(chunks.filter(name => /^base-(?!v[23]-)/.test(name)).length, 1, 'Base V1 compatibility bundle must exist exactly once');
   assert.equal(chunks.filter(name => /^base-v2-/.test(name)).length, 1, 'Base V2 bundle must exist exactly once');
@@ -669,7 +681,13 @@ try {
   }
   await phantom.locator('#connect').click();
   await phantom.waitForFunction(() => document.querySelector('#connect').textContent === 'Approve in Phantom');
-  assert.match(await phantom.locator('#wallet-diagnostic').textContent(), /Phantom detected/);
+  assert.match(
+    await phantom
+      .locator('#wallet-diagnostic')
+      .textContent(),
+    /phantom\.solana: present[\s\S]*Phantom ready/i,
+    'Synthetic Phantom provider must be detected before account approval'
+  );
   await phantom.locator('#connect').click();
   await phantom.waitForFunction(
     () => {
@@ -721,14 +739,13 @@ try {
   assert.equal(await phantom.evaluate(() => window.syntheticApprovalActive), true);
   await phantom.waitForFunction(
     () =>
-      document.querySelector('#connect')?.disabled === false &&
-      document.querySelector('#create')?.disabled === false
+      document.querySelector('#connect')?.disabled === false
   );
 
   assert.equal(
     await phantom.locator('#create').isDisabled(),
-    false,
-    'Reviewed Pump Mainnet creation becomes available only after Phantom connects'
+    true,
+    'PumpLite Solana writes remain intentionally locked during frontend verification'
   );
   await phantom.close();
 
@@ -1130,10 +1147,27 @@ try {
     );
     assert.ok(!requests.some(url => /\/(solana|base)-/.test(url)), 'No wallet SDK is fetched initially');
     assert.equal(await page.locator('body').evaluate(el => el.scrollWidth <= innerWidth), true);
-    // Force both production lazy-module graphs to resolve without calling connect or signing.
-    for (const chunk of chunks) {
-      const type = await page.evaluate(async url => typeof (await import(url)).adapter, base + 'assets/chunks/' + chunk);
-      assert.equal(type, 'function');
+    // Resolve production/compatibility adapter graphs without calling
+    // connect or signing. The raw Pump SDK chunk must never be imported
+    // directly because its reviewed loader installs browser Buffer first.
+    const adapterChunks =
+      chunks.filter(
+        chunk =>
+          !/^solana-pump-(?!loader-)/.test(chunk)
+      );
+
+    for (const chunk of adapterChunks) {
+      const type =
+        await page.evaluate(
+          async url =>
+            typeof (await import(url)).adapter,
+          base + 'assets/chunks/' + chunk
+        );
+
+      assert.equal(
+        type,
+        'function'
+      );
     }
     // Check the published guard without RPC requests or wallet calls.
     const chainGuard = await page.evaluate(async ({ url, configUrl }) => {
@@ -1144,7 +1178,7 @@ try {
         adapter({ ...solana, genesisHash: solana.genesisHash.slice(0, 32) }, () => {});
         return false;
       } catch (error) { return error.message === 'RPC is not Solana Mainnet'; }
-    }, { url: base + 'assets/chunks/' + chunks.find(chunk => chunk.startsWith('solana-')), configUrl: base + 'config.json' });
+    }, { url: base + 'assets/chunks/' + tinyBundles[0], configUrl: base + 'config.json' });
     assert.equal(chainGuard, true, 'Published Solana adapter rejects truncated chain configuration');
     await page.locator('#skip-content').focus();
     await page.keyboard.press('Enter');
@@ -1176,7 +1210,7 @@ try {
       }
     );
 
-    // Pump Mainnet is a reviewed live deployment now.
+    // PumpLite Mainnet is a reviewed live deployment; public writes remain locked.
     // Wait for PumpLite's boot cycle, not library-specific error wording.
     await page.waitForFunction(
       () =>

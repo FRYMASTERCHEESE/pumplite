@@ -48,7 +48,7 @@ function compatibleMint() {
   throw Error('No compatible fixture mint');
 }
 
-test('legacy tiny builder is no longer the production Solana route', async () => {
+test('tiny builder is the reviewed PumpLite production route', async () => {
   const config = JSON.parse(
     await readFile(
       'config.json',
@@ -58,32 +58,22 @@ test('legacy tiny builder is no longer the production Solana route', async () =>
 
   assert.equal(
     config.solana.clientVersion,
-    4
+    5
   );
 
   assert.equal(
     config.solana.protocol,
-    'pump'
+    'tiny'
   );
 
   assert.equal(
     config.solana.programId,
-    '6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P'
-  );
-
-  assert.equal(
-    config.solana.ammProgramId,
-    'pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA'
-  );
-
-  assert.equal(
-    config.solana.mayhemProgramId,
-    'MAyhSmzXzV1pTf7LsNkrNwkWKTo4ougAJ1PPg47MD4e'
+    '3CHqrdJzwWQj1QikCzpjBhC8iQ3paaMtD1x9kwoW1rku'
   );
 
   assert.equal(
     config.solana.transactionsEnabled,
-    true
+    false
   );
 });
 

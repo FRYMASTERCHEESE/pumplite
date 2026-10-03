@@ -271,14 +271,15 @@ gate(
 );
 
 gate(
-  'reviewed Pump Mainnet identities and RPC split remain sealed',
-  config.solana?.protocol === 'pump' &&
+  'reviewed PumpLite Solana Mainnet identity and RPC split remain sealed',
+  config.solana?.protocol === 'tiny' &&
     config.solana?.programId ===
-      '6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P' &&
-    config.solana?.ammProgramId ===
-      'pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA' &&
-    config.solana?.mayhemProgramId ===
-      'MAyhSmzXzV1pTf7LsNkrNwkWKTo4ougAJ1PPg47MD4e' &&
+      '3CHqrdJzwWQj1QikCzpjBhC8iQ3paaMtD1x9kwoW1rku' &&
+    config.solana?.treasury ===
+      'BNpFPPuy2h12dryy4dayemjA4YS17ccVaF82jBDuiwct' &&
+    config.solana?.clientVersion === 5 &&
+    config.solana?.ammProgramId === undefined &&
+    config.solana?.mayhemProgramId === undefined &&
     config.solana?.rpcUrl ===
       'https://pumplite-rpc.coreyedge123.workers.dev/rpc' &&
     Array.isArray(
@@ -290,8 +291,8 @@ gate(
 );
 
 gate(
-  'reviewed Pump Mainnet transaction path remains enabled',
-  config.solana?.transactionsEnabled === true
+  'PumpLite Solana Mainnet public transaction path remains safety locked',
+  config.solana?.transactionsEnabled === false
 );
 
 gate(

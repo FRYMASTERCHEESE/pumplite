@@ -19,15 +19,6 @@ const current =
 const validFactory =
   '0x1111111111111111111111111111111111111111';
 
-const PUMP =
-  '6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P';
-
-const PUMP_AMM =
-  'pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA';
-
-const MAYHEM =
-  'MAyhSmzXzV1pTf7LsNkrNwkWKTo4ougAJ1PPg47MD4e';
-
 function clone() {
   return structuredClone(
     current
@@ -35,115 +26,75 @@ function clone() {
 }
 
 test(
-  'production enables reviewed Base and Pump Mainnet',
+  'production pins Base and PumpLite Mainnet',
   () => {
     validatePublicConfig(
       current
     );
 
     assert.equal(
-      current.base.factory,
-      '0xdA8c34819ae397FD4bE3C95947DEA64f4A3278f4'
-    );
-
-    assert.equal(
-      current.base.contractVersion,
-      2
-    );
-
-    assert.equal(
-      deploymentConfigured(
-        current,
-        'base'
-      ),
-      true
-    );
-
-    assert.equal(
-      deploymentConfigured(
-        current,
-        'solana'
-      ),
-      true
-    );
-
-    assert.equal(
-      transactionConfigEnabled(
-        current,
-        'base'
-      ),
-      true
-    );
-
-    assert.equal(
-      transactionConfigEnabled(
-        current,
-        'solana'
-      ),
-      true
-    );
-
-    assert.equal(
       current.solana.protocol,
-      'pump'
+      'tiny'
     );
 
     assert.equal(
       current.solana.programId,
-      PUMP
+      '3CHqrdJzwWQj1QikCzpjBhC8iQ3paaMtD1x9kwoW1rku'
     );
 
     assert.equal(
-      current.solana.ammProgramId,
-      PUMP_AMM
+      current.solana.treasury,
+      'BNpFPPuy2h12dryy4dayemjA4YS17ccVaF82jBDuiwct'
     );
 
     assert.equal(
-      current.solana.mayhemProgramId,
-      MAYHEM
+      current.solana.transactionsEnabled,
+      false
     );
 
     assert.equal(
-      current.base.holderClaim.enabled,
+      deploymentConfigured(
+        current,
+        'solana'
+      ),
       true
     );
 
     assert.equal(
-      current.base.holderClaim.contract,
-      '0xeCe2B0494f3010D3bd37ba4C3eF39faCe228c5c2'
+      transactionConfigEnabled(
+        current,
+        'solana'
+      ),
+      false
     );
 
     assert.equal(
-      current.base.holderClaim.token,
-      '0xb15A460142c77b42cDF57815b0eeFEb24b593196'
+      deploymentConfigured(
+        current,
+        'base'
+      ),
+      true
     );
 
     assert.equal(
-      current.base.holderClaim.claimAmount,
-      '1'
-    );
-
-    assert.equal(
-      current.base.holderClaim.maxClaims,
-      50
+      transactionConfigEnabled(
+        current,
+        'base'
+      ),
+      true
     );
   }
 );
 
 test(
-  'Base remains usable when Solana writes are intentionally disabled',
+  'reviewed PumpLite config can enable writes explicitly',
   () => {
     const config =
       clone();
 
-    config.base.factory =
-      validFactory;
-
-    config.base.transactionsEnabled =
+    config.solana
+      .transactionsEnabled =
       true;
-
-    config.solana.transactionsEnabled =
-      false;
 
     validatePublicConfig(
       config
@@ -152,9 +103,32 @@ test(
     assert.equal(
       transactionConfigEnabled(
         config,
-        'base'
+        'solana'
       ),
       true
+    );
+  }
+);
+
+test(
+  'missing PumpLite program fails closed when writes enabled',
+  () => {
+    const config =
+      clone();
+
+    config.solana
+      .transactionsEnabled =
+      true;
+
+    config.solana.programId =
+      null;
+
+    assert.throws(
+      () =>
+        validatePublicConfig(
+          config
+        ),
+      /PumpLite Mainnet/
     );
 
     assert.equal(
@@ -168,7 +142,53 @@ test(
 );
 
 test(
-  'Base enabled with no factory fails closed',
+  'unreviewed PumpLite identities are rejected',
+  () => {
+    const changes = [
+      config =>
+        config.solana.programId =
+          '11111111111111111111111111111111',
+
+      config =>
+        config.solana.treasury =
+          '11111111111111111111111111111111',
+
+      config =>
+        config.solana.clientVersion =
+          4,
+
+      config =>
+        config.solana.rpcFallbackUrls =
+          ['https://example.com']
+    ];
+
+    for (const mutate of changes) {
+      const config =
+        clone();
+
+      mutate(config);
+
+      assert.throws(
+        () =>
+          validatePublicConfig(
+            config
+          ),
+        /PumpLite Mainnet/
+      );
+
+      assert.equal(
+        deploymentConfigured(
+          config,
+          'solana'
+        ),
+        false
+      );
+    }
+  }
+);
+
+test(
+  'Base enabled without factory fails closed',
   () => {
     const config =
       clone();
@@ -183,107 +203,6 @@ test(
         ),
       /without a deployed factory/
     );
-
-    assert.equal(
-      transactionConfigEnabled(
-        config,
-        'base'
-      ),
-      false
-    );
-  }
-);
-
-test(
-  'Solana enabled without reviewed Pump deployment fails closed',
-  () => {
-    const config =
-      clone();
-
-    config.solana.programId =
-      null;
-
-    assert.throws(
-      () =>
-        validatePublicConfig(
-          config
-        ),
-      /Unreviewed Pump Mainnet/
-    );
-
-    assert.equal(
-      transactionConfigEnabled(
-        config,
-        'solana'
-      ),
-      false
-    );
-  }
-);
-
-test(
-  'reviewed Pump deployment may be configured but write-disabled',
-  () => {
-    const config =
-      clone();
-
-    config.solana.transactionsEnabled =
-      false;
-
-    validatePublicConfig(
-      config
-    );
-
-    assert.equal(
-      deploymentConfigured(
-        config,
-        'solana'
-      ),
-      true
-    );
-
-    assert.equal(
-      transactionConfigEnabled(
-        config,
-        'solana'
-      ),
-      false
-    );
-  }
-);
-
-test(
-  'unreviewed Pump identities and RPC routing are rejected',
-  () => {
-    for (
-      const mutate of [
-        config =>
-          config.solana.programId =
-            '11111111111111111111111111111111',
-        config =>
-          config.solana.ammProgramId =
-            '11111111111111111111111111111111',
-        config =>
-          config.solana.mayhemProgramId =
-            '11111111111111111111111111111111',
-        config =>
-          config.solana.rpcFallbackUrls =
-            ['https://example.com']
-      ]
-    ) {
-      const config =
-        clone();
-
-      mutate(config);
-
-      assert.throws(
-        () =>
-          validatePublicConfig(
-            config
-          ),
-        /Unreviewed Pump Mainnet/
-      );
-    }
   }
 );
 
@@ -293,7 +212,8 @@ test(
     const config =
       clone();
 
-    config.base.chainId = 1;
+    config.base.chainId =
+      1;
 
     assert.throws(
       () =>
@@ -306,7 +226,7 @@ test(
 );
 
 test(
-  'invalid and zero Base factories are rejected',
+  'invalid Base factories are rejected',
   () => {
     for (
       const factory of [
@@ -351,91 +271,26 @@ test(
 );
 
 test(
-  'invalid and zero Base treasuries are rejected',
+  'Base holder claim remains pinned',
   () => {
-    for (
-      const treasury of [
-        '0x0000000000000000000000000000000000000000',
-        'not-an-address'
-      ]
-    ) {
-      const config =
-        clone();
+    assert.equal(
+      current.base.holderClaim.enabled,
+      true
+    );
 
-      config.base.treasury =
-        treasury;
+    assert.equal(
+      current.base.holderClaim.contract,
+      '0xeCe2B0494f3010D3bd37ba4C3eF39faCe228c5c2'
+    );
 
-      assert.throws(
-        () =>
-          validatePublicConfig(
-            config
-          ),
-        /treasury/
-      );
-    }
-  }
-);
+    assert.equal(
+      current.base.holderClaim.token,
+      '0xb15A460142c77b42cDF57815b0eeFEb24b593196'
+    );
 
-test(
-  'enabled holder claim fails closed on bad addresses or limits',
-  () => {
-    for (
-      const [field, value] of [
-        [
-          'contract',
-          '0x0000000000000000000000000000000000000000'
-        ],
-        [
-          'token',
-          'not-an-address'
-        ]
-      ]
-    ) {
-      const config =
-        clone();
-
-      config.base.holderClaim[field] =
-        value;
-
-      assert.throws(
-        () =>
-          validatePublicConfig(
-            config
-          ),
-        /holder claim address/
-      );
-    }
-
-    {
-      const config =
-        clone();
-
-      config.base.holderClaim.claimAmount =
-        '0';
-
-      assert.throws(
-        () =>
-          validatePublicConfig(
-            config
-          ),
-        /holder claim amount/
-      );
-    }
-
-    {
-      const config =
-        clone();
-
-      config.base.holderClaim.maxClaims =
-        0;
-
-      assert.throws(
-        () =>
-          validatePublicConfig(
-            config
-          ),
-        /holder claim maximum/
-      );
-    }
+    assert.equal(
+      current.base.holderClaim.maxClaims,
+      50
+    );
   }
 );

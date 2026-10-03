@@ -22,13 +22,15 @@ const config = JSON.parse(await readFile('config.json', 'utf8'));
 validatePublicConfig(config);
 assertSolanaMainnet(config.solana.genesisHash);
 assert.equal('transactionsEnabled' in config, false, 'Global transaction switch must not exist');
-assert.equal(config.solana.transactionsEnabled, true, 'Reviewed Pump Mainnet writes must remain enabled');
-assert.equal(transactionConfigEnabled(config, 'solana'), true, 'Reviewed Pump Mainnet deployment must remain transaction-enabled');
+assert.equal(config.solana.transactionsEnabled, false, 'PumpLite Solana public writes must remain safety locked');
+assert.equal(transactionConfigEnabled(config, 'solana'), false, 'PumpLite Solana transaction path must remain locked');
 assert.equal(config.metadataUploads?.enabled, true, 'Metadata publishing must remain enabled');
-assert.equal(config.solana.protocol, 'pump');
-assert.equal(config.solana.programId, '6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P');
-assert.equal(config.solana.ammProgramId, 'pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA');
-assert.equal(config.solana.mayhemProgramId, 'MAyhSmzXzV1pTf7LsNkrNwkWKTo4ougAJ1PPg47MD4e');
+assert.equal(config.solana.protocol, 'tiny');
+assert.equal(config.solana.programId, '3CHqrdJzwWQj1QikCzpjBhC8iQ3paaMtD1x9kwoW1rku');
+assert.equal(config.solana.treasury, 'BNpFPPuy2h12dryy4dayemjA4YS17ccVaF82jBDuiwct');
+assert.equal(config.solana.clientVersion, 5);
+assert.equal(config.solana.ammProgramId, undefined);
+assert.equal(config.solana.mayhemProgramId, undefined);
 assert.deepEqual(
   config.solana.rpcFallbackUrls,
   ['https://solana-rpc.publicnode.com']
@@ -99,7 +101,7 @@ for (const [name, abi] of Object.entries(v2Abis)) {
   }
 }
 
-console.log('PASS syntax, reviewed Base and Pump Mainnet deployment locks, treasury configuration, safe DOM, mainnet-only UI, absent admin and privileged Base functions');
+console.log('PASS syntax, reviewed Base and PumpLite Mainnet deployment locks, treasury configuration, safe DOM, mainnet-only UI, absent admin and privileged Base functions');
 
 const headerCheck = spawnSync(process.execPath, ['scripts/build-security-headers.mjs','--check'], {encoding:'utf8'});
 assert.equal(headerCheck.status,0,headerCheck.stderr);

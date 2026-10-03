@@ -2,6 +2,12 @@ const BASE_ADDRESS = /^0x[0-9a-fA-F]{40}$/;
 const SOLANA_ADDRESS = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 const ZERO_BASE = /^0x0{40}$/i;
 
+const PUMPLITE_TINY_PROGRAM =
+  '3CHqrdJzwWQj1QikCzpjBhC8iQ3paaMtD1x9kwoW1rku';
+
+const PUMPLITE_TREASURY =
+  'BNpFPPuy2h12dryy4dayemjA4YS17ccVaF82jBDuiwct';
+
 const PUMP_PROGRAM =
   '6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P';
 
@@ -32,6 +38,28 @@ function validSolanaAddress(value) {
   return (
     typeof value === 'string' &&
     SOLANA_ADDRESS.test(value)
+  );
+}
+
+function reviewedTiny(value) {
+  return Boolean(
+    value &&
+    value.protocol === 'tiny' &&
+    value.programId ===
+      PUMPLITE_TINY_PROGRAM &&
+    value.treasury ===
+      PUMPLITE_TREASURY &&
+    value.clientVersion === 5 &&
+    value.genesisHash ===
+      SOLANA_MAINNET_GENESIS &&
+    value.rpcUrl ===
+      PUMPLITE_READ_RPC &&
+    Array.isArray(
+      value.rpcFallbackUrls
+    ) &&
+    value.rpcFallbackUrls.length === 1 &&
+    value.rpcFallbackUrls[0] ===
+      PUMPLITE_WRITE_RPC
   );
 }
 
@@ -92,7 +120,9 @@ export function deploymentConfigured(
     );
   }
 
-  return reviewedPump(value);
+  return value.protocol === 'tiny'
+    ? reviewedTiny(value)
+    : reviewedPump(value);
 }
 
 export function transactionConfigEnabled(
@@ -278,8 +308,9 @@ export function validatePublicConfig(
   if (
     config.solana.protocol !==
       undefined &&
-    config.solana.protocol !==
-      'pump'
+    !['pump', 'tiny'].includes(
+      config.solana.protocol
+    )
   ) {
     throw Error(
       'Unsupported Solana protocol'
@@ -295,6 +326,18 @@ export function validatePublicConfig(
   ) {
     throw Error(
       'Unreviewed Pump Mainnet program configuration'
+    );
+  }
+
+  if (
+    config.solana.protocol ===
+      'tiny' &&
+    !reviewedTiny(
+      config.solana
+    )
+  ) {
+    throw Error(
+      'Unreviewed PumpLite Mainnet program configuration'
     );
   }
 
@@ -319,7 +362,7 @@ export function validatePublicConfig(
     )
   ) {
     throw Error(
-      'Solana transactions cannot be enabled without the reviewed Pump Mainnet deployment'
+      'Solana transactions cannot be enabled without the reviewed Solana Mainnet deployment'
     );
   }
 
