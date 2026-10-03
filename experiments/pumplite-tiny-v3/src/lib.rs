@@ -111,12 +111,9 @@ fn mul_div_ratio(a: u64, b: u64, d: u64) -> u64 {
 fn quote_buy(native: u64, tokens: u64, input: u64) -> Result<(u64, u64), ProgramError> {
     let f = fee(input);
 
-    let net = input.checked_sub(f).ok_or(err(ERR_OVERFLOW))?;
+    let net = input - f;
 
-    let denominator = VIRTUAL_NATIVE
-        .checked_add(native)
-        .and_then(|v| v.checked_add(net))
-        .ok_or(err(ERR_OVERFLOW))?;
+    let denominator = VIRTUAL_NATIVE + native + net;
 
     let output = mul_div_ratio(tokens, net, denominator);
 
@@ -125,11 +122,9 @@ fn quote_buy(native: u64, tokens: u64, input: u64) -> Result<(u64, u64), Program
 
 #[inline(always)]
 fn quote_sell(native: u64, tokens: u64, input: u64) -> Result<(u64, u64), ProgramError> {
-    let denominator = tokens.checked_add(input).ok_or(err(ERR_OVERFLOW))?;
+    let denominator = tokens + input;
 
-    let priced = VIRTUAL_NATIVE
-        .checked_add(native)
-        .ok_or(err(ERR_OVERFLOW))?;
+    let priced = VIRTUAL_NATIVE + native;
 
     let gross = mul_div_ratio(priced, input, denominator);
 
@@ -163,10 +158,6 @@ fn system_transfer(
         accounts: &accounts,
         data: &data,
     };
-
-    if from.is_borrowed() | to.is_borrowed() {
-        return Err(ProgramError::AccountBorrowFailed);
-    }
 
     let mut cpi = [const { MaybeUninit::<CpiAccount>::uninit() }; 2];
 
@@ -254,10 +245,6 @@ fn remaining_tokens(mint: &AccountView, market: &AccountView) -> Result<u64, Pro
 
     let remaining = SUPPLY.checked_sub(circulating).ok_or(err(ERR_ACCOUNT))?;
 
-    if remaining == 0 {
-        return Err(err(ERR_QUOTE));
-    }
-
     Ok(remaining)
 }
 
@@ -287,7 +274,7 @@ fn buy(accounts: &mut [AccountView], input: u64, minimum: u64) -> ProgramResult 
         return Err(err(ERR_SLIPPAGE));
     }
 
-    let net = input.checked_sub(f).ok_or(err(ERR_OVERFLOW))?;
+    let net = input - f;
 
     // 0.25% PumpLite fee.
     system_transfer(trader, treasury, f, &[])?;
@@ -321,7 +308,7 @@ fn sell(accounts: &mut [AccountView], input: u64, minimum: u64) -> ProgramResult
 
     let (gross, f) = quote_sell(native, tokens, input)?;
 
-    let output = gross.checked_sub(f).ok_or(err(ERR_OVERFLOW))?;
+    let output = gross - f;
 
     if output < minimum {
         return Err(err(ERR_SLIPPAGE));
@@ -358,10 +345,6 @@ fn process_instruction(
     let input = u64_at(instruction_data, 1);
 
     let minimum = u64_at(instruction_data, 9);
-
-    if input == 0 {
-        return Err(err(ERR_QUOTE));
-    }
 
     if minimum == 0 {
         return Err(err(ERR_SLIPPAGE));
