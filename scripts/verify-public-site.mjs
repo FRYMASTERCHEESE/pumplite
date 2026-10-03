@@ -189,7 +189,7 @@ async function verifyOnce() {
       'PLITE verification &amp; discovery'
     ) &&
     statusPage.includes(
-      'src="./status.js?boot=20261002bugs3"'
+      'src="./status.js?boot=20261003pump3"'
     ),
     'Live status page or status script reference is stale'
   );
@@ -199,7 +199,7 @@ async function verifyOnce() {
       'Deploy PumpLite V3'
     ) &&
     v3DeployPage.includes(
-      'src="./assets/v3-deploy.js?boot=20261002bugs3"'
+      'src="./assets/v3-deploy.js?boot=20261003pump3"'
     ) &&
     v3DeployPage.includes(
       'REAL BASE MAINNET'
@@ -364,12 +364,32 @@ async function verifyOnce() {
 
   assert.equal(
     liveConfig.solana.transactionsEnabled,
-    false
+    true
+  );
+
+  assert.equal(
+    liveConfig.solana.protocol,
+    'pump'
   );
 
   assert.equal(
     liveConfig.solana.programId,
-    null
+    '6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P'
+  );
+
+  assert.equal(
+    liveConfig.solana.ammProgramId,
+    'pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA'
+  );
+
+  assert.equal(
+    liveConfig.solana.mayhemProgramId,
+    'MAyhSmzXzV1pTf7LsNkrNwkWKTo4ougAJ1PPg47MD4e'
+  );
+
+  assert.deepEqual(
+    liveConfig.solana.rpcFallbackUrls,
+    ['https://solana-rpc.publicnode.com']
   );
 
   assert.equal(
@@ -427,7 +447,7 @@ async function verifyOnce() {
   console.log('App asset:', expectedApp);
   console.log('Claim asset:', expectedClaim);
   console.log(
-    'Base V2 live; Solana remains transaction-locked.'
+    'Base V2 live; reviewed Pump Mainnet Solana integration is enabled.'
   );
   console.log(
     'No wallet used. No signature requested. No transaction submitted.'

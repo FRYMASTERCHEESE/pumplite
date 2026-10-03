@@ -98,7 +98,12 @@ test('Base V2 frontend contains gated V2 features', async () => {
   assert.match(app, /connectBaseWalletFromGesture/);
   assert.match(app, /creationData/);
   assert.match(app, /optional first buy/i);
-  assert.match(app, /exchange-rates\?currency=ETH/);
+  assert.match(app, /exchange-rates\?currency=/);
+  assert.match(app, /encodeURIComponent\(native\)/);
+  assert.match(
+    app,
+    /state\.chain === 'solana'[\s\S]*?'SOL'[\s\S]*?'ETH'/
+  );
   assert.match(app, /Your token was created, but the optional first buy did not complete/);
   assert.match(app, /adapter\.trade\(/);
   assert.match(adapter, /provider\.estimateGas\(\{/);

@@ -29,7 +29,7 @@
 <title>PumpLite · Token launches, kept simple</title>
 <link rel="stylesheet" href="./assets/styles.css">
 <script defer src="./assets/phantom-diagnostic.js"></script>
-<script type="module" src="./assets/app.js?boot=20261002bugs3"></script>
+<script type="module" src="./assets/app.js?boot=20261003pump3"></script>
 </head>
 <body>
 <a class="skip-link" id="skip-content" href="#main-content">Skip to main content</a>
@@ -136,7 +136,7 @@
       <section class="panel launch" id="create-section" tabindex="-1" hidden>
         <p class="eyebrow">CREATE ON PUMPLITE</p><h2>Create your token</h2>
         <p id="create-network" class="network-pill">Base Mainnet · ETH pair</p>
-        <div class="launch-facts"><span><b id="create-supply-fact">1 billion</b><small id="create-supply-mode-fact">Fixed supply</small></span><span><b>0%</b>PumpLite creation fee</span><span><b>0.25%</b>Trading fee</span></div>
+        <div class="launch-facts"><span><b id="create-supply-fact">1 billion</b><small id="create-supply-mode-fact">Fixed supply</small></span><span><b>0%</b>PumpLite creation fee</span><span><b id="create-trading-fee">0.25%</b><small id="create-trading-fee-label">Trading fee</small></span></div>
         <p id="create-supply-help" class="fine">No creator allocation. All supply starts in the market vault. No future minting.</p>
 
         <div id="base-v2-create-options" hidden>
@@ -176,6 +176,16 @@
             </div>
 
             <p class="fine">Fixed supply can never mint later. Mintable supply can mint only into the market and never above its permanent cap.</p>
+          </fieldset>
+        </div>
+        <div id="solana-pump-options" hidden>
+          <fieldset>
+            <legend>Pump Mainnet options</legend>
+            <label>
+              <input id="solana-mayhem" type="checkbox">
+              Enable Pump Mayhem mode
+            </label>
+            <p class="fine">Mayhem is selected permanently when the Pump coin is created. Pump protocol and creator trading fees are separate from PumpLite's Base fee.</p>
           </fieldset>
         </div>
         <form id="create-form">
@@ -220,7 +230,7 @@
       <h2>Using PumpLite safely</h2>
 
       <div class="help-grid">
-        <article><h3>Create Token</h3><p class="fine">Create a Base Mainnet token, publish metadata and review the wallet transaction before approving it.</p></article>
+        <article><h3>Create Token</h3><p class="fine">Create a real Base Mainnet or Solana Pump Mainnet token, publish metadata and review every wallet transaction before approving it.</p></article>
         <article><h3>Markets &amp; Trade</h3><p class="fine">Browse real PumpLite markets, buy with the simple NZD/USD helper, or sell through your connected wallet.</p></article>
         <article><h3>PLITE Claim</h3><p class="fine">Use the single PLITE Claim link in the header to open the separate First 50 claim page.</p></article>
         <article><h3>Wallet Safety</h3><p class="fine">Never enter a seed phrase or private key into PumpLite. Check Base Mainnet, the address and the amount before approving a transaction.</p></article>

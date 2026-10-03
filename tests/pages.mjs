@@ -85,8 +85,45 @@ try {
         publicPath
     );
   }
-  const chunks = (await readdir('assets/chunks')).filter(name => /^(solana|base)-.*\.js$/.test(name));
-  assert.equal(chunks.filter(name => /^solana-/.test(name)).length, 1, 'Solana bundle must exist exactly once');
+  const chunks =
+    (await readdir('assets/chunks'))
+      .filter(
+        name =>
+          /^(solana|base)-.*\.js$/.test(name)
+      );
+
+  const pumpBundles =
+    chunks.filter(
+      name =>
+        /^solana-pump-(?!loader-).*\.js$/.test(name)
+    );
+
+  const pumpLoaderBundles =
+    chunks.filter(
+      name =>
+        /^solana-pump-loader-.*\.js$/.test(name)
+    );
+
+  assert.equal(
+    pumpBundles.length,
+    1,
+    'Pump SDK bundle must exist exactly once'
+  );
+
+  assert.equal(
+    pumpLoaderBundles.length,
+    1,
+    'Pump loader bundle must exist exactly once'
+  );
+
+  assert.equal(
+    chunks.filter(
+      name =>
+        /^solana-pump-/.test(name)
+    ).length,
+    2,
+    'Solana production build must contain exactly the Pump SDK and its loader'
+  );
   assert.equal(chunks.filter(name => /^base-(?!v[23]-)/.test(name)).length, 1, 'Base V1 compatibility bundle must exist exactly once');
   assert.equal(chunks.filter(name => /^base-v2-/.test(name)).length, 1, 'Base V2 bundle must exist exactly once');
   assert.equal(chunks.filter(name => /^base-v3-/.test(name)).length, 1, 'Base V3 Classic/Mayhem bundle must exist exactly once');
@@ -203,32 +240,701 @@ try {
   await broken.close();
   const phantom = await browser.newPage({ viewport: { width: 390, height: 844 } });
   await phantom.addInitScript(() => {
-    const key = { toBase58: () => '11111111111111111111111111111112', equals: other => other?.toBase58() === '11111111111111111111111111111112' };
-    window.phantom = { solana: { publicKey: key, signTransaction() { throw Error('No signing allowed'); },
-      connect() { window.syntheticApprovalActive = navigator.userActivation.isActive; return Promise.resolve({ publicKey: key }); } } };
+    const address =
+      '11111111111111111111111111111112';
+
+    const key = {
+      toBase58() {
+        return address;
+      },
+
+      toString() {
+        return address;
+      },
+
+      toJSON() {
+        return address;
+      },
+
+      equals(other) {
+        if (other === this) {
+          return true;
+        }
+
+        if (
+          typeof other === 'string'
+        ) {
+          return other === address;
+        }
+
+        try {
+          return (
+            typeof other?.toBase58 ===
+              'function' &&
+            other.toBase58() ===
+              address
+          );
+        } catch {
+          return false;
+        }
+      }
+    };
+
+    const listeners =
+      new Map();
+
+    function emit(
+      event,
+      value
+    ) {
+      for (
+        const callback of
+        listeners.get(event) || []
+      ) {
+        try {
+          callback(value);
+        } catch {}
+      }
+    }
+
+    const provider = {
+      isPhantom: true,
+      isConnected: false,
+      publicKey: null,
+
+      on(event, callback) {
+        if (
+          typeof callback !==
+          'function'
+        ) {
+          return;
+        }
+
+        if (
+          !listeners.has(event)
+        ) {
+          listeners.set(
+            event,
+            new Set()
+          );
+        }
+
+        listeners
+          .get(event)
+          .add(callback);
+      },
+
+      removeListener(
+        event,
+        callback
+      ) {
+        listeners
+          .get(event)
+          ?.delete(callback);
+      },
+
+      async connect() {
+        window.syntheticApprovalActive =
+          navigator.userActivation.isActive;
+
+        this.publicKey =
+          key;
+
+        this.isConnected =
+          true;
+
+        return {
+          publicKey: key
+        };
+      },
+
+      async disconnect() {
+        this.publicKey =
+          null;
+
+        this.isConnected =
+          false;
+
+        emit(
+          'disconnect'
+        );
+      },
+
+      async signTransaction() {
+        throw Error(
+          'Transaction signing is disabled in this browser test'
+        );
+      },
+
+      async signAllTransactions() {
+        throw Error(
+          'Transaction signing is disabled in this browser test'
+        );
+      },
+
+      async signMessage() {
+        throw Error(
+          'Message signing is disabled in this browser test'
+        );
+      }
+    };
+
+    window.phantom = {
+      solana: provider
+    };
+
+    // Some wallets expose the same provider here as well.
+    window.solana =
+      provider;
   });
-  await phantom.route('https://pumplite-rpc.coreyedge123.workers.dev/rpc', async route => {
-    const request = route.request().postDataJSON();
-    assert.equal(request.method, 'getGenesisHash');
-    await route.fulfill({ json: { jsonrpc: '2.0', id: request.id, result: '5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d' } });
-  });
+
+  const MAINNET_GENESIS =
+    '5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d';
+
+  const PROGRAM_OWNER =
+    'BPFLoaderUpgradeab1e11111111111111111111111';
+
+  const syntheticProgramAccount =
+    () => ({
+      data: [
+        '',
+        'base64'
+      ],
+      executable: true,
+      lamports: 1,
+      owner: PROGRAM_OWNER,
+      rentEpoch: 0,
+      space: 0
+    });
+
+  function syntheticRpcResult(
+    request
+  ) {
+    const method =
+      request?.method;
+
+    switch (method) {
+      case 'getGenesisHash':
+        return MAINNET_GENESIS;
+
+      case 'getAccountInfo':
+        return {
+          context: {
+            slot: 1
+          },
+          value:
+            syntheticProgramAccount()
+        };
+
+      case 'getMultipleAccounts': {
+        const addresses =
+          Array.isArray(
+            request?.params?.[0]
+          )
+            ? request.params[0]
+            : [];
+
+        return {
+          context: {
+            slot: 1
+          },
+          value:
+            addresses.map(
+              () =>
+                syntheticProgramAccount()
+            )
+        };
+      }
+
+      case 'getBalance':
+        return {
+          context: {
+            slot: 1
+          },
+          value: 0
+        };
+
+      case 'getTokenAccountsByOwner':
+        return {
+          context: {
+            slot: 1
+          },
+          value: []
+        };
+
+      case 'getTokenAccountBalance':
+        return {
+          context: {
+            slot: 1
+          },
+          value: {
+            amount: '0',
+            decimals: 0,
+            uiAmount: 0,
+            uiAmountString: '0'
+          }
+        };
+
+      case 'getLatestBlockhash':
+        return {
+          context: {
+            slot: 1
+          },
+          value: {
+            blockhash:
+              '11111111111111111111111111111111',
+            lastValidBlockHeight:
+              999999999
+          }
+        };
+
+      case 'isBlockhashValid':
+        return {
+          context: {
+            slot: 1
+          },
+          value: true
+        };
+
+      case 'getBlockHeight':
+        return 1;
+
+      case 'getSlot':
+        return 1;
+
+      case 'getMinimumBalanceForRentExemption':
+        return 0;
+
+      case 'getFeeForMessage':
+        return {
+          context: {
+            slot: 1
+          },
+          value: 5000
+        };
+
+      case 'getEpochInfo':
+        return {
+          absoluteSlot: 1,
+          blockHeight: 1,
+          epoch: 1,
+          slotIndex: 1,
+          slotsInEpoch: 432000,
+          transactionCount: 1
+        };
+
+      case 'getVersion':
+        return {
+          'solana-core':
+            'test',
+          'feature-set':
+            1
+        };
+
+      case 'getSignatureStatuses':
+        return {
+          context: {
+            slot: 1
+          },
+          value: [
+            null
+          ]
+        };
+
+      case 'simulateTransaction':
+        return {
+          context: {
+            slot: 1
+          },
+          value: {
+            accounts: null,
+            err: null,
+            innerInstructions: null,
+            logs: [],
+            replacementBlockhash: null,
+            returnData: null,
+            unitsConsumed: 1
+          }
+        };
+
+      default:
+        throw Error(
+          'Unexpected synthetic Solana RPC method: ' +
+          String(method)
+        );
+    }
+  }
+
+  async function fulfillSolanaRpc(
+    route
+  ) {
+    const request =
+      route
+        .request()
+        .postDataJSON();
+
+    const list =
+      Array.isArray(request)
+        ? request
+        : [
+            request
+          ];
+
+    let responses;
+
+    try {
+      responses =
+        list.map(
+          item => ({
+            jsonrpc: '2.0',
+            id: item.id,
+            result:
+              syntheticRpcResult(
+                item
+              )
+          })
+        );
+    } catch (error) {
+      responses =
+        list.map(
+          item => ({
+            jsonrpc: '2.0',
+            id: item.id,
+            error: {
+              code: -32601,
+              message:
+                error.message
+            }
+          })
+        );
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType:
+        'application/json',
+      body:
+        JSON.stringify(
+          Array.isArray(request)
+            ? responses
+            : responses[0]
+        )
+    });
+  }
+
+  await phantom.route(
+    'https://pumplite-rpc.coreyedge123.workers.dev/rpc',
+    fulfillSolanaRpc
+  );
+
+  await phantom.route(
+    'https://solana-rpc.publicnode.com/',
+    fulfillSolanaRpc
+  );
+
   await phantom.goto(base+'#solana');
   await phantom.waitForFunction(() => document.documentElement.dataset.walletAppReady === 'ready');
+
+  await phantom.waitForFunction(
+    () =>
+      document.documentElement.dataset.pumpAdapterReady ===
+        'ready' ||
+      document.documentElement.dataset.pumpAdapterReady ===
+        'error',
+    undefined,
+    {
+      timeout: 60000
+    }
+  );
+
+  const pumpPreloadState =
+    await phantom.evaluate(
+      () =>
+        document.documentElement.dataset.pumpAdapterReady
+    );
+
+  if (
+    pumpPreloadState !==
+    'ready'
+  ) {
+    const reason =
+      await phantom
+        .locator('#status-text')
+        .textContent();
+
+    throw Error(
+      'Pump adapter preload failed: ' +
+      reason
+    );
+  }
   await phantom.locator('#connect').click();
   await phantom.waitForFunction(() => document.querySelector('#connect').textContent === 'Approve in Phantom');
-  assert.match(await phantom.locator('#wallet-diagnostic').textContent(), /Phantom ready/);
+  assert.match(await phantom.locator('#wallet-diagnostic').textContent(), /Phantom detected/);
   await phantom.locator('#connect').click();
-  await phantom.waitForFunction(() => document.querySelector('#connect').textContent.startsWith('Disconnect'));
+  await phantom.waitForFunction(
+    () => {
+      const button =
+        document.querySelector(
+          '#connect'
+        );
+
+      const status =
+        document.querySelector(
+          '#status-text'
+        )?.textContent || '';
+
+      return (
+        button
+          ?.textContent
+          ?.startsWith(
+            'Disconnect'
+          ) ||
+        /connection failed|could not|error/i
+          .test(status)
+      );
+    },
+    undefined,
+    {
+      timeout: 15000
+    }
+  );
+
+  const connectedButton =
+    await phantom
+      .locator('#connect')
+      .textContent();
+
+  if (
+    !connectedButton.startsWith(
+      'Disconnect'
+    )
+  ) {
+    throw Error(
+      'Synthetic Phantom connect failed: ' +
+      (
+        await phantom
+          .locator('#status-text')
+          .textContent()
+      )
+    );
+  }
   assert.equal(await phantom.evaluate(() => window.syntheticApprovalActive), true);
-  assert.equal(await phantom.locator('#create').isDisabled(), true);
+  await phantom.waitForFunction(
+    () =>
+      document.querySelector('#connect')?.disabled === false &&
+      document.querySelector('#create')?.disabled === false
+  );
+
+  assert.equal(
+    await phantom.locator('#create').isDisabled(),
+    false,
+    'Reviewed Pump Mainnet creation becomes available only after Phantom connects'
+  );
   await phantom.close();
 
   for (const width of [390, 1440]) {
     const context = await browser.newContext({ viewport: { width, height: 900 } });
     const page = await context.newPage(), errors = [], failed = [], requests = [];
-    await context.route('**/*', route => {
-      if (route.request().url().startsWith(origin + '/')) return route.continue();
-      failed.push('External request: ' + route.request().url()); return route.abort();
+    const reviewedSolanaRpc = url =>
+      url === 'https://pumplite-rpc.coreyedge123.workers.dev/rpc' ||
+      url === 'https://solana-rpc.publicnode.com/' ||
+      url === 'https://solana-rpc.publicnode.com';
+
+    await context.route('**/*', async route => {
+      const request =
+        route.request();
+
+      const url =
+        request.url();
+
+      if (
+        url.startsWith(
+          origin + '/'
+        )
+      ) {
+        return route.continue();
+      }
+
+      if (
+        reviewedSolanaRpc(url)
+      ) {
+        let payload;
+
+        try {
+          payload =
+            request.postDataJSON();
+        } catch {
+          failed.push(
+            'Invalid reviewed Solana RPC request: ' +
+            url
+          );
+
+          return route.abort();
+        }
+
+        const calls =
+          Array.isArray(payload)
+            ? payload
+            : [payload];
+
+        const forbidden =
+          new Set([
+            'sendTransaction',
+            'simulateTransaction',
+            'requestAirdrop'
+          ]);
+
+        const responses =
+          calls.map(call => {
+            if (
+              forbidden.has(
+                call?.method
+              )
+            ) {
+              failed.push(
+                'Forbidden Solana RPC method in read-only Pages test: ' +
+                call.method
+              );
+
+              return {
+                jsonrpc: '2.0',
+                id: call.id,
+                error: {
+                  code: -32601,
+                  message:
+                    'Write RPC forbidden in read-only Pages test'
+                }
+              };
+            }
+
+            switch (
+              call?.method
+            ) {
+              case 'getGenesisHash':
+                return {
+                  jsonrpc: '2.0',
+                  id: call.id,
+                  result:
+                    '5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d'
+                };
+
+              case 'getAccountInfo':
+                return {
+                  jsonrpc: '2.0',
+                  id: call.id,
+                  result: {
+                    context: {
+                      slot: 1
+                    },
+                    value: null
+                  }
+                };
+
+              case 'getMultipleAccounts':
+                return {
+                  jsonrpc: '2.0',
+                  id: call.id,
+                  result: {
+                    context: {
+                      slot: 1
+                    },
+                    value:
+                      (
+                        Array.isArray(
+                          call?.params?.[0]
+                        )
+                          ? call.params[0]
+                          : []
+                      ).map(
+                        () => null
+                      )
+                  }
+                };
+
+              case 'getBalance':
+                return {
+                  jsonrpc: '2.0',
+                  id: call.id,
+                  result: {
+                    context: {
+                      slot: 1
+                    },
+                    value: 0
+                  }
+                };
+
+              case 'getTokenAccountsByOwner':
+                return {
+                  jsonrpc: '2.0',
+                  id: call.id,
+                  result: {
+                    context: {
+                      slot: 1
+                    },
+                    value: []
+                  }
+                };
+
+              case 'getProgramAccounts':
+                return {
+                  jsonrpc: '2.0',
+                  id: call.id,
+                  result: []
+                };
+
+              case 'getSlot':
+                return {
+                  jsonrpc: '2.0',
+                  id: call.id,
+                  result: 1
+                };
+
+              case 'getBlockHeight':
+                return {
+                  jsonrpc: '2.0',
+                  id: call.id,
+                  result: 1
+                };
+
+              default:
+                failed.push(
+                  'Unexpected Solana read RPC in Pages test: ' +
+                  String(
+                    call?.method
+                  )
+                );
+
+                return {
+                  jsonrpc: '2.0',
+                  id: call?.id,
+                  error: {
+                    code: -32601,
+                    message:
+                      'Unexpected read RPC'
+                  }
+                };
+            }
+          });
+
+        return route.fulfill({
+          status: 200,
+          contentType:
+            'application/json',
+          body:
+            JSON.stringify(
+              Array.isArray(payload)
+                ? responses
+                : responses[0]
+            )
+        });
+      }
+
+      failed.push(
+        'External request: ' +
+        url
+      );
+
+      return route.abort();
     });
     await context.addInitScript(() => {
       window.__walletCalls = [];
@@ -463,12 +1169,83 @@ try {
     await page.selectOption('#chain', 'base');
     assert.match(await page.locator('#deployment').textContent(), /Base Mainnet/);
     assert.equal(await page.locator('#create').isDisabled(), false);
-    await page.goto(base + '#solana/not-a-deployment', { waitUntil: 'networkidle' });
-    await page.waitForFunction(() => document.querySelector('#status-text').textContent.includes('No reviewed deployment'));
-    await page.reload({ waitUntil: 'networkidle' });
-    await page.waitForFunction(() => document.querySelector('#status-text').textContent.includes('No reviewed deployment'));
+    await page.goto(
+      base + '#solana/not-a-deployment',
+      {
+        waitUntil: 'networkidle'
+      }
+    );
+
+    // Pump Mainnet is a reviewed live deployment now.
+    // Wait for PumpLite's boot cycle, not library-specific error wording.
+    await page.waitForFunction(
+      () =>
+        document.documentElement.dataset.walletAppReady ===
+        'ready'
+    );
+
+    assert.match(
+      await page
+        .locator('#deployment')
+        .textContent(),
+      /Solana Mainnet|Pump/i,
+      'Solana must remain a configured reviewed Mainnet deployment'
+    );
+
+    assert.doesNotMatch(
+      await page
+        .locator('#status-text')
+        .textContent(),
+      /No reviewed deployment/i,
+      'An invalid market address must not make PumpLite treat Solana as undeployed'
+    );
+
+    assert.equal(
+      await page
+        .locator('#market-link')
+        .getAttribute('href'),
+      null,
+      'Invalid Solana market must never produce a live market link'
+    );
+
+    await page.reload({
+      waitUntil: 'networkidle'
+    });
+
+    await page.waitForFunction(
+      () =>
+        document.documentElement.dataset.walletAppReady ===
+        'ready'
+    );
+
+    assert.match(
+      await page
+        .locator('#deployment')
+        .textContent(),
+      /Solana Mainnet|Pump/i
+    );
+
+    assert.doesNotMatch(
+      await page
+        .locator('#status-text')
+        .textContent(),
+      /No reviewed deployment/i
+    );
+
+    assert.equal(
+      await page
+        .locator('#market-link')
+        .getAttribute('href'),
+      null
+    );
     await page.locator('#back').click();
-    await page.waitForFunction(() => !document.querySelector('#home').hidden);
+
+    await page.waitForFunction(
+      () =>
+        location.hash === '' &&
+        !document.querySelector('#home').hidden &&
+        document.querySelector('#market-page').hidden
+    );
     await page.evaluate(() => {
       document.querySelector('#home').hidden = true;
       document.querySelector('#market-page').hidden = false;
@@ -477,7 +1254,20 @@ try {
     assert.equal(await page.locator('#market-metadata img').count(), 0);
     assert.equal(await page.locator('body').evaluate(el => el.scrollWidth <= innerWidth), true);
     assert.deepEqual(await page.evaluate(() => window.__walletCalls), []);
-    assert.ok(requests.every(url => url === origin + '/pumplite' || url.startsWith(base)), 'All assets stay beneath /pumplite/');
+    const unexpectedRequests =
+      requests.filter(
+        url =>
+          url !==
+            origin + '/pumplite' &&
+          !url.startsWith(base) &&
+          !reviewedSolanaRpc(url)
+      );
+
+    assert.deepEqual(
+      unexpectedRequests,
+      [],
+      'Only PumpLite assets and reviewed read-only Solana RPC endpoints may be requested'
+    );
     // Every wallet-sensitive page must fail closed when embedded.
     const embeddedChecks = [
       [
@@ -543,7 +1333,7 @@ try {
       )
     );
     assert.deepEqual(failed, []);
-    console.log('PASS Pages export ' + width + 'px: /pumplite/, both production SDK imports, lazy loading, config/CSS, hash reload, no errors/404s/external requests/wallet calls');
+    console.log('PASS Pages export ' + width + 'px: /pumplite/, both production SDK imports, lazy loading, config/CSS, hash reload, no errors/404s/unreviewed external requests/wallet calls');
     await context.close();
   }
 } finally {

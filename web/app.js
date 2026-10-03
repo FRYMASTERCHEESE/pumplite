@@ -70,6 +70,13 @@ function controls() {
 
   $('base-v2-create-options').hidden = !baseModern;
   $('base-v3-mode-options').hidden = !baseV3;
+
+  $('solana-pump-options').hidden =
+    state.chain !== 'solana';
+
+  $('solana-mayhem').disabled =
+    state.busy ||
+    state.chain !== 'solana';
   $('v2-initial-mayhem-row').hidden = baseV3;
   $('base-contract-version-label').textContent =
     baseV3 ? 'V3' : 'V2';
@@ -116,16 +123,16 @@ function controls() {
 
   if (
     state.chain === 'solana' &&
-    state.config?.solana?.clientVersion === 3
+    state.config?.solana?.protocol === 'pump'
   ) {
     $('create-supply-fact').textContent =
       '1 billion';
 
     $('create-supply-mode-fact').textContent =
-      'Fixed hard maximum';
+      'Pump V2 · Token-2022';
 
     $('create-supply-help').textContent =
-      'No creator allocation. Circulating supply starts at 0. Buys mint only through the PumpLite market PDA; sells burn tokens. Hard maximum: 1 billion. No freeze authority.';
+      'Pump handles the live bonding curve and routes graduated SOL-paired coins to their canonical PumpSwap pool. Mayhem is selected when the coin is created.';
   }
 
   $('v2-supply-mode').disabled =
@@ -225,13 +232,13 @@ function controls() {
         state.config,
         'solana'
       )
-        ? 'Tiny Solana client prepared. Token creation remains locked until the Mainnet program deployment is verified.'
+        ? 'Pump Mainnet transactions are currently locked.'
         : state.wallet
-          ? 'Solana wallet connected. Create coin will open the optional first-buy step.'
-          : 'Connect your Solana wallet first, then Create coin.';
+          ? 'Phantom connected. Create coin will open the optional first-buy step.'
+          : 'Connect Phantom first, then create your Pump Mainnet coin.';
 
     $('creation-review').textContent =
-      'Check the name, ticker and metadata first. PumpLite charges 0% to create; Solana network fees and account rent still apply. Every transaction requires wallet approval.';
+      'Pump lists coin creation at 0 SOL platform fee. Solana rent and network fees can still apply. Pump protocol and creator fees apply to trades. PumpLite shows the transaction for Phantom approval before anything is sent.';
   }
 
   $('get-quote').disabled =
@@ -612,6 +619,21 @@ let marketStats24hRequest = 0;
 async function loadMarket24hStats(market) {
   const request = ++marketStats24hRequest;
 
+  if (state.chain !== 'base') {
+    $('volume-24h').textContent =
+      'Pump protocol';
+
+    $('trades-24h').textContent =
+      'Live route';
+
+    $('market-24h-status').textContent =
+      market.graduated
+        ? 'Graduated Pump coin. Trades route through its canonical PumpSwap pool.'
+        : 'Live Pump bonding-curve market on Solana Mainnet.';
+
+    return;
+  }
+
   const production =
     location.protocol === 'https:' &&
     location.hostname !== 'localhost' &&
@@ -864,14 +886,31 @@ async function getAdapter() {
   if (state.adapter) return state.adapter;
   const chain = state.chain, epoch = state.epoch;
   if (chain === 'solana') { diagnostic('Loading Solana SDK…'); status('Loading Solana wallet support…'); }
-  const module =
-    chain === 'solana'
-      ? await import('./adapters/solana-tiny.js')
-      : state.config?.base?.contractVersion === 3
+  let module;
+
+  if (chain === 'solana') {
+    /*
+     * Pump browser Buffer bootstrap.
+     *
+     * Some Pump/Solana SDK dependencies use the Node-compatible
+     * Buffer global while their modules are evaluating.
+     *
+     * This MUST happen before importing solana-pump.js.
+     * Loading Buffer does not access a wallet, sign anything,
+     * submit a transaction or spend SOL.
+     */
+    module =
+      await import(
+        './adapters/solana-pump-loader.js'
+      );
+  } else {
+    module =
+      state.config?.base?.contractVersion === 3
         ? await import('./adapters/base-v3.js')
         : state.config?.base?.contractVersion === 2
           ? await import('./adapters/base-v2.js')
           : await import('./adapters/base.js');
+  }
   if (epoch !== state.epoch) throw Error('Network selection changed');
   state.adapter = module.adapter(state.config[chain], (message, href) => { if (chain === 'solana') diagnostic(message); status(message, href); }, walletChanged);
   return state.adapter;
@@ -891,8 +930,21 @@ function requireWrite() {
   if (!state.wallet) throw Error('Connect a wallet first');
 }
 function marketPriceWei(m) {
+  if (!m) return null;
+
   if (
-    !m ||
+    m.protocol === 'pump' &&
+    typeof m.pumpVirtualTokenReserves === 'bigint' &&
+    m.pumpVirtualTokenReserves > 0n
+  ) {
+    return (
+      m.virtualNative *
+      10n ** BigInt(m.decimals)
+    ) /
+    m.pumpVirtualTokenReserves;
+  }
+
+  if (
     typeof m.tokenReserve !== 'bigint' ||
     m.tokenReserve <= 0n
   ) return null;
@@ -1792,6 +1844,16 @@ async function route() {
 }
 function switchChain(chain) {
   state.adapter?.disconnect();
+
+  $('create-trading-fee').textContent =
+    chain === 'solana'
+      ? 'Pump'
+      : '0.25%';
+
+  $('create-trading-fee-label').textContent =
+    chain === 'solana'
+      ? 'protocol fees apply'
+      : 'Trading fee';
   state.chain = chain; state.epoch++; state.adapter = null; state.wallet = null; state.market = null; state.next = null; state.markets=[]; state.registry=null; state.platformStats=null;
   $('create-network').textContent =
     chain === 'base'
@@ -1813,7 +1875,33 @@ function switchChain(chain) {
   $('markets').append(empty); $('more').hidden = true; invalidateQuote();
   status(state.config[chain].name + ' selected. Wallet disconnected.');
 }
-$('chain').addEventListener('change', () => { switchChain($('chain').value); location.hash = ''; $('home').hidden = false; $('market-page').hidden = true; });
+$('chain').addEventListener('change', () => {
+  const chain =
+    $('chain').value;
+
+  switchChain(chain);
+
+  location.hash = '';
+  $('home').hidden = false;
+  $('market-page').hidden = true;
+
+  if (
+    chain === 'solana' &&
+    ready()
+  ) {
+    // Load code only. No wallet permission, signature or RPC
+    // transaction is requested by this preload.
+    void getAdapter().catch(error => {
+      status(
+        'Pump Mainnet wallet support could not load: ' +
+        (
+          error?.message ||
+          'unknown browser error'
+        )
+      );
+    });
+  }
+});
 async function connectBaseWalletFromGesture() {
   if (state.wallet) return state.wallet;
   if (state.chain !== 'base') throw Error('Select Base Mainnet first');
@@ -1929,8 +2017,11 @@ $('connect').addEventListener('click', () => action(async () => {
     location.hash.slice(1).split('/');
 
   const routeMarketId =
-    routeParts[0] === 'base' && routeParts[1]
-      ? decodeURIComponent(routeParts[1])
+    routeParts[0] === state.chain &&
+    routeParts[1]
+      ? decodeURIComponent(
+          routeParts[1]
+        )
       : null;
 
   const marketId =
@@ -2239,6 +2330,9 @@ function creationData() {
         'Publish image + metadata to IPFS first. The Published metadata URI must be filled before this token can be created.'
       );
     }
+
+    data.mayhemMode =
+      $('solana-mayhem').checked;
 
     return data;
   }
@@ -2932,22 +3026,31 @@ $('initial-buy-form').addEventListener('submit', e => {
           await adapter.market(createdId);
 
         const q =
-          [2, 3].includes(
-            market.contractVersion
-          )
-            ? quoteBaseV2(
+          state.chain === 'solana'
+            ? await adapter.quote(
                 market,
                 'buy',
                 initialBuy
               )
-            : quote(
-                market,
-                'buy',
-                initialBuy
-              );
+            : [2, 3].includes(
+                market.contractVersion
+              )
+              ? quoteBaseV2(
+                  market,
+                  'buy',
+                  initialBuy
+                )
+              : quote(
+                  market,
+                  'buy',
+                  initialBuy
+                );
 
         const min =
-          minimumOutput(q.output, 100);
+          minimumOutput(
+            q.output,
+            100
+          );
 
         flow.textContent =
           'Step 2: review the optional buy in your wallet.';
@@ -2956,7 +3059,10 @@ $('initial-buy-form').addEventListener('submit', e => {
           market,
           'buy',
           initialBuy,
-          min
+          min,
+          state.chain === 'solana'
+            ? 1
+            : undefined
         );
       }
 
@@ -3042,17 +3148,54 @@ $('get-quote').addEventListener('click', () => action(async () => {
   const slippageBps = Math.round(slippage);
   if (Math.abs(slippage - slippageBps) > 1e-7) throw Error('Slippage supports two decimal places');
   const q =
-    [2, 3].includes(m.contractVersion)
-      ? quoteBaseV2(m, side, amount)
-      : quote(m, side, amount);
+    state.chain === 'solana'
+      ? await (await getAdapter())
+          .quote(
+            m,
+            side,
+            amount
+          )
+      : [2, 3].includes(
+          m.contractVersion
+        )
+        ? quoteBaseV2(
+            m,
+            side,
+            amount
+          )
+        : quote(
+            m,
+            side,
+            amount
+          );
 
-  const min = minimumOutput(q.output, slippageBps);
+  const min =
+    minimumOutput(
+      q.output,
+      slippageBps
+    );
   const decimals = side === 'buy' ? m.decimals : m.nativeDecimals, unit = side === 'buy' ? m.symbol : m.unit;
-  state.quote = { ...q, min, amount, side, at: Date.now(), market: m.id, chain: state.chain };
+  state.quote = {
+    ...q,
+    min,
+    amount,
+    side,
+    slippagePercent:
+      slippageBps / 100,
+    at: Date.now(),
+    market: m.id,
+    chain: state.chain
+  };
   $('quote-output').textContent = formatUnits(q.output, decimals, decimals) + ' ' + unit;
   $('quote-min').textContent = formatUnits(min, decimals, decimals) + ' ' + unit;
   $('quote-fee').textContent =
-    formatUnits(q.fee, m.nativeDecimals, m.nativeDecimals) + ' ' + m.unit;
+    state.chain === 'solana'
+      ? 'Pump protocol + creator fees are included in the on-chain quote'
+      : formatUnits(
+          q.fee,
+          m.nativeDecimals,
+          m.nativeDecimals
+        ) + ' ' + m.unit;
 
   $('quote-support-row').hidden = m.contractVersion !== 2;
 
@@ -3075,7 +3218,13 @@ $('trade-form').addEventListener('submit', e => { e.preventDefault(); action(asy
     invalidateQuote(); throw Error('Quote expired. Request a fresh quote.');
   }
   invalidateQuote();
-  await (await getAdapter()).trade(state.market, q.side, q.amount, q.min);
+  await (await getAdapter()).trade(
+    state.market,
+    q.side,
+    q.amount,
+    q.min,
+    q.slippagePercent
+  );
   await refreshMarketAfterAction(state.market.id);
 }); });
 $('v2-supply-mode').addEventListener('change', controls);
@@ -3326,8 +3475,45 @@ try {
   switchChain('base');
   await action(route);
 
+  /*
+   * Browser/UI readiness must not depend on parsing the
+   * large Pump SDK chunk.
+   */
   document.documentElement.dataset.walletAppReady =
     'ready';
+
+  /*
+   * Warm the reviewed Pump adapter after normal application
+   * boot. This does not request wallet access, sign anything,
+   * submit a transaction or spend SOL.
+   */
+  if (
+    state.chain === 'solana' &&
+    ready()
+  ) {
+    document.documentElement.dataset.pumpAdapterReady =
+      'loading';
+
+    queueMicrotask(() => {
+      void getAdapter()
+        .then(() => {
+          document.documentElement.dataset.pumpAdapterReady =
+            'ready';
+        })
+        .catch(error => {
+          document.documentElement.dataset.pumpAdapterReady =
+            'error';
+
+          status(
+            'Pump Mainnet wallet support could not load: ' +
+            (
+              error?.message ||
+              'unknown browser error'
+            )
+          );
+        });
+    });
+  }
 
   // Production HTTPS pages begin read-only market discovery automatically.
   // Local tests use HTTP, so they remain deterministic and make no external calls.

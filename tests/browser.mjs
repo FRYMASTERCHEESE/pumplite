@@ -19,11 +19,15 @@ try {
     await page.waitForFunction(() => document.querySelector('#deployment').textContent.includes('Base Mainnet'));
     await page.selectOption('#chain','solana');
     assert.equal(await page.locator('#create').isDisabled(), true);
-    assert.equal(await page.locator('#refresh').isDisabled(), true);
+    assert.equal(
+      await page.locator('#refresh').isDisabled(),
+      false,
+      'Reviewed Pump Mainnet is configured for live reads'
+    );
     assert.equal(await page.locator('body').evaluate(el => el.scrollWidth <= innerWidth), true);
     assert.equal(await page.locator('#chain option').count(), 2);
     await page.locator('#connect').click();
-    await page.waitForFunction(() => document.querySelector('#status-text').textContent.includes('Provider detection: no compatible Solana provider'));
+    await page.waitForFunction(() => document.querySelector('#status-text').textContent.includes('No compatible Solana provider'));
     await page.selectOption('#chain', 'base');
     assert.match(await page.locator('#deployment').textContent(), /Base Mainnet.*live configuration/);
     await page.locator('#connect').click();
@@ -35,7 +39,7 @@ try {
     await page.screenshot({ path: 'build/screenshots/home-' + width + '.png', fullPage: true });
     assert.deepEqual(errors, []);
     assert.deepEqual(external, []);
-    console.log('PASS browser ' + width + 'px: Base live, Solana locked, wallet-gated writes, no overflow, no external requests, no page errors');
+    console.log('PASS browser ' + width + 'px: Base live, Pump Mainnet configured, wallet-gated Solana writes, no overflow, no external requests, no page errors');
     await page.close();
   }
 } finally { await browser.close(); }

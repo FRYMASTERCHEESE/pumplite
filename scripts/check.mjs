@@ -22,10 +22,17 @@ const config = JSON.parse(await readFile('config.json', 'utf8'));
 validatePublicConfig(config);
 assertSolanaMainnet(config.solana.genesisHash);
 assert.equal('transactionsEnabled' in config, false, 'Global transaction switch must not exist');
-assert.equal(config.solana.transactionsEnabled, false, 'Solana must remain locked for the Base-first release');
-assert.equal(transactionConfigEnabled(config, 'solana'), false, 'Solana writes must remain fail-closed');
+assert.equal(config.solana.transactionsEnabled, true, 'Reviewed Pump Mainnet writes must remain enabled');
+assert.equal(transactionConfigEnabled(config, 'solana'), true, 'Reviewed Pump Mainnet deployment must remain transaction-enabled');
 assert.equal(config.metadataUploads?.enabled, true, 'Metadata publishing must remain enabled');
-assert.equal(config.solana.programId, null);
+assert.equal(config.solana.protocol, 'pump');
+assert.equal(config.solana.programId, '6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P');
+assert.equal(config.solana.ammProgramId, 'pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA');
+assert.equal(config.solana.mayhemProgramId, 'MAyhSmzXzV1pTf7LsNkrNwkWKTo4ougAJ1PPg47MD4e');
+assert.deepEqual(
+  config.solana.rpcFallbackUrls,
+  ['https://solana-rpc.publicnode.com']
+);
 assert.equal(config.solana.discoveryUrl, null);
 if (config.base.transactionsEnabled) {
   assert.equal(transactionConfigEnabled(config, 'base'), true, 'Enabled Base writes require a valid factory');
@@ -92,7 +99,7 @@ for (const [name, abi] of Object.entries(v2Abis)) {
   }
 }
 
-console.log('PASS syntax, per-chain fail-closed deployment locks, treasury configuration, safe DOM, mainnet-only UI, absent admin and privileged Base functions');
+console.log('PASS syntax, reviewed Base and Pump Mainnet deployment locks, treasury configuration, safe DOM, mainnet-only UI, absent admin and privileged Base functions');
 
 const headerCheck = spawnSync(process.execPath, ['scripts/build-security-headers.mjs','--check'], {encoding:'utf8'});
 assert.equal(headerCheck.status,0,headerCheck.stderr);

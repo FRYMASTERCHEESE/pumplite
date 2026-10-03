@@ -271,13 +271,27 @@ gate(
 );
 
 gate(
-  'Solana program remains undeployed',
-  config.solana?.programId === null
+  'reviewed Pump Mainnet identities and RPC split remain sealed',
+  config.solana?.protocol === 'pump' &&
+    config.solana?.programId ===
+      '6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P' &&
+    config.solana?.ammProgramId ===
+      'pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA' &&
+    config.solana?.mayhemProgramId ===
+      'MAyhSmzXzV1pTf7LsNkrNwkWKTo4ougAJ1PPg47MD4e' &&
+    config.solana?.rpcUrl ===
+      'https://pumplite-rpc.coreyedge123.workers.dev/rpc' &&
+    Array.isArray(
+      config.solana?.rpcFallbackUrls
+    ) &&
+    config.solana.rpcFallbackUrls.length === 1 &&
+    config.solana.rpcFallbackUrls[0] ===
+      'https://solana-rpc.publicnode.com'
 );
 
 gate(
-  'Solana transactions remain fail-closed',
-  config.solana?.transactionsEnabled === false
+  'reviewed Pump Mainnet transaction path remains enabled',
+  config.solana?.transactionsEnabled === true
 );
 
 gate(
