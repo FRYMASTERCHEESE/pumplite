@@ -173,6 +173,149 @@ try {
 } catch { rejected=true; }
 assert.equal(rejected,true,'impossible slippage must fail');
 
+
+// Verify a failed SOL CPI aborts the entire BUY.
+const poor = Keypair.generate();
+const poorToken = Keypair.generate();
+
+await sendAndConfirmTransaction(
+  connection,
+  new Transaction().add(
+    SystemProgram.createAccount({
+      fromPubkey:payer.publicKey,
+      newAccountPubkey:poorToken.publicKey,
+      lamports:tokenRent,
+      space:ACCOUNT_SIZE,
+      programId:TOKEN_PROGRAM_ID
+    }),
+    createInitializeAccount3Instruction(
+      poorToken.publicKey,
+      mint.publicKey,
+      poor.publicKey,
+      TOKEN_PROGRAM_ID
+    ),
+    SystemProgram.transfer({
+      fromPubkey:payer.publicKey,
+      toPubkey:poor.publicKey,
+      lamports:10_000
+    })
+  ),
+  [payer,poorToken]
+);
+
+const failedBuyTreasuryBefore =
+  BigInt(await connection.getBalance(TREASURY));
+
+const failedBuyMarketBefore =
+  BigInt(await connection.getBalance(market));
+
+rejected=false;
+
+try {
+  await sendAndConfirmTransaction(
+    connection,
+    new Transaction().add(core({
+      side:'buy',
+      owner:poor.publicKey,
+      market,
+      mint:mint.publicKey,
+      tokens:poorToken.publicKey,
+      amount:1_000_000n,
+      min:1n
+    })),
+    [payer,poor]
+  );
+} catch {
+  rejected=true;
+}
+
+assert.equal(
+  rejected,
+  true,
+  'failed SOL CPI must fail whole buy'
+);
+
+const poorTokenAfter =
+  await getAccount(
+    connection,
+    poorToken.publicKey,
+    'confirmed',
+    TOKEN_PROGRAM_ID
+  );
+
+assert.equal(
+  poorTokenAfter.amount,
+  0n,
+  'failed SOL CPI must not mint tokens'
+);
+
+assert.equal(
+  BigInt(await connection.getBalance(TREASURY)),
+  failedBuyTreasuryBefore,
+  'failed buy must roll back treasury transfer'
+);
+
+assert.equal(
+  BigInt(await connection.getBalance(market)),
+  failedBuyMarketBefore,
+  'failed buy must roll back market transfer'
+);
+
+// Verify a failed token Burn CPI aborts the entire SELL.
+const failedSellTreasuryBefore =
+  BigInt(await connection.getBalance(TREASURY));
+
+const failedSellMarketBefore =
+  BigInt(await connection.getBalance(market));
+
+const failedSellerBefore =
+  BigInt(await connection.getBalance(poor.publicKey));
+
+rejected=false;
+
+try {
+  await sendAndConfirmTransaction(
+    connection,
+    new Transaction().add(core({
+      side:'sell',
+      owner:poor.publicKey,
+      market,
+      mint:mint.publicKey,
+      tokens:poorToken.publicKey,
+      amount:1_000_000n,
+      min:1n
+    })),
+    [payer,poor]
+  );
+} catch {
+  rejected=true;
+}
+
+assert.equal(
+  rejected,
+  true,
+  'failed Burn CPI must fail whole sell'
+);
+
+assert.equal(
+  BigInt(await connection.getBalance(TREASURY)),
+  failedSellTreasuryBefore,
+  'failed burn must not pay treasury'
+);
+
+assert.equal(
+  BigInt(await connection.getBalance(market)),
+  failedSellMarketBefore,
+  'failed burn must not release market SOL'
+);
+
+assert.equal(
+  BigInt(await connection.getBalance(poor.publicKey)),
+  failedSellerBefore,
+  'failed burn must not pay seller'
+);
+
+console.log('PASS CPI failure rollback');
 console.log('PASS real local-validator BUY/SELL');
 console.log('PASS fixed treasury fee');
 console.log('PASS wrong treasury/market rejected');

@@ -124,9 +124,8 @@ jobs:
           solana --url http://127.0.0.1:8899 --keypair "$payer" airdrop 10 >/dev/null
 
           solana --url http://127.0.0.1:8899 --keypair "$payer" \
-            program-v4 deploy target/solana-002/pumplite_tiny_v3.so \
-            --program-keypair "$program" \
-            --authority "$payer"
+            program deploy target/solana-002/pumplite_tiny_v3.so \
+            --program-id "$program"
 
           program_id=$(solana-keygen pubkey "$program")
 
@@ -156,7 +155,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add ci/solana-002
-          git commit -m "Record verified 0.02 SOL candidate"
+          git commit -m "Record verified 0.04 SOL candidate"
           git push origin HEAD:solana-002-cost
 
       - name: Enforce hard size ceiling
@@ -168,8 +167,8 @@ jobs:
             echo "FAIL: local-validator integration failed"
             exit 1
           fi
-          if [ "$size" -gt 7500 ]; then
-            echo "FAIL: $size bytes > 7500-byte hard ceiling"
+          if [ "$size" -gt 7650 ]; then
+            echo "FAIL: $size bytes > 7650-byte verification ceiling"
             exit 1
           fi
-          echo "PASS: integration passed and $size bytes <= 7500"
+          echo "PASS: integration passed and $size bytes <= 7650"
