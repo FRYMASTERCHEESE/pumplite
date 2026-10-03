@@ -1,0 +1,29 @@
+[package]
+name = "pumplite-raw-v1"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[workspace]
+
+[dependencies]
+solana-define-syscall = { version = "=5.2.0", default-features = false }
+
+[profile.release]
+opt-level = "z"
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = "symbols"
+overflow-checks = false
+debug = false
+incremental = false
+
+[lints.rust]
+unexpected_cfgs = { level = "allow", check-cfg = [
+  'cfg(target_os, values("solana"))',
+  'cfg(target_arch, values("bpf","sbf"))'
+] }
