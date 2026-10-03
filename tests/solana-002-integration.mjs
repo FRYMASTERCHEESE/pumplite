@@ -50,6 +50,8 @@ function core({side,owner,market,mint,tokens,treasury=TREASURY,amount,min}) {
       {pubkey:mint,isSigner:false,isWritable:true},
       {pubkey:tokens,isSigner:false,isWritable:true},
       {pubkey:treasury,isSigner:false,isWritable:true},
+      {pubkey:SystemProgram.programId,isSigner:false,isWritable:false},
+      {pubkey:TOKEN_PROGRAM_ID,isSigner:false,isWritable:false},
     ],
     data:Buffer.concat([Buffer.from([side==='buy'?0:1]),u64(amount),u64(min)])
   });

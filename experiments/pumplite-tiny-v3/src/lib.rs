@@ -13,7 +13,7 @@ use pinocchio::{
 #[cfg(any(target_os = "solana", target_arch = "bpf"))]
 use pinocchio::syscalls::sol_invoke_signed_c;
 
-program_entrypoint!(process_instruction, 5);
+program_entrypoint!(process_instruction, 7);
 no_allocator!();
 nostd_panic_handler!();
 
@@ -281,7 +281,7 @@ fn process_instruction(
     let minimum = unsafe { read64(data.as_ptr().add(9)) };
     if input == 0 || minimum == 0 { return bad(); }
 
-    let [trader, market, mint, trader_tokens, treasury] = accounts
+    let [trader, market, mint, trader_tokens, treasury, _system_program, _token_program] = accounts
     else { return Err(ProgramError::NotEnoughAccountKeys); };
 
     if treasury.address().as_array() != &TREASURY { return bad(); }

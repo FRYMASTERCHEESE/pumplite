@@ -329,7 +329,7 @@ export function tinyTradeInstructions({
     u64(min)
   ]);
 
-  // Exact 5-account layout used by the 11,192-byte program.
+  // Exact 7-account PumpLite layout, including CPI program accounts.
   instructions.push(
     new TransactionInstruction({
       programId,
@@ -339,7 +339,9 @@ export function tinyTradeInstructions({
         key(market, true),
         key(mint, true),
         key(traderTokens, true),
-        key(treasury, true)
+        key(treasury, true),
+        key(SystemProgram.programId),
+        key(TINY_TOKEN_PROGRAM)
       ]
     })
   );
