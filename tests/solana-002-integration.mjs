@@ -180,6 +180,15 @@ assert.equal(rejected,true,'impossible slippage must fail');
 const poor = Keypair.generate();
 const poorToken = Keypair.generate();
 
+const poorRent =
+  await connection.getMinimumBalanceForRentExemption(0);
+
+const poorFunding =
+  poorRent + 2_000_000;
+
+const failedBuyAmount =
+  BigInt(poorFunding) + 1_000_000n;
+
 await sendAndConfirmTransaction(
   connection,
   new Transaction().add(
@@ -199,7 +208,7 @@ await sendAndConfirmTransaction(
     SystemProgram.transfer({
       fromPubkey:payer.publicKey,
       toPubkey:poor.publicKey,
-      lamports:10_000
+      lamports:poorFunding
     })
   ),
   [payer,poorToken]
@@ -222,7 +231,7 @@ try {
       market,
       mint:mint.publicKey,
       tokens:poorToken.publicKey,
-      amount:1_000_000n,
+      amount:failedBuyAmount,
       min:1n
     })),
     [payer,poor]
@@ -284,7 +293,7 @@ try {
       market,
       mint:mint.publicKey,
       tokens:poorToken.publicKey,
-      amount:1_000_000n,
+      amount:failedBuyAmount,
       min:1n
     })),
     [payer,poor]

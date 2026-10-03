@@ -281,7 +281,7 @@ fn process_instruction(
     let minimum = unsafe { read64(data.as_ptr().add(9)) };
     if input == 0 || minimum == 0 { return bad(); }
 
-    let [trader, market, mint, trader_tokens, treasury, _system_program, _token_program] = accounts
+    let [trader, market, mint, trader_tokens, treasury, ..] = accounts
     else { return Err(ProgramError::NotEnoughAccountKeys); };
 
     if treasury.address().as_array() != &TREASURY { return bad(); }
