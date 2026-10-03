@@ -3142,7 +3142,7 @@ $('initial-buy-form').addEventListener('submit', e => {
           'Free PumpLite launch created. Creator cost: 0 SOL. No Solana transaction was submitted.';
 
         status(
-          'Free PumpLite launch signed and saved. Creator cost: 0 SOL. Draft ' +
+          'Free PumpLite launch signed and published. Creator cost: 0 SOL. Launch ' +
           draft.id.slice(0, 12) +
           '… No transaction was submitted.'
         );

@@ -1,0 +1,823 @@
+import {
+  decodeBase58,
+  decodeBase64
+} from "./solana-identity.js";
+
+const PROGRAM_ID =
+  "3CHqrdJzwWQj1QikCzpjBhC8iQ3paaMtD1x9kwoW1rku";
+
+const PREFIX =
+  "PumpLite Free Solana Launch\n" +
+  "version=1\n";
+
+const enc =
+  new TextEncoder();
+
+export const LAUNCH_SCHEMA = `
+CREATE TABLE IF NOT EXISTS solana_launches (
+  id TEXT PRIMARY KEY,
+  creator TEXT NOT NULL,
+  name TEXT NOT NULL,
+  symbol TEXT NOT NULL,
+  uri TEXT NOT NULL,
+  nonce TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  signature TEXT NOT NULL,
+  registered_at INTEGER NOT NULL,
+  status TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS solana_launches_registered
+ON solana_launches(
+  registered_at DESC
+);
+
+CREATE INDEX IF NOT EXISTS solana_launches_creator_registered
+ON solana_launches(
+  creator,
+  registered_at DESC
+);
+`;
+
+function fail(
+  message,
+  status = 400
+) {
+  const error =
+    new Error(message);
+
+  error.status =
+    status;
+
+  throw error;
+}
+
+function one(cursor) {
+  const rows =
+    cursor.toArray();
+
+  return rows.length
+    ? rows[0]
+    : null;
+}
+
+function json(
+  data,
+  status = 200
+) {
+  return new Response(
+    JSON.stringify(data),
+    {
+      status,
+      headers: {
+        "Content-Type":
+          "application/json",
+
+        "Cache-Control":
+          "no-store"
+      }
+    }
+  );
+}
+
+function utf8Length(value) {
+  return enc.encode(value).length;
+}
+
+function validateUri(uri) {
+  if (
+    typeof uri !== "string" ||
+    utf8Length(uri) > 200
+  ) {
+    fail(
+      "Invalid launch URI"
+    );
+  }
+
+  if (!uri) {
+    return;
+  }
+
+  if (
+    /[\s\\]/u.test(uri) ||
+    /[\u0000-\u001f\u007f]/u
+      .test(uri)
+  ) {
+    fail(
+      "Invalid launch URI"
+    );
+  }
+
+  let url;
+
+  try {
+    url =
+      new URL(uri);
+  } catch {
+    fail(
+      "Invalid launch URI"
+    );
+  }
+
+  if (
+    !["https:", "ipfs:"]
+      .includes(url.protocol) ||
+    !url.hostname ||
+    url.username ||
+    url.password ||
+    url.hash ||
+    !(
+      uri.startsWith("https://") ||
+      uri.startsWith("ipfs://")
+    )
+  ) {
+    fail(
+      "Invalid launch URI"
+    );
+  }
+}
+
+function canonicalRecord(body) {
+  if (
+    !body ||
+    typeof body !== "object" ||
+    Array.isArray(body)
+  ) {
+    fail(
+      "Invalid launch"
+    );
+  }
+
+  if (
+    body.version !== 1 ||
+    body.chain !== "solana" ||
+    body.programId !== PROGRAM_ID
+  ) {
+    fail(
+      "Unsupported PumpLite launch"
+    );
+  }
+
+  const creator =
+    typeof body.creator === "string"
+      ? decodeBase58(body.creator)
+      : null;
+
+  if (
+    !creator ||
+    creator.length !== 32
+  ) {
+    fail(
+      "Invalid creator"
+    );
+  }
+
+  if (
+    typeof body.name !== "string" ||
+    !body.name.trim() ||
+    utf8Length(body.name) > 32
+  ) {
+    fail(
+      "Invalid launch name"
+    );
+  }
+
+  if (
+    typeof body.symbol !== "string" ||
+    !/^[A-Z0-9]{1,10}$/
+      .test(body.symbol)
+  ) {
+    fail(
+      "Invalid launch symbol"
+    );
+  }
+
+  validateUri(
+    body.uri
+  );
+
+  if (
+    typeof body.nonce !== "string" ||
+    !/^[0-9a-f]{32}$/
+      .test(body.nonce)
+  ) {
+    fail(
+      "Invalid launch nonce"
+    );
+  }
+
+  if (
+    !Number.isSafeInteger(
+      body.createdAt
+    ) ||
+    body.createdAt <= 0
+  ) {
+    fail(
+      "Invalid launch timestamp"
+    );
+  }
+
+  return {
+    version: 1,
+    chain: "solana",
+    programId: PROGRAM_ID,
+    creator: body.creator,
+    name: body.name,
+    symbol: body.symbol,
+    uri: body.uri,
+    nonce: body.nonce,
+    createdAt: body.createdAt
+  };
+}
+
+function hex(bytes) {
+  return Array.from(
+    bytes,
+    byte =>
+      byte
+        .toString(16)
+        .padStart(2, "0")
+  ).join("");
+}
+
+export async function
+validateSignedLaunch(
+  body,
+  now = Date.now()
+) {
+  const record =
+    canonicalRecord(body);
+
+  if (
+    record.createdAt <
+      now - 86_400_000 ||
+    record.createdAt >
+      now + 300_000
+  ) {
+    fail(
+      "Launch signature has expired"
+    );
+  }
+
+  const canonical =
+    JSON.stringify(record);
+
+  const message =
+    PREFIX +
+    canonical;
+
+  if (
+    body.message !==
+    message
+  ) {
+    fail(
+      "Launch message mismatch"
+    );
+  }
+
+  const digest =
+    new Uint8Array(
+      await crypto.subtle.digest(
+        "SHA-256",
+        enc.encode(canonical)
+      )
+    );
+
+  const id =
+    hex(digest);
+
+  if (
+    typeof body.id !== "string" ||
+    body.id !== id
+  ) {
+    fail(
+      "Launch ID mismatch"
+    );
+  }
+
+  const publicKey =
+    decodeBase58(
+      record.creator
+    );
+
+  const signature =
+    decodeBase64(
+      body.signature
+    );
+
+  if (
+    !publicKey ||
+    publicKey.length !== 32 ||
+    !signature ||
+    signature.length !== 64
+  ) {
+    fail(
+      "Invalid launch signature"
+    );
+  }
+
+  let key;
+
+  try {
+    key =
+      await crypto.subtle
+        .importKey(
+          "raw",
+          publicKey,
+          {
+            name: "Ed25519"
+          },
+          false,
+          ["verify"]
+        );
+  } catch {
+    fail(
+      "Invalid creator key"
+    );
+  }
+
+  const valid =
+    await crypto.subtle.verify(
+      {
+        name: "Ed25519"
+      },
+      key,
+      signature,
+      enc.encode(message)
+    );
+
+  if (!valid) {
+    fail(
+      "Launch signature verification failed",
+      403
+    );
+  }
+
+  return {
+    ...record,
+    id,
+    message,
+    signature:
+      body.signature
+  };
+}
+
+async function readBody(
+  request
+) {
+  const declared =
+    Number(
+      request.headers
+        .get("Content-Length") ||
+      "0"
+    );
+
+  if (
+    Number.isFinite(declared) &&
+    declared > 4096
+  ) {
+    fail(
+      "Launch request too large",
+      413
+    );
+  }
+
+  const raw =
+    await request.text();
+
+  if (
+    enc.encode(raw).length >
+      4096
+  ) {
+    fail(
+      "Launch request too large",
+      413
+    );
+  }
+
+  try {
+    return JSON.parse(raw);
+  } catch {
+    fail(
+      "Invalid JSON"
+    );
+  }
+}
+
+function loadLaunch(
+  sql,
+  id
+) {
+  return one(
+    sql.exec(
+      `SELECT
+         id,
+         creator,
+         name,
+         symbol,
+         uri,
+         nonce,
+         created_at,
+         signature,
+         registered_at,
+         status
+       FROM solana_launches
+       WHERE id = ?`,
+      id
+    )
+  );
+}
+
+function publicLaunch(row) {
+  return {
+    id:
+      String(row.id),
+
+    programId:
+      PROGRAM_ID,
+
+    creator:
+      String(row.creator),
+
+    name:
+      String(row.name),
+
+    symbol:
+      String(row.symbol),
+
+    uri:
+      String(row.uri),
+
+    nonce:
+      String(row.nonce),
+
+    createdAt:
+      Number(row.created_at),
+
+    signature:
+      String(row.signature),
+
+    registeredAt:
+      Number(row.registered_at),
+
+    status:
+      String(row.status)
+  };
+}
+
+function registerLaunch(
+  ctx,
+  launch,
+  now
+) {
+  return ctx.storage
+    .transactionSync(
+      () => {
+        const sql =
+          ctx.storage.sql;
+
+        const existing =
+          loadLaunch(
+            sql,
+            launch.id
+          );
+
+        if (existing) {
+          const same =
+            existing.creator ===
+              launch.creator &&
+            existing.name ===
+              launch.name &&
+            existing.symbol ===
+              launch.symbol &&
+            existing.uri ===
+              launch.uri &&
+            existing.nonce ===
+              launch.nonce &&
+            Number(
+              existing.created_at
+            ) ===
+              launch.createdAt &&
+            existing.signature ===
+              launch.signature;
+
+          if (!same) {
+            return {
+              ok: false,
+              conflict: true
+            };
+          }
+
+          return {
+            ok: true,
+            launch:
+              publicLaunch(
+                existing
+              )
+          };
+        }
+
+        const dayStart =
+          Math.floor(
+            now / 86_400_000
+          ) *
+          86_400_000;
+
+        const creatorCount =
+          Number(
+            one(
+              sql.exec(
+                `SELECT
+                   COUNT(*) AS count
+                 FROM solana_launches
+                 WHERE creator = ?
+                   AND registered_at >= ?`,
+                launch.creator,
+                dayStart
+              )
+            )?.count || 0
+          );
+
+        if (
+          creatorCount >= 25
+        ) {
+          return {
+            ok: false,
+            limited: true
+          };
+        }
+
+        const globalCount =
+          Number(
+            one(
+              sql.exec(
+                `SELECT
+                   COUNT(*) AS count
+                 FROM solana_launches
+                 WHERE registered_at >= ?`,
+                dayStart
+              )
+            )?.count || 0
+          );
+
+        if (
+          globalCount >= 5000
+        ) {
+          return {
+            ok: false,
+            limited: true
+          };
+        }
+
+        sql.exec(
+          `INSERT INTO solana_launches
+            (
+              id,
+              creator,
+              name,
+              symbol,
+              uri,
+              nonce,
+              created_at,
+              signature,
+              registered_at,
+              status
+            )
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+          launch.id,
+          launch.creator,
+          launch.name,
+          launch.symbol,
+          launch.uri,
+          launch.nonce,
+          launch.createdAt,
+          launch.signature,
+          now
+        );
+
+        return {
+          ok: true,
+          launch:
+            publicLaunch(
+              loadLaunch(
+                sql,
+                launch.id
+              )
+            )
+        };
+      }
+    );
+}
+
+function parseOffset(
+  pathname
+) {
+  const match =
+    /^\/launch\/pending\/([0-9]+)\.json$/
+      .exec(pathname);
+
+  if (!match) {
+    return null;
+  }
+
+  const offset =
+    Number(match[1]);
+
+  if (
+    !Number.isSafeInteger(
+      offset
+    ) ||
+    offset < 0 ||
+    offset % 8 !== 0 ||
+    offset > 100_000
+  ) {
+    return null;
+  }
+
+  return offset;
+}
+
+function pendingPage(
+  ctx,
+  offset
+) {
+  const rows =
+    ctx.storage.sql.exec(
+      `SELECT
+         id,
+         creator,
+         name,
+         symbol,
+         uri,
+         nonce,
+         created_at,
+         signature,
+         registered_at,
+         status
+       FROM solana_launches
+       WHERE status = 'pending'
+       ORDER BY registered_at DESC, id ASC
+       LIMIT 8 OFFSET ?`,
+      offset
+    ).toArray();
+
+  return {
+    schemaVersion: 1,
+    programId:
+      PROGRAM_ID,
+
+    launches:
+      rows.map(
+        publicLaunch
+      ),
+
+    next:
+      rows.length === 8
+        ? offset + 8
+        : null
+  };
+}
+
+export function isLaunchRoute(
+  method,
+  pathname
+) {
+  return Boolean(
+    (
+      method === "POST" &&
+      pathname ===
+        "/launch/register"
+    ) ||
+    (
+      method === "GET" &&
+      /^\/launch\/pending\/[0-9]+\.json$/
+        .test(pathname)
+    ) ||
+    (
+      method === "GET" &&
+      /^\/launch\/[0-9a-f]{64}\.json$/
+        .test(pathname)
+    )
+  );
+}
+
+export async function
+handleLaunchRequest(
+  ctx,
+  request,
+  now = Date.now()
+) {
+  const url =
+    new URL(
+      request.url
+    );
+
+  if (
+    request.method === "POST" &&
+    url.pathname ===
+      "/launch/register"
+  ) {
+    const launch =
+      await validateSignedLaunch(
+        await readBody(
+          request
+        ),
+        now
+      );
+
+    const result =
+      registerLaunch(
+        ctx,
+        launch,
+        now
+      );
+
+    if (result.conflict) {
+      return json(
+        {
+          error:
+            "Launch ID conflict"
+        },
+        409
+      );
+    }
+
+    if (result.limited) {
+      return json(
+        {
+          error:
+            "Launch registration limit reached"
+        },
+        429
+      );
+    }
+
+    return json({
+      ok: true,
+      id:
+        result.launch.id,
+      launch:
+        result.launch
+    });
+  }
+
+  if (
+    request.method === "GET"
+  ) {
+    const offset =
+      parseOffset(
+        url.pathname
+      );
+
+    if (
+      offset !== null
+    ) {
+      return json(
+        pendingPage(
+          ctx,
+          offset
+        )
+      );
+    }
+
+    const match =
+      /^\/launch\/([0-9a-f]{64})\.json$/
+        .exec(
+          url.pathname
+        );
+
+    if (match) {
+      const row =
+        loadLaunch(
+          ctx.storage.sql,
+          match[1]
+        );
+
+      if (!row) {
+        return json(
+          {
+            error:
+              "Launch not found"
+          },
+          404
+        );
+      }
+
+      return json({
+        schemaVersion: 1,
+        programId:
+          PROGRAM_ID,
+        launch:
+          publicLaunch(row)
+      });
+    }
+  }
+
+  return json(
+    {
+      error:
+        "Not found"
+    },
+    404
+  );
+}

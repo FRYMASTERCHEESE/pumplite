@@ -49,6 +49,63 @@ function jsonResponse(data, status, origin = ALLOWED_ORIGIN) {
   });
 }
 
+async function launchProxy(
+  request,
+  env,
+  origin
+) {
+  if (!env.UPLOAD_GUARD) {
+    return jsonResponse(
+      {
+        error:
+          "Launch registry unavailable"
+      },
+      503,
+      origin || ALLOWED_ORIGIN
+    );
+  }
+
+  const upstream =
+    await env.UPLOAD_GUARD
+      .fetch(request);
+
+  const headers =
+    new Headers(
+      upstream.headers
+    );
+
+  for (
+    const [
+      key,
+      value
+    ] of Object.entries(
+      corsHeaders(
+        origin ||
+        ALLOWED_ORIGIN
+      )
+    )
+  ) {
+    headers.set(
+      key,
+      value
+    );
+  }
+
+  headers.set(
+    "Cache-Control",
+    "no-store"
+  );
+
+  return new Response(
+    upstream.body,
+    {
+      status:
+        upstream.status,
+      headers
+    }
+  );
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -65,11 +122,40 @@ export default {
       });
     }
 
-    // Only PumpLite's GitHub Pages origin may use /rpc.
+    const publicLaunchRead =
+      request.method === "GET" &&
+      (
+        /^\/launch\/pending\/[0-9]+\.json$/
+          .test(url.pathname) ||
+        /^\/launch\/[0-9a-f]{64}\.json$/
+          .test(url.pathname)
+      );
+
+    if (publicLaunchRead) {
+      return launchProxy(
+        request,
+        env,
+        origin
+      );
+    }
+
+    // Only PumpLite's GitHub Pages origin may use signed/control APIs.
     if (origin !== ALLOWED_ORIGIN) {
       return jsonResponse(
         { error: "Origin not allowed" },
         403
+      );
+    }
+
+    if (
+      request.method === "POST" &&
+      url.pathname ===
+        "/launch/register"
+    ) {
+      return launchProxy(
+        request,
+        env,
+        origin
       );
     }
 

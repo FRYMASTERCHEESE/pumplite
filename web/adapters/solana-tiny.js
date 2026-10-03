@@ -1524,7 +1524,7 @@ export function adapter(
               .padStart(2, '0')
         ).join('');
 
-      return {
+      const draft = {
         ...record,
         id,
         message,
@@ -1533,6 +1533,65 @@ export function adapter(
             'base64'
           )
       };
+
+      const launchUrl =
+        new URL(
+          config.rpcUrl
+        );
+
+      launchUrl.pathname =
+        '/launch/register';
+
+      launchUrl.search = '';
+      launchUrl.hash = '';
+
+      const response =
+        await boundedFetch(
+          launchUrl,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type':
+                'application/json'
+            },
+            body:
+              JSON.stringify(
+                draft
+              )
+          },
+          {
+            maxBytes: 8192
+          }
+        );
+
+      let reply;
+
+      try {
+        reply =
+          await response.json();
+      } catch {
+        throw Error(
+          'PumpLite launch registry returned an invalid response'
+        );
+      }
+
+      if (
+        !response.ok ||
+        reply?.ok !== true ||
+        reply?.id !== id ||
+        reply?.launch?.creator !==
+          owner.toBase58()
+      ) {
+        throw Error(
+          'PumpLite launch registry rejected the signed launch'
+        );
+      }
+
+      notify(
+        'Free PumpLite launch published. Creator cost: 0 SOL. No Solana transaction was submitted.'
+      );
+
+      return draft;
     },
 
     async create({

@@ -25,6 +25,12 @@ import {
   completeGrant
 } from "./store.js";
 
+import {
+  LAUNCH_SCHEMA,
+  isLaunchRoute,
+  handleLaunchRequest
+} from "./launches.js";
+
 const ALLOWED_PATHS = new Set(["/challenge", "/issue", "/authorize", "/complete"]);
 
 function json(data, status = 200) {
@@ -41,7 +47,21 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    if (request.method !== "POST" || !ALLOWED_PATHS.has(url.pathname)) {
+    const launch =
+      isLaunchRoute(
+        request.method,
+        url.pathname
+      );
+
+    if (
+      !launch &&
+      (
+        request.method !== "POST" ||
+        !ALLOWED_PATHS.has(
+          url.pathname
+        )
+      )
+    ) {
       return json({ error: "Not found" }, 404);
     }
 
@@ -61,13 +81,53 @@ export class UploadGuard extends DurableObject {
     this.env = env;
     ctx.blockConcurrencyWhile(async () => {
       ctx.storage.sql.exec(SCHEMA);
+      ctx.storage.sql.exec(
+        LAUNCH_SCHEMA
+      );
     });
   }
 
   async fetch(request) {
     const url = new URL(request.url);
 
-    if (!ALLOWED_PATHS.has(url.pathname)) {
+    if (
+      isLaunchRoute(
+        request.method,
+        url.pathname
+      )
+    ) {
+      try {
+        return await handleLaunchRequest(
+          this.ctx,
+          request,
+          Date.now()
+        );
+      } catch (error) {
+        const status =
+          Number.isSafeInteger(
+            error?.status
+          )
+            ? error.status
+            : 500;
+
+        return json(
+          {
+            error:
+              status === 500
+                ? "Launch registry temporarily unavailable"
+                : error.message
+          },
+          status
+        );
+      }
+    }
+
+    if (
+      request.method !== "POST" ||
+      !ALLOWED_PATHS.has(
+        url.pathname
+      )
+    ) {
       return json({ error: "Not found" }, 404);
     }
 
