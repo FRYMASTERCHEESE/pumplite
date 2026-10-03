@@ -47,7 +47,7 @@ fn bad<T>() -> Result<T, ProgramError> {
 unsafe fn read64(p: *const u8) -> u64 {
     u64::from_le(core::ptr::read_unaligned(p as *const u64))
 }
-#[inline(never)]
+#[cfg_attr(not(feature = "auto-cpi"), inline(never))]
 unsafe fn invoke_cpi_checked(
     instruction: &InstructionView,
     accounts: &[CpiAccount],
@@ -101,14 +101,14 @@ unsafe fn invoke_cpi_checked(
 }
 
 #[cfg(not(feature = "bitmul"))]
-#[inline(never)]
+#[cfg_attr(not(feature = "auto-md"), inline(never))]
 fn md(a: u64, b: u64, d: u64) -> Result<u64, ProgramError> {
     if d == 0 { return bad(); }
     Ok((((a as u128) * (b as u128)) / (d as u128)) as u64)
 }
 
 #[cfg(feature = "bitmul")]
-#[inline(never)]
+#[cfg_attr(not(feature = "auto-md"), inline(never))]
 fn md(a: u64, b: u64, d: u64) -> Result<u64, ProgramError> {
     if d == 0 || b >= d { return bad(); }
     let mut q = 0u64;
@@ -145,7 +145,7 @@ fn md(a: u64, b: u64, d: u64) -> Result<u64, ProgramError> {
     Ok(q)
 }
 
-#[inline(never)]
+#[cfg_attr(not(feature = "auto-sol"), inline(never))]
 fn sol_xfer(
     from: &AccountView,
     to: &AccountView,
@@ -184,7 +184,7 @@ fn sol_xfer(
     }
 }
 
-#[inline(never)]
+#[cfg_attr(not(feature = "auto-token"), inline(never))]
 fn token_xfer(
     tag: u8,
     a: &AccountView,
@@ -228,7 +228,7 @@ fn token_xfer(
     }
 }
 
-#[inline(never)]
+#[cfg_attr(not(feature = "auto-remaining"), inline(never))]
 fn remaining(mint: &AccountView, market: &AccountView) -> Result<u64, ProgramError> {
     if !mint.owned_by(&TOKEN) || mint.data_len() != 82 {
         return bad();
@@ -244,7 +244,7 @@ fn remaining(mint: &AccountView, market: &AccountView) -> Result<u64, ProgramErr
     Ok(left)
 }
 
-#[inline(never)]
+#[cfg_attr(not(feature = "auto-quote"), inline(never))]
 fn quote(tag: u8, native: u64, tokens: u64, input: u64) -> Result<(u64,u64), ProgramError> {
     if input == 0 || tokens == 0 { return bad(); }
     if tag == 0 {
@@ -268,21 +268,21 @@ fn quote(tag: u8, native: u64, tokens: u64, input: u64) -> Result<(u64,u64), Pro
     }
 }
 
-#[inline(never)]
+#[cfg_attr(not(feature = "auto-process"), inline(never))]
 fn process_instruction(
     _program_id: &Address,
     accounts: &mut [AccountView],
     data: &[u8],
 ) -> ProgramResult {
-    if data.len() != 17 { return bad(); }
+    if data.len() != 17 { return Err(ProgramError::InvalidInstructionData); }
     let tag = data[0];
-    if tag > 1 { return bad(); }
+    if tag > 1 { return Err(ProgramError::InvalidInstructionData); }
     let input = unsafe { read64(data.as_ptr().add(1)) };
     let minimum = unsafe { read64(data.as_ptr().add(9)) };
     if input == 0 || minimum == 0 { return bad(); }
 
     if accounts.len() < 5 {
-        return bad();
+        return Err(ProgramError::NotEnoughAccountKeys);
     }
 
     let p = accounts.as_ptr();

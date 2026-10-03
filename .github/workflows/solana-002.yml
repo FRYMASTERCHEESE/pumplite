@@ -40,50 +40,84 @@ jobs:
           cargo test --manifest-path experiments/pumplite-tiny-v3/Cargo.toml --lib
           cargo test --manifest-path experiments/pumplite-tiny-v3/Cargo.toml --lib --features bitmul
 
-      - name: Build both arithmetic variants
+      - name: Build safe size variants
         id: build
         shell: bash
         run: |
           set -euo pipefail
+
           rm -rf target/solana-002
-          mkdir -p target/solana-002/u128 target/solana-002/bitmul
+          mkdir -p target/solana-002/variants
 
-          cargo-build-sbf \
-            --manifest-path experiments/pumplite-tiny-v3/Cargo.toml \
-            --arch v3 \
-            --optimize-size \
-            --sbf-out-dir target/solana-002/u128
+          best_size=999999999
+          best_name=""
+          best_path=""
 
-          cargo-build-sbf \
-            --manifest-path experiments/pumplite-tiny-v3/Cargo.toml \
-            --arch v3 \
-            --optimize-size \
-            --features bitmul \
-            --sbf-out-dir target/solana-002/bitmul
+          build_variant() {
+            name="$1"
+            features="$2"
+            out="target/solana-002/variants/$name"
 
-          a=target/solana-002/u128/pumplite_tiny_v3.so
-          b=target/solana-002/bitmul/pumplite_tiny_v3.so
-          sa=$(stat -c%s "$a")
-          sb=$(stat -c%s "$b")
+            mkdir -p "$out"
 
-          if [ "$sa" -le "$sb" ]; then
-            cp "$a" target/solana-002/pumplite_tiny_v3.so
-            variant=u128
-            size="$sa"
-          else
-            cp "$b" target/solana-002/pumplite_tiny_v3.so
-            variant=bitmul
-            size="$sb"
-          fi
+            echo ""
+            echo "=== BUILD $name ==="
+            echo "features: $features"
 
-          hash=$(sha256sum target/solana-002/pumplite_tiny_v3.so | awk '{print $1}')
-          echo "size=$size" >> "$GITHUB_OUTPUT"
+            cargo-build-sbf \
+              --manifest-path experiments/pumplite-tiny-v3/Cargo.toml \
+              --arch v3 \
+              --optimize-size \
+              --features "$features" \
+              --sbf-out-dir "$out"
+
+            so="$out/pumplite_tiny_v3.so"
+            size=$(stat -c%s "$so")
+
+            echo "$name bytes: $size"
+
+            if [ "$size" -lt "$best_size" ]; then
+              best_size="$size"
+              best_name="$name"
+              best_path="$so"
+            fi
+          }
+
+          build_variant base "bitmul"
+          build_variant remaining "bitmul,auto-remaining"
+          build_variant quote "bitmul,auto-quote"
+          build_variant process "bitmul,auto-process"
+          build_variant rem_quote "bitmul,auto-remaining,auto-quote"
+          build_variant rem_process "bitmul,auto-remaining,auto-process"
+          build_variant quote_process "bitmul,auto-quote,auto-process"
+          build_variant rem_quote_process "bitmul,auto-remaining,auto-quote,auto-process"
+          build_variant md "bitmul,auto-md"
+          build_variant sol "bitmul,auto-sol"
+          build_variant token "bitmul,auto-token"
+          build_variant xfers "bitmul,auto-sol,auto-token"
+          build_variant cpi "bitmul,auto-cpi"
+          build_variant cpi_remaining "bitmul,auto-cpi,auto-remaining"
+          build_variant cpi_quote "bitmul,auto-cpi,auto-quote"
+          build_variant all_auto "bitmul,auto-cpi,auto-md,auto-sol,auto-token,auto-remaining,auto-quote,auto-process"
+
+          cp "$best_path" \
+            target/solana-002/pumplite_tiny_v3.so
+
+          hash=$(sha256sum \
+            target/solana-002/pumplite_tiny_v3.so |
+            awk '{print $1}')
+
+          echo ""
+          echo "============================================"
+          echo "SMALLEST SAFE LAYOUT"
+          echo "variant: $best_name"
+          echo "bytes: $best_size"
+          echo "sha256: $hash"
+          echo "============================================"
+
+          echo "size=$best_size" >> "$GITHUB_OUTPUT"
           echo "hash=$hash" >> "$GITHUB_OUTPUT"
-          echo "variant=$variant" >> "$GITHUB_OUTPUT"
-
-          echo "u128 bytes: $sa"
-          echo "bitmul bytes: $sb"
-          echo "chosen: $variant / $size bytes / $hash"
+          echo "variant=$best_name" >> "$GITHUB_OUTPUT"
 
       - name: Install JS dependencies
         shell: bash

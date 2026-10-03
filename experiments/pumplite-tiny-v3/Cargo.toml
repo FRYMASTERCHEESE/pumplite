@@ -27,6 +27,13 @@ default = []
 bitmul = []
 custom-heap = []
 custom-panic = []
+auto-process = []
+auto-quote = []
+auto-remaining = []
+auto-token = []
+auto-sol = []
+auto-md = []
+auto-cpi = []
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("solana"))'] }
