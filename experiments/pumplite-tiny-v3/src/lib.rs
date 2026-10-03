@@ -48,18 +48,9 @@ fn err(code: u32) -> ProgramError {
 }
 
 #[inline(always)]
-fn u64_at(data: &[u8], offset: usize) -> Result<u64, ProgramError> {
-    let bytes = data
-        .get(offset..offset + 8)
-        .ok_or(ProgramError::InvalidInstructionData)?;
-
-    Ok(u64::from_le_bytes(
-        bytes
-            .try_into()
-            .map_err(|_| ProgramError::InvalidInstructionData)?,
-    ))
+fn u64_at(data: &[u8], offset: usize) -> u64 {
+    u64::from_le(unsafe { core::ptr::read_unaligned(data.as_ptr().add(offset) as *const u64) })
 }
-
 #[inline(always)]
 fn fee(amount: u64) -> u64 {
     // Exactly 25 / 10,000.
@@ -73,11 +64,7 @@ fn fee(amount: u64) -> u64 {
  * PumpLite calls this only when b < d.
  */
 #[inline(never)]
-fn mul_div_ratio(a: u64, b: u64, d: u64) -> Result<u64, ProgramError> {
-    if d == 0 || b >= d {
-        return Err(err(ERR_OVERFLOW));
-    }
-
+fn mul_div_ratio(a: u64, b: u64, d: u64) -> u64 {
     let mut q = 0u64;
     let mut r = 0u64;
 
@@ -87,14 +74,13 @@ fn mul_div_ratio(a: u64, b: u64, d: u64) -> Result<u64, ProgramError> {
 
     while x != 0 {
         if x & 1 != 0 {
-            q = q.checked_add(aq).ok_or(err(ERR_OVERFLOW))?;
+            q += aq;
 
             let gap = d - ar;
 
             if r >= gap {
                 r -= gap;
-
-                q = q.checked_add(1).ok_or(err(ERR_OVERFLOW))?;
+                q += 1;
             } else {
                 r += ar;
             }
@@ -110,27 +96,19 @@ fn mul_div_ratio(a: u64, b: u64, d: u64) -> Result<u64, ProgramError> {
 
         let carry = if ar >= gap {
             ar -= gap;
-            1u64
+            1
         } else {
             ar += ar;
-            0u64
+            0
         };
 
-        aq = aq
-            .checked_mul(2)
-            .and_then(|v| v.checked_add(carry))
-            .ok_or(err(ERR_OVERFLOW))?;
+        aq = aq * 2 + carry;
     }
 
-    Ok(q)
+    q
 }
-
 #[inline(always)]
 fn quote_buy(native: u64, tokens: u64, input: u64) -> Result<(u64, u64), ProgramError> {
-    if input == 0 || tokens == 0 {
-        return Err(err(ERR_QUOTE));
-    }
-
     let f = fee(input);
 
     let net = input.checked_sub(f).ok_or(err(ERR_OVERFLOW))?;
@@ -140,30 +118,22 @@ fn quote_buy(native: u64, tokens: u64, input: u64) -> Result<(u64, u64), Program
         .and_then(|v| v.checked_add(net))
         .ok_or(err(ERR_OVERFLOW))?;
 
-    let output = mul_div_ratio(tokens, net, denominator)?;
-
-    if output == 0 || output >= tokens {
-        return Err(err(ERR_QUOTE));
-    }
+    let output = mul_div_ratio(tokens, net, denominator);
 
     Ok((output, f))
 }
 
 #[inline(always)]
 fn quote_sell(native: u64, tokens: u64, input: u64) -> Result<(u64, u64), ProgramError> {
-    if input == 0 || tokens == 0 {
-        return Err(err(ERR_QUOTE));
-    }
-
     let denominator = tokens.checked_add(input).ok_or(err(ERR_OVERFLOW))?;
 
     let priced = VIRTUAL_NATIVE
         .checked_add(native)
         .ok_or(err(ERR_OVERFLOW))?;
 
-    let gross = mul_div_ratio(priced, input, denominator)?;
+    let gross = mul_div_ratio(priced, input, denominator);
 
-    if gross == 0 || gross > native {
+    if gross > native {
         return Err(err(ERR_BACKING));
     }
 
@@ -280,7 +250,7 @@ fn remaining_tokens(mint: &AccountView, market: &AccountView) -> Result<u64, Pro
         return Err(err(ERR_ACCOUNT));
     }
 
-    let circulating = u64_at(&data, 36)?;
+    let circulating = u64_at(&data, 36);
 
     let remaining = SUPPLY.checked_sub(circulating).ok_or(err(ERR_ACCOUNT))?;
 
@@ -385,9 +355,9 @@ fn process_instruction(
 
     let tag = instruction_data[0];
 
-    let input = u64_at(instruction_data, 1)?;
+    let input = u64_at(instruction_data, 1);
 
-    let minimum = u64_at(instruction_data, 9)?;
+    let minimum = u64_at(instruction_data, 9);
 
     if input == 0 {
         return Err(err(ERR_QUOTE));
@@ -427,7 +397,7 @@ mod tests {
             for d in [2u64, 31, 1_000, VIRTUAL_NATIVE, SUPPLY] {
                 let b = (a % d).min(d - 1);
 
-                assert_eq!(mul_div_ratio(a, b, d).unwrap(), reference(a, b, d));
+                assert_eq!(mul_div_ratio(a, b, d), reference(a, b, d));
             }
         }
     }
