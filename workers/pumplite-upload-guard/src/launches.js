@@ -884,6 +884,17 @@ function reserveLaunch(
         const sql =
           ctx.storage.sql;
 
+        /*
+         * Expired reservations no longer have any claim on their
+         * public mint/market values. Remove them before enforcing
+         * UNIQUE constraints.
+         */
+        sql.exec(
+          `DELETE FROM solana_launch_reservations
+           WHERE expires_at <= ?`,
+          now
+        );
+
         const launch =
           loadLaunch(
             sql,

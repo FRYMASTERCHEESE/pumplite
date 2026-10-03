@@ -41,6 +41,7 @@ import {
   tinyMarketAddress,
   tinyMetadataAddress,
   buildTinyCreateInstructions,
+  buildTinyFirstBuyerActivationInstructions,
   tinyTradeInstructions
 } from '../solana-tiny-instructions.js';
 
@@ -1823,6 +1824,251 @@ export function adapter(
 
         expiresAt:
           reservation.expiresAt
+      };
+    },
+
+    async activateReservedFirstBuyer({
+      launchId,
+      buyAmount,
+      buyMinimum
+    }) {
+      if (
+        config.transactionsEnabled !==
+        true
+      ) {
+        throw Error(
+          'PumpLite first-buyer Mainnet activation is still safety locked'
+        );
+      }
+
+      const buyer =
+        await wallet();
+
+      const treasury =
+        new PublicKey(
+          config.treasury
+        );
+
+      /*
+       * The deployed curve pays its fee to treasury via System CPI.
+       * Do not use treasury itself as first buyer: that would turn
+       * the fee transfer into a source/destination self-transfer.
+       */
+      if (
+        buyer.equals(
+          treasury
+        )
+      ) {
+        throw Error(
+          'The PumpLite treasury wallet cannot be the first buyer'
+        );
+      }
+
+      if (
+        typeof launchId !==
+          'string' ||
+        !/^[0-9a-f]{64}$/
+          .test(launchId)
+      ) {
+        throw Error(
+          'Invalid PumpLite launch ID'
+        );
+      }
+
+      if (
+        typeof buyAmount !==
+          'bigint' ||
+        buyAmount <= 0n ||
+        typeof buyMinimum !==
+          'bigint' ||
+        buyMinimum <= 0n
+      ) {
+        throw Error(
+          'Invalid first-buyer amount'
+        );
+      }
+
+      const local =
+        localFirstBuyer.get(
+          launchId
+        );
+
+      if (
+        !local ||
+        !local.mintKeypair ||
+        !local.reservation
+      ) {
+        throw Error(
+          'First-buyer reservation is not available in this browser. Reserve again.'
+        );
+      }
+
+      const reservation =
+        local.reservation;
+
+      if (
+        reservation.buyer !==
+          buyer.toBase58() ||
+        reservation.mint !==
+          local.mint.toBase58() ||
+        reservation.market !==
+          local.market.toBase58()
+      ) {
+        throw Error(
+          'Local first-buyer reservation changed'
+        );
+      }
+
+      if (
+        !Number.isSafeInteger(
+          reservation.expiresAt
+        ) ||
+        reservation.expiresAt <=
+          Date.now() + 15_000
+      ) {
+        throw Error(
+          'First-buyer reservation expired or is too close to expiry. Reserve again.'
+        );
+      }
+
+      const launchUrl =
+        new URL(
+          config.rpcUrl
+        );
+
+      launchUrl.pathname =
+        '/launch/' +
+        launchId +
+        '.json';
+
+      launchUrl.search = '';
+      launchUrl.hash = '';
+
+      const response =
+        await boundedFetch(
+          launchUrl,
+          {},
+          {
+            maxBytes:
+              8192
+          }
+        );
+
+      let payload;
+
+      try {
+        payload =
+          await response.json();
+      } catch {
+        throw Error(
+          'PumpLite launch registry returned invalid launch data'
+        );
+      }
+
+      const launch =
+        payload?.launch;
+
+      if (
+        !response.ok ||
+        payload?.schemaVersion !== 1 ||
+        payload?.programId !==
+          program().toBase58() ||
+        launch?.id !==
+          launchId ||
+        launch?.programId !==
+          program().toBase58() ||
+        launch?.status !==
+          'pending'
+      ) {
+        throw Error(
+          'PumpLite pending launch could not be verified'
+        );
+      }
+
+      let creator;
+
+      try {
+        creator =
+          new PublicKey(
+            launch.creator
+          );
+      } catch {
+        throw Error(
+          'Invalid PumpLite launch creator'
+        );
+      }
+
+      await writeNetwork();
+
+      const mintRentLamports =
+        await writeConnection
+          .getMinimumBalanceForRentExemption(
+            TINY_MINT_SIZE,
+            'confirmed'
+          );
+
+      const built =
+        buildTinyFirstBuyerActivationInstructions({
+          buyer,
+          creator,
+          programId:
+            program(),
+          treasury,
+          name:
+            launch.name,
+          symbol:
+            launch.symbol,
+          uri:
+            launch.uri,
+          mintRentLamports,
+          buyAmount,
+          buyMinimum,
+          mintKeypair:
+            local.mintKeypair
+        });
+
+      if (
+        !built.mint.equals(
+          local.mint
+        ) ||
+        !built.market.equals(
+          local.market
+        )
+      ) {
+        throw Error(
+          'Reserved PumpLite mint changed during activation'
+        );
+      }
+
+      /*
+       * send() keeps the mint signature browser-local, asks Phantom
+       * for the buyer signature, verifies Phantom did not change
+       * PumpLite business instructions, performs sigVerify=true
+       * Mainnet simulation, then broadcasts only if simulation passes.
+       */
+      const signature =
+        await send(
+          built.instructions,
+          [
+            local.mintKeypair
+          ]
+        );
+
+      local.submitted = {
+        signature,
+        mint:
+          built.mint.toBase58(),
+        market:
+          built.market.toBase58()
+      };
+
+      return {
+        launchId,
+        mint:
+          built.mint.toBase58(),
+        market:
+          built.market.toBase58(),
+        signature
       };
     },
 

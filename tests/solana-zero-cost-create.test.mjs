@@ -18,7 +18,7 @@ test(
 
     const end =
       adapter.indexOf(
-        '\n    async create({',
+        '\n    async reserveFirstBuyer',
         start
       );
 
