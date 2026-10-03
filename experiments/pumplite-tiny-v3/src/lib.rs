@@ -274,15 +274,15 @@ fn process_instruction(
     accounts: &mut [AccountView],
     data: &[u8],
 ) -> ProgramResult {
-    if data.len() != 17 { return Err(ProgramError::InvalidInstructionData); }
+    if data.len() != 17 { return bad(); }
     let tag = data[0];
-    if tag > 1 { return Err(ProgramError::InvalidInstructionData); }
+    if tag > 1 { return bad(); }
     let input = unsafe { read64(data.as_ptr().add(1)) };
     let minimum = unsafe { read64(data.as_ptr().add(9)) };
     if input == 0 || minimum == 0 { return bad(); }
 
     if accounts.len() < 5 {
-        return Err(ProgramError::NotEnoughAccountKeys);
+        return bad();
     }
 
     let p = accounts.as_ptr();
