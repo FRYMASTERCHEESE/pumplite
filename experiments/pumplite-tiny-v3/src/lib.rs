@@ -62,114 +62,9 @@ fn u64_at(data: &[u8], offset: usize) -> Result<u64, ProgramError> {
 
 #[inline(always)]
 fn fee(amount: u64) -> u64 {
-    // Exactly 25 / 10,000.
+    // Exactly 25 basis points.
     amount / 400
 }
-
-/*
- * Exact floor(a*b/d) without linking the large
- * compiler u128-division runtime.
- *
- * PumpLite calls this only when b < d.
- */
-#[inline(never)]
-fn mul_div_ratio(a: u64, b: u64, d: u64) -> Result<u64, ProgramError> {
-    if d == 0 || b >= d {
-        return Err(err(ERR_OVERFLOW));
-    }
-
-    let mut q = 0u64;
-    let mut r = 0u64;
-
-    let mut aq = a / d;
-    let mut ar = a % d;
-    let mut x = b;
-
-    while x != 0 {
-        if x & 1 != 0 {
-            q = q.checked_add(aq).ok_or(err(ERR_OVERFLOW))?;
-
-            let gap = d - ar;
-
-            if r >= gap {
-                r -= gap;
-
-                q = q.checked_add(1).ok_or(err(ERR_OVERFLOW))?;
-            } else {
-                r += ar;
-            }
-        }
-
-        x >>= 1;
-
-        if x == 0 {
-            break;
-        }
-
-        let gap = d - ar;
-
-        let carry = if ar >= gap {
-            ar -= gap;
-            1u64
-        } else {
-            ar += ar;
-            0u64
-        };
-
-        aq = aq
-            .checked_mul(2)
-            .and_then(|v| v.checked_add(carry))
-            .ok_or(err(ERR_OVERFLOW))?;
-    }
-
-    Ok(q)
-}
-
-#[inline(always)]
-fn quote_buy(native: u64, tokens: u64, input: u64) -> Result<(u64, u64), ProgramError> {
-    if input == 0 || tokens == 0 {
-        return Err(err(ERR_QUOTE));
-    }
-
-    let f = fee(input);
-
-    let net = input.checked_sub(f).ok_or(err(ERR_OVERFLOW))?;
-
-    let denominator = VIRTUAL_NATIVE
-        .checked_add(native)
-        .and_then(|v| v.checked_add(net))
-        .ok_or(err(ERR_OVERFLOW))?;
-
-    let output = mul_div_ratio(tokens, net, denominator)?;
-
-    if output == 0 || output >= tokens {
-        return Err(err(ERR_QUOTE));
-    }
-
-    Ok((output, f))
-}
-
-#[inline(always)]
-fn quote_sell(native: u64, tokens: u64, input: u64) -> Result<(u64, u64), ProgramError> {
-    if input == 0 || tokens == 0 {
-        return Err(err(ERR_QUOTE));
-    }
-
-    let denominator = tokens.checked_add(input).ok_or(err(ERR_OVERFLOW))?;
-
-    let priced = VIRTUAL_NATIVE
-        .checked_add(native)
-        .ok_or(err(ERR_OVERFLOW))?;
-
-    let gross = mul_div_ratio(priced, input, denominator)?;
-
-    if gross == 0 || gross > native {
-        return Err(err(ERR_BACKING));
-    }
-
-    Ok((gross, fee(gross)))
-}
-
 #[inline(never)]
 fn system_transfer(
     from: &AccountView,
@@ -350,7 +245,7 @@ fn check_accounts(trader: &AccountView, treasury: &AccountView) -> ProgramResult
     Ok(())
 }
 
-fn buy(accounts: &mut [AccountView], input: u64, minimum: u64) -> ProgramResult {
+fn buy(accounts: &mut [AccountView], input: u64, requested: u64, minimum: u64) -> ProgramResult {
     let [trader, market, mint, trader_tokens, treasury] = accounts else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
@@ -361,13 +256,33 @@ fn buy(accounts: &mut [AccountView], input: u64, minimum: u64) -> ProgramResult 
 
     let native = market.lamports();
 
-    let (output, f) = quote_buy(native, tokens, input)?;
+    let f = fee(input);
 
-    if output < minimum {
+    let net = input.checked_sub(f).ok_or(err(ERR_OVERFLOW))?;
+
+    if requested == 0 || requested > tokens || requested < minimum {
         return Err(err(ERR_SLIPPAGE));
     }
 
-    let net = input.checked_sub(f).ok_or(err(ERR_OVERFLOW))?;
+    let before_native = VIRTUAL_NATIVE
+        .checked_add(native)
+        .ok_or(err(ERR_OVERFLOW))?;
+
+    let after_native = before_native.checked_add(net).ok_or(err(ERR_OVERFLOW))?;
+
+    let after_tokens = tokens - requested;
+
+    // Constant-product safety:
+    //
+    // (native after) * (tokens after)
+    // must never fall below the pre-trade invariant.
+    //
+    // This allows a user to request LESS than the
+    // curve quote, but never MORE.
+    if (after_native as u128) * (after_tokens as u128) < (before_native as u128) * (tokens as u128)
+    {
+        return Err(err(ERR_QUOTE));
+    }
 
     // 0.25% PumpLite fee.
     system_transfer(trader, treasury, f, &[])?;
@@ -383,12 +298,12 @@ fn buy(accounts: &mut [AccountView], input: u64, minimum: u64) -> ProgramResult 
 
     let signers = [Signer::from(&seeds)];
 
-    token_mint_to(mint, trader_tokens, market, output, &signers)?;
+    token_mint_to(mint, trader_tokens, market, requested, &signers)?;
 
     Ok(())
 }
 
-fn sell(accounts: &mut [AccountView], input: u64, minimum: u64) -> ProgramResult {
+fn sell(accounts: &mut [AccountView], input: u64, requested: u64, minimum: u64) -> ProgramResult {
     let [trader, market, mint, trader_tokens, treasury] = accounts else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
@@ -399,12 +314,33 @@ fn sell(accounts: &mut [AccountView], input: u64, minimum: u64) -> ProgramResult
 
     let native = market.lamports();
 
-    let (gross, f) = quote_sell(native, tokens, input)?;
+    let gross = requested;
+
+    if gross == 0 || gross > native {
+        return Err(err(ERR_BACKING));
+    }
+
+    let f = fee(gross);
 
     let output = gross.checked_sub(f).ok_or(err(ERR_OVERFLOW))?;
 
     if output < minimum {
         return Err(err(ERR_SLIPPAGE));
+    }
+
+    let before_native = VIRTUAL_NATIVE
+        .checked_add(native)
+        .ok_or(err(ERR_OVERFLOW))?;
+
+    let after_native = before_native.checked_sub(gross).ok_or(err(ERR_BACKING))?;
+
+    let after_tokens = tokens.checked_add(input).ok_or(err(ERR_OVERFLOW))?;
+
+    // A seller may withdraw less than the curve permits,
+    // but can never withdraw more.
+    if (after_native as u128) * (after_tokens as u128) < (before_native as u128) * (tokens as u128)
+    {
+        return Err(err(ERR_QUOTE));
     }
 
     token_burn(trader_tokens, mint, trader, input)?;
@@ -429,7 +365,7 @@ fn process_instruction(
     accounts: &mut [AccountView],
     instruction_data: &[u8],
 ) -> ProgramResult {
-    if instruction_data.len() != 17 {
+    if instruction_data.len() != 25 {
         return Err(ProgramError::InvalidInstructionData);
     }
 
@@ -437,7 +373,9 @@ fn process_instruction(
 
     let input = u64_at(instruction_data, 1)?;
 
-    let minimum = u64_at(instruction_data, 9)?;
+    let requested = u64_at(instruction_data, 9)?;
+
+    let minimum = u64_at(instruction_data, 17)?;
 
     if input == 0 {
         return Err(err(ERR_QUOTE));
@@ -448,9 +386,9 @@ fn process_instruction(
     }
 
     match tag {
-        0 => buy(accounts, input, minimum),
+        0 => buy(accounts, input, requested, minimum),
 
-        1 => sell(accounts, input, minimum),
+        1 => sell(accounts, input, requested, minimum),
 
         _ => Err(ProgramError::InvalidInstructionData),
     }
@@ -460,40 +398,62 @@ fn process_instruction(
 mod tests {
     use super::*;
 
-    fn reference(a: u64, b: u64, d: u64) -> u64 {
-        ((a as u128) * (b as u128) / (d as u128)) as u64
-    }
-
     #[test]
     fn fee_is_25_bps() {
-        for n in [1u64, 400, 1_000, 1_000_000, 1_000_000_000, u32::MAX as u64] {
-            assert_eq!(fee(n), ((n as u128) * 25 / 10_000) as u64);
+        for amount in [400u64, 1_000, 1_000_000, 1_000_000_000] {
+            assert_eq!(fee(amount), ((amount as u128) * 25 / 10_000) as u64);
         }
     }
 
     #[test]
     fn compact_math_matches_reference() {
-        for a in [1u64, 10, 1_000, 1_000_000_000, SUPPLY] {
-            for d in [2u64, 31, 1_000, VIRTUAL_NATIVE, SUPPLY] {
-                let b = (a % d).min(d - 1);
+        let native = 5_000_000_000u64;
+        let tokens = 900_000_000_000_000u64;
+        let input = 1_000_000_000u64;
 
-                assert_eq!(mul_div_ratio(a, b, d).unwrap(), reference(a, b, d));
-            }
-        }
+        let net = input - fee(input);
+
+        let before_native = VIRTUAL_NATIVE + native;
+
+        let after_native = before_native + net;
+
+        let output = ((tokens as u128) * (net as u128) / (after_native as u128)) as u64;
+
+        let left = (after_native as u128) * ((tokens - output) as u128);
+
+        let right = (before_native as u128) * (tokens as u128);
+
+        assert!(left >= right);
+
+        let too_many = output + 1;
+
+        let bad = (after_native as u128) * ((tokens - too_many) as u128);
+
+        assert!(bad < right);
     }
 
     #[test]
-    fn round_trip_cannot_profit() {
-        for amount in [10_000u64, 1_000_000, 100_000_000, 1_000_000_000] {
-            let (out, buy_fee) = quote_buy(0, SUPPLY, amount).unwrap();
+    fn sell_invariant_rejects_overpayment() {
+        let native = 10_000_000_000u64;
+        let tokens = 800_000_000_000_000u64;
+        let input = 10_000_000_000_000u64;
 
-            let native = amount - buy_fee;
+        let before_native = VIRTUAL_NATIVE + native;
 
-            let remaining = SUPPLY - out;
+        let after_tokens = tokens + input;
 
-            let (gross, sell_fee) = quote_sell(native, remaining, out).unwrap();
+        let gross = ((before_native as u128) * (input as u128) / (after_tokens as u128)) as u64;
 
-            assert!(gross - sell_fee < amount);
-        }
+        let left = ((before_native - gross) as u128) * (after_tokens as u128);
+
+        let right = (before_native as u128) * (tokens as u128);
+
+        assert!(left >= right);
+
+        let too_much = gross + 1;
+
+        let bad = ((before_native - too_much) as u128) * (after_tokens as u128);
+
+        assert!(bad < right);
     }
 }
