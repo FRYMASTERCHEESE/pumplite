@@ -1,5 +1,5 @@
 import { validateRegistry } from '../web/verification.js';
-import { build } from 'esbuild';
+import { build, transform } from 'esbuild';
 import { mkdir, copyFile, readFile, writeFile, rm, lstat, readdir, cp, access } from 'node:fs/promises';
 import { resolve, dirname, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -38,8 +38,39 @@ for (const output of Object.values(result.metafile.outputs)) {
   }
 }
 const files = new Map(result.outputFiles.map(file => [file.path, file.contents]));
-files.set(resolve(assets, 'phantom-diagnostic.js'), await readFile('web/phantom-diagnostic.js'));
-files.set(resolve(assets, 'styles.css'), await readFile('web/styles.css'));
+const phantomDiagnostic =
+  await transform(
+    await readFile(
+      'web/phantom-diagnostic.js',
+      'utf8'
+    ),
+    {
+      loader: 'js',
+      minify: true,
+      target: 'es2022'
+    }
+  );
+
+files.set(
+  resolve(assets, 'phantom-diagnostic.js'),
+  Buffer.from(phantomDiagnostic.code)
+);
+const styles =
+  await transform(
+    await readFile(
+      'web/styles.css',
+      'utf8'
+    ),
+    {
+      loader: 'css',
+      minify: true
+    }
+  );
+
+files.set(
+  resolve(assets, 'styles.css'),
+  Buffer.from(styles.code)
+);
 files.set(resolve(assets, 'plite-icon-48.svg'), await readFile('web/plite-icon-48.svg'));
 files.set(resolve(assets, 'plite-logo-200.png'), await readFile('web/plite-logo-200.png'));
 files.set(resolve(assets, 'plite-info.json'), await readFile('web/plite-info.json'));
@@ -56,14 +87,41 @@ function visit(path) {
   }
 }
 visit('assets/app.js');
-let initial = gzipSync(await readFile('web/phantom-diagnostic.js')).length, total = initial;
+let initial =
+  gzipSync(
+    files.get(
+      resolve(
+        assets,
+        'phantom-diagnostic.js'
+      )
+    )
+  ).length,
+  total = initial;
 for (const path of Object.keys(result.metafile.outputs)) {
   const bytes = files.get(resolve(path)), gzip = gzipSync(bytes).length;
   total += gzip;
   if (initialPaths.has(path)) initial += gzip;
   console.log(path + ': ' + bytes.length + ' bytes / ' + gzip + ' gzip');
 }
-for (const path of ['index.html', 'web/styles.css', 'config.json']) initial += gzipSync(await readFile(path)).length;
+initial +=
+  gzipSync(
+    await readFile('index.html')
+  ).length;
+
+initial +=
+  gzipSync(
+    files.get(
+      resolve(
+        assets,
+        'styles.css'
+      )
+    )
+  ).length;
+
+initial +=
+  gzipSync(
+    await readFile('config.json')
+  ).length;
 console.log('Initial page: ' + initial + ' bytes gzip; all JS chunks: ' + total + ' bytes gzip');
 if (initial > 48_000) throw Error('Initial page exceeds 48 KB gzip budget');
 async function list(path) {

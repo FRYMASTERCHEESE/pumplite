@@ -152,7 +152,7 @@ test('tiny creation transaction fits Solana packet', () => {
   );
 });
 
-test('tiny BUY uses exact five-account 17-byte core format', () => {
+test('tiny BUY keeps five business accounts and appends CPI programs', () => {
   const { mint, market } =
     compatibleMint();
 
@@ -192,7 +192,7 @@ test('tiny BUY uses exact five-account 17-byte core format', () => {
     core.data.readBigUInt64LE(9),
     min
   );
-  assert.equal(core.keys.length, 5);
+  assert.equal(core.keys.length, 7);
 
   assert.ok(
     core.keys[0].pubkey.equals(owner)
@@ -210,6 +210,16 @@ test('tiny BUY uses exact five-account 17-byte core format', () => {
   );
   assert.ok(
     core.keys[4].pubkey.equals(treasury)
+  );
+
+  assert.equal(
+    core.keys[5].pubkey.toBase58(),
+    '11111111111111111111111111111111'
+  );
+
+  assert.equal(
+    core.keys[6].pubkey.toBase58(),
+    TINY_TOKEN_PROGRAM.toBase58()
   );
 });
 

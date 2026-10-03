@@ -194,6 +194,28 @@ export function adapter(
   let connection =
     makeConnection(urls[0]);
 
+  /*
+   * Keep read RPC and signed transaction RPC separate.
+   *
+   * Production config pins rpcFallbackUrls[0] to the reviewed
+   * public Solana Mainnet endpoint. Tests may intentionally omit
+   * the fallback and use their mocked rpcUrl instead.
+   */
+  const writeUrl =
+    (config.rpcFallbackUrls || [])[0] ||
+    config.rpcUrl;
+
+  const writeConnection =
+    makeConnection(writeUrl);
+
+  async function writeNetwork() {
+    const hash =
+      await writeConnection
+        .getGenesisHash();
+
+    assertSolanaMainnet(hash);
+  }
+
   let preparedAt = 0;
   let preparedProvider;
   let connected;
@@ -302,8 +324,14 @@ export function adapter(
     const owner =
       await wallet();
 
+    /*
+     * Verify the dedicated broadcast endpoint is Solana Mainnet
+     * before obtaining a blockhash or requesting a wallet signature.
+     */
+    await writeNetwork();
+
     const latest =
-      await connection
+      await writeConnection
         .getLatestBlockhash(
           'confirmed'
         );
@@ -540,7 +568,7 @@ export function adapter(
     }
 
     const fee =
-      await connection
+      await writeConnection
         .getFeeForMessage(
           signed.compileMessage(),
           'confirmed'
@@ -561,7 +589,7 @@ export function adapter(
       signed.serialize();
 
     const simulation =
-      await connection
+      await writeConnection
         ._rpcRequest(
           'simulateTransaction',
           [
@@ -619,7 +647,7 @@ export function adapter(
     );
 
     const signature =
-      await connection
+      await writeConnection
         .sendRawTransaction(
           raw,
           {
@@ -649,7 +677,7 @@ export function adapter(
     );
 
     const confirmation =
-      await connection
+      await writeConnection
         .confirmTransaction(
           {
             signature,
