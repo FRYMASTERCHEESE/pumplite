@@ -3,12 +3,15 @@
 use core::{mem::MaybeUninit, ptr::write_unaligned, slice::from_raw_parts};
 
 use pinocchio::{
-    cpi::{invoke_signed_unchecked, CpiAccount, Seed, Signer},
+    cpi::{CpiAccount, Seed, Signer},
     error::ProgramError,
     instruction::{InstructionAccount, InstructionView},
     no_allocator, nostd_panic_handler, program_entrypoint,
     AccountView, Address, ProgramResult,
 };
+
+#[cfg(any(target_os = "solana", target_arch = "bpf"))]
+use pinocchio::syscalls::sol_invoke_signed_c;
 
 program_entrypoint!(process_instruction, 5);
 no_allocator!();
@@ -43,6 +46,58 @@ fn bad<T>() -> Result<T, ProgramError> {
 #[inline(always)]
 unsafe fn read64(p: *const u8) -> u64 {
     u64::from_le(core::ptr::read_unaligned(p as *const u64))
+}
+#[inline(always)]
+unsafe fn invoke_cpi_checked(
+    instruction: &InstructionView,
+    accounts: &[CpiAccount],
+    signers: &[Signer<'_, '_>],
+) -> ProgramResult {
+    #[cfg(any(target_os = "solana", target_arch = "bpf"))]
+    {
+        #[repr(C)]
+        struct CInstruction {
+            program_id: *const Address,
+            accounts: *const InstructionAccount<'static>,
+            accounts_len: u64,
+            data: *const u8,
+            data_len: u64,
+        }
+
+        let cpi = CInstruction {
+            program_id: instruction.program_id,
+            accounts:
+                instruction.accounts.as_ptr()
+                    as *const InstructionAccount<'static>,
+            accounts_len: instruction.accounts.len() as u64,
+            data: instruction.data.as_ptr(),
+            data_len: instruction.data.len() as u64,
+        };
+
+        core::sync::atomic::compiler_fence(
+            core::sync::atomic::Ordering::SeqCst
+        );
+
+        let result = sol_invoke_signed_c(
+            &cpi as *const _ as *const u8,
+            accounts.as_ptr() as *const u8,
+            accounts.len() as u64,
+            signers.as_ptr() as *const u8,
+            signers.len() as u64,
+        );
+
+        if result == 0 {
+            Ok(())
+        } else {
+            Err(result.into())
+        }
+    }
+
+    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
+    {
+        core::hint::black_box((instruction, accounts, signers));
+        Ok(())
+    }
 }
 
 #[cfg(not(feature = "bitmul"))]
@@ -121,13 +176,12 @@ fn sol_xfer(
     CpiAccount::init_from_account_view(from, &mut infos[0]);
     CpiAccount::init_from_account_view(to, &mut infos[1]);
     unsafe {
-        invoke_signed_unchecked(
+        invoke_cpi_checked(
             &ix,
             from_raw_parts(infos.as_ptr() as _, 2),
             signers,
-        );
+        )
     }
-    Ok(())
 }
 
 #[inline(never)]
@@ -166,13 +220,12 @@ fn token_xfer(
     CpiAccount::init_from_account_view(b, &mut infos[1]);
     CpiAccount::init_from_account_view(authority, &mut infos[2]);
     unsafe {
-        invoke_signed_unchecked(
+        invoke_cpi_checked(
             &ix,
             from_raw_parts(infos.as_ptr() as _, 3),
             signers,
-        );
+        )
     }
-    Ok(())
 }
 
 #[inline(never)]

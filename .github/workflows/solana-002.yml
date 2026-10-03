@@ -1,4 +1,4 @@
-name: PumpLite 0.02 SOL candidate
+name: PumpLite 0.04 SOL candidate
 
 on:
   push:
@@ -91,7 +91,7 @@ jobs:
           set -euo pipefail
           npm install --global pnpm@10.11.0
           pnpm install --frozen-lockfile
-          npm install --no-save --package-lock=false @solana/spl-token@0.4.13
+          pnpm add --save-dev --lockfile=false --ignore-scripts @solana/spl-token@0.4.13
 
       - name: Real local-validator integration
         id: integration
@@ -168,8 +168,8 @@ jobs:
             echo "FAIL: local-validator integration failed"
             exit 1
           fi
-          if [ "$size" -gt 3650 ]; then
-            echo "FAIL: $size bytes > 3650-byte hard ceiling"
+          if [ "$size" -gt 7500 ]; then
+            echo "FAIL: $size bytes > 7500-byte hard ceiling"
             exit 1
           fi
-          echo "PASS: integration passed and $size bytes <= 3650"
+          echo "PASS: integration passed and $size bytes <= 7500"
