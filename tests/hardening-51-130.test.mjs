@@ -17,7 +17,7 @@ test('Steps 51-130 verifier exposes all 80 static hardening gates and no transac
   for (const required of [
     'package identity and private ESM boundary',
     'official Base V2 factory seal',
-    'Solana transaction lock',
+    'reviewed Pump Mainnet transaction enablement',
     'First 50 claim identities',
     'PLITE/WETH pair identity',
     'factory metadata validation',

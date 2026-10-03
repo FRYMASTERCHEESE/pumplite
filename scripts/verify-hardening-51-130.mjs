@@ -152,12 +152,15 @@ assert.equal(config.solana.genesisHash, '5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147d
 pass(67, 'Solana Mainnet genesis identity');
 
 // 68
-assert.equal(config.solana.programId, null);
-pass(68, 'Solana undeployed program lock');
+assert.equal(config.solana.protocol, 'pump');
+assert.equal(config.solana.programId, '6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P');
+assert.equal(config.solana.ammProgramId, 'pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA');
+assert.equal(config.solana.mayhemProgramId, 'MAyhSmzXzV1pTf7LsNkrNwkWKTo4ougAJ1PPg47MD4e');
+pass(68, 'reviewed Pump Mainnet program identities');
 
 // 69
-assert.equal(config.solana.transactionsEnabled, false);
-pass(69, 'Solana transaction lock');
+assert.equal(config.solana.transactionsEnabled, true);
+pass(69, 'reviewed Pump Mainnet transaction enablement');
 
 // 70
 assert.match(config.solana.treasury, /^[1-9A-HJ-NP-Za-km-z]{32,44}$/);
@@ -649,7 +652,8 @@ for (const file of [
 ]) assert.ok((await stat(file)).isFile(), 'Missing workflow: ' + file);
 
 includes(releaseManifest, [
-  'Solana must remain deployment-locked',
+  'Reviewed Pump Mainnet release configuration mismatch',
+  '6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P',
   'Base V2 Mainnet release configuration mismatch'
 ], 'Release manifest');
 assert.match(security, /has not received an independent third-party smart-contract\/economic audit/i);

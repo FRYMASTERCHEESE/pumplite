@@ -23,7 +23,17 @@ for(const path of paths){
 
 const config=JSON.parse(await readFile('config.json','utf8'));
 if('transactionsEnabled' in config)throw Error('Legacy global transaction switch is not permitted');
-if(config.solana.programId!==null||config.solana.transactionsEnabled!==false)throw Error('Solana must remain deployment-locked');
+if(
+ config.solana.protocol!=='pump' ||
+ config.solana.programId!=='6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P' ||
+ config.solana.ammProgramId!=='pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA' ||
+ config.solana.mayhemProgramId!=='MAyhSmzXzV1pTf7LsNkrNwkWKTo4ougAJ1PPg47MD4e' ||
+ config.solana.transactionsEnabled!==true ||
+ config.solana.genesisHash!=='5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d' ||
+ config.solana.clientVersion!==4 ||
+ config.solana.pumpSdkVersion!=='2.0.0' ||
+ config.solana.pumpSwapSdkVersion!=='1.20.0'
+)throw Error('Reviewed Pump Mainnet release configuration mismatch');
 
 if(
  config.base.chainId!==8453 ||

@@ -22,7 +22,7 @@ jobs:
       - name: Reject unreviewed dependency advisories
         run: |
           mkdir -p build
-          # Audit returns nonzero for the documented moderate finding; parser fails closed on errors.
+          # Audit may return nonzero for explicitly reviewed findings; parser fails closed on unreviewed or critical findings.
           pnpm audit --json > build/dependency-audit.json || true
           node scripts/check-dependency-review.mjs
       - run: pnpm check:pages

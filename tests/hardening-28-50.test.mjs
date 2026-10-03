@@ -16,7 +16,7 @@ test('Steps 28-50 verifier exposes every hardening gate and remains static/read-
   for (const required of [
     'public configuration schema and platform fee',
     'active Base V2 deployment identity',
-    'Solana deployment lock',
+    'reviewed Pump Mainnet deployment seal',
     'First 50 claim public configuration',
     'PLITE public identity consistency',
     'reviewed PLITE registry integrity',

@@ -90,14 +90,17 @@ requireIncludes(marketSource, [
 ], 'Market immutable roles');
 pass(30, 'treasury and controller immutability');
 
-// 31 - Solana remains fail closed
-assert.equal(config.solana.programId, null, 'Solana program unexpectedly configured');
-assert.equal(config.solana.transactionsEnabled, false, 'Solana transactions unexpectedly enabled');
+// 31 - reviewed Pump Mainnet identity
+assert.equal(config.solana.protocol, 'pump', 'Solana protocol drift');
+assert.equal(config.solana.programId, '6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P', 'Pump program drift');
+assert.equal(config.solana.ammProgramId, 'pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA', 'PumpSwap program drift');
+assert.equal(config.solana.mayhemProgramId, 'MAyhSmzXzV1pTf7LsNkrNwkWKTo4ougAJ1PPg47MD4e', 'Mayhem program drift');
+assert.equal(config.solana.transactionsEnabled, true, 'Pump Mainnet transactions unexpectedly disabled');
 requireIncludes(releaseManifestSource, [
-  "config.solana.programId!==null||config.solana.transactionsEnabled!==false",
-  "Solana must remain deployment-locked"
-], 'Release manifest Solana lock');
-pass(31, 'Solana deployment lock');
+  "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P",
+  "Reviewed Pump Mainnet release configuration mismatch"
+], 'Release manifest Pump Mainnet seal');
+pass(31, 'reviewed Pump Mainnet deployment seal');
 
 // 32 - First 50 public claim configuration
 assert.equal(config.base.holderClaim.enabled, true, 'Holder claim unexpectedly disabled');

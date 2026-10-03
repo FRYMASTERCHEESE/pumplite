@@ -468,15 +468,33 @@ async function step21IdentitySeal() {
   );
 
   assert.equal(
+    config.solana.protocol,
+    'pump',
+    'Solana protocol drift'
+  );
+
+  assert.equal(
     config.solana.programId,
-    null,
-    'Solana program unexpectedly configured'
+    '6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P',
+    'Reviewed Pump program drift'
+  );
+
+  assert.equal(
+    config.solana.ammProgramId,
+    'pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA',
+    'Reviewed PumpSwap program drift'
+  );
+
+  assert.equal(
+    config.solana.mayhemProgramId,
+    'MAyhSmzXzV1pTf7LsNkrNwkWKTo4ougAJ1PPg47MD4e',
+    'Reviewed Mayhem program drift'
   );
 
   assert.equal(
     config.solana.transactionsEnabled,
-    false,
-    'Solana transactions unexpectedly enabled'
+    true,
+    'Reviewed Pump Mainnet transactions unexpectedly disabled'
   );
 
   assert.equal(

@@ -73,7 +73,7 @@ test(
 
     assert.match(
       app,
-      /adapters\/solana-pump\.js/
+      /adapters\/solana-pump-loader\.js/
     );
 
     assert.doesNotMatch(
