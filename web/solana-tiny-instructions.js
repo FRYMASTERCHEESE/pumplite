@@ -90,7 +90,7 @@ export function tinyMarketAddress(
   );
 }
 
-function generateCompatibleMint(programId) {
+export function generateCompatibleMint(programId) {
   for (let attempt = 0; attempt < 1024; attempt++) {
     const mintKeypair = Keypair.generate();
 
@@ -139,7 +139,9 @@ function initializeMint2Instruction(
 }
 
 function metadataInstruction({
-  owner,
+  payer,
+  mintAuthority,
+  updateAuthority,
   mint,
   name,
   symbol,
@@ -173,9 +175,9 @@ function metadataInstruction({
     keys: [
       key(tinyMetadataAddress(mint), true),
       key(mint),
-      key(owner, false, true),
-      key(owner, true, true),
-      key(owner),
+      key(mintAuthority, false, true),
+      key(payer, true, true),
+      key(updateAuthority),
       key(SystemProgram.programId)
     ]
   });
@@ -205,11 +207,14 @@ function setMintAuthorityInstruction({
 
 export function buildTinyCreateInstructions({
   owner,
+  creator = owner,
   programId,
   name,
   symbol,
   uri,
-  mintRentLamports
+  mintRentLamports,
+  mintKeypair:
+    suppliedMintKeypair
 }) {
   validateMetadata(name, symbol, uri);
 
@@ -220,11 +225,28 @@ export function buildTinyCreateInstructions({
     throw Error('Invalid Solana mint rent');
   }
 
+  const generated =
+    suppliedMintKeypair
+      ? {
+          mintKeypair:
+            suppliedMintKeypair,
+          mint:
+            suppliedMintKeypair.publicKey,
+          market:
+            tinyMarketAddress(
+              suppliedMintKeypair.publicKey,
+              programId
+            )
+        }
+      : generateCompatibleMint(
+          programId
+        );
+
   const {
     mintKeypair,
     mint,
     market
-  } = generateCompatibleMint(programId);
+  } = generated;
 
   const instructions = [
     SystemProgram.createAccount({
@@ -243,7 +265,12 @@ export function buildTinyCreateInstructions({
     ),
 
     metadataInstruction({
-      owner,
+      payer:
+        owner,
+      mintAuthority:
+        owner,
+      updateAuthority:
+        creator,
       mint,
       name,
       symbol,
@@ -264,6 +291,85 @@ export function buildTinyCreateInstructions({
     mint,
     market,
     instructions
+  };
+}
+
+export function buildTinyFirstBuyerActivationInstructions({
+  buyer,
+  creator,
+  programId,
+  treasury,
+  name,
+  symbol,
+  uri,
+  mintRentLamports,
+  buyAmount,
+  buyMinimum,
+  mintKeypair
+}) {
+  if (
+    !buyer ||
+    !creator ||
+    !treasury
+  ) {
+    throw Error(
+      'Missing first-buyer activation identity'
+    );
+  }
+
+  if (
+    typeof buyAmount !== 'bigint' ||
+    buyAmount <= 0n ||
+    typeof buyMinimum !== 'bigint' ||
+    buyMinimum <= 0n
+  ) {
+    throw Error(
+      'Invalid first-buyer amount'
+    );
+  }
+
+  const created =
+    buildTinyCreateInstructions({
+      owner:
+        buyer,
+      creator,
+      programId,
+      name,
+      symbol,
+      uri,
+      mintRentLamports,
+      mintKeypair
+    });
+
+  const trade =
+    tinyTradeInstructions({
+      owner:
+        buyer,
+      mint:
+        created.mint,
+      market:
+        created.market,
+      treasury,
+      programId,
+      side:
+        'buy',
+      amount:
+        buyAmount,
+      min:
+        buyMinimum
+    });
+
+  return {
+    mintKeypair:
+      created.mintKeypair,
+    mint:
+      created.mint,
+    market:
+      created.market,
+    instructions: [
+      ...created.instructions,
+      ...trade
+    ]
   };
 }
 
