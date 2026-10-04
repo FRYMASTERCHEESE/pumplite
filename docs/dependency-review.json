@@ -1,74 +1,64 @@
 {
-    "reviewedAt":  "2026-10-03",
-    "reviewBy":  "2026-11-03",
-    "purpose":  "Engineering exposure review; not independent audit approval or permission to deploy.",
-    "javascript":  [
-                       {
-                           "id":  "GHSA-528h-pc64-c93x",
-                           "name":  "stream-json",
-                           "version":  "1.9.1",
-                           "severity":  "moderate",
-                           "reason":  "Zero browser bytes enforced by build. Node jayson uses StreamValues/Verifier, not the affected path filters. No untrusted production Node service is shipped. Reassess before adding server-side RPC/metadata processing; do not force incompatible v3 into jayson."
-                       },
-                       {
-                           "id":  "GHSA-3gc7-fjrx-p6mg",
-                           "name":  "bigint-buffer",
-                           "version":  "1.1.5",
-                           "severity":  "high",
-                           "acceptedRisk":  true,
-                           "patchedVersion":  null,
-                           "scope":  "Transitive Solana SDK dependency. PumpLite production is a static browser application; bigint-buffer uses its pure-JavaScript path in browser mode. Dependency install scripts are disabled so the native binding is not built by default.",
-                           "reason":  "GitHub reports no patched version. The advisory affects availability through the native toBigIntLE conversion path. Keep the finding visible, re-review monthly, reject any different high or critical advisory, and remove this exception immediately when the Pump/Solana dependency graph provides a patched path."
-                       }
-                   ],
-    "rust":  [
-                 {
-                     "id":  "RUSTSEC-2021-0139",
-                     "name":  "ansi_term",
-                     "version":  "0.12.1",
-                     "informational":  "unmaintained",
-                     "scope":  "Outside the pumplite normal/build dependency graph; isolated VM/tooling dependency.",
-                     "reason":  "Unmaintained upstream package. Preserve compatible pinned Solana/Agave graph and monitor upstream migration."
-                 },
-                 {
-                     "id":  "RUSTSEC-2025-0141",
-                     "name":  "bincode",
-                     "version":  "1.3.3",
-                     "informational":  "unmaintained",
-                     "scope":  "Program dependency via Solana/Anchor; not safe to replace serialization APIs independently.",
-                     "reason":  "Unmaintained upstream package. Preserve compatible pinned Solana/Agave graph and monitor upstream migration."
-                 },
-                 {
-                     "id":  "RUSTSEC-2024-0388",
-                     "name":  "derivative",
-                     "version":  "2.2.0",
-                     "informational":  "unmaintained",
-                     "scope":  "Outside the pumplite normal/build dependency graph; isolated VM/tooling dependency.",
-                     "reason":  "Unmaintained upstream package. Preserve compatible pinned Solana/Agave graph and monitor upstream migration."
-                 },
-                 {
-                     "id":  "RUSTSEC-2025-0161",
-                     "name":  "libsecp256k1",
-                     "version":  "0.6.0",
-                     "informational":  "unmaintained",
-                     "scope":  "Outside the pumplite normal/build dependency graph; isolated VM/tooling dependency.",
-                     "reason":  "Unmaintained upstream package. Preserve compatible pinned Solana/Agave graph and monitor upstream migration."
-                 },
-                 {
-                     "id":  "RUSTSEC-2024-0436",
-                     "name":  "paste",
-                     "version":  "1.0.15",
-                     "informational":  "unmaintained",
-                     "scope":  "Outside the pumplite normal/build dependency graph; isolated VM/tooling dependency.",
-                     "reason":  "Unmaintained upstream package. Preserve compatible pinned Solana/Agave graph and monitor upstream migration."
-                 },
-                 {
-                     "id":  "RUSTSEC-2026-0097",
-                     "name":  "rand",
-                     "version":  "0.7.3",
-                     "informational":  "unsound",
-                     "scope":  "Outside the pumplite normal/build dependency graph; isolated VM/tooling dependency.",
-                     "reason":  "Conditional logger reentrancy finding in test dependencies; no custom logger invoking rand::rng is installed."
-                 }
-             ]
+  "reviewedAt": "2026-10-04",
+  "reviewBy": "2026-11-04",
+  "purpose": "Engineering exposure review; not independent audit approval or permission to deploy.",
+  "javascript": [
+    {
+      "id": "GHSA-528h-pc64-c93x",
+      "name": "stream-json",
+      "version": "1.9.1",
+      "severity": "moderate",
+      "reason": "Zero browser bytes enforced by build. Node jayson uses StreamValues/Verifier, not the affected path filters. No untrusted production Node service is shipped. Reassess before adding server-side RPC/metadata processing; do not force incompatible v3 into jayson."
+    }
+  ],
+  "rust": [
+    {
+      "id": "RUSTSEC-2021-0139",
+      "name": "ansi_term",
+      "version": "0.12.1",
+      "informational": "unmaintained",
+      "scope": "Outside the pumplite normal/build dependency graph; isolated VM/tooling dependency.",
+      "reason": "Unmaintained upstream package. Preserve compatible pinned Solana/Agave graph and monitor upstream migration."
+    },
+    {
+      "id": "RUSTSEC-2025-0141",
+      "name": "bincode",
+      "version": "1.3.3",
+      "informational": "unmaintained",
+      "scope": "Program dependency via Solana/Anchor; not safe to replace serialization APIs independently.",
+      "reason": "Unmaintained upstream package. Preserve compatible pinned Solana/Agave graph and monitor upstream migration."
+    },
+    {
+      "id": "RUSTSEC-2024-0388",
+      "name": "derivative",
+      "version": "2.2.0",
+      "informational": "unmaintained",
+      "scope": "Outside the pumplite normal/build dependency graph; isolated VM/tooling dependency.",
+      "reason": "Unmaintained upstream package. Preserve compatible pinned Solana/Agave graph and monitor upstream migration."
+    },
+    {
+      "id": "RUSTSEC-2025-0161",
+      "name": "libsecp256k1",
+      "version": "0.6.0",
+      "informational": "unmaintained",
+      "scope": "Outside the pumplite normal/build dependency graph; isolated VM/tooling dependency.",
+      "reason": "Unmaintained upstream package. Preserve compatible pinned Solana/Agave graph and monitor upstream migration."
+    },
+    {
+      "id": "RUSTSEC-2024-0436",
+      "name": "paste",
+      "version": "1.0.15",
+      "informational": "unmaintained",
+      "scope": "Outside the pumplite normal/build dependency graph; isolated VM/tooling dependency.",
+      "reason": "Unmaintained upstream package. Preserve compatible pinned Solana/Agave graph and monitor upstream migration."
+    },
+    {
+      "id": "RUSTSEC-2026-0097",
+      "name": "rand",
+      "version": "0.7.3",
+      "informational": "unsound",
+      "scope": "Outside the pumplite normal/build dependency graph; isolated VM/tooling dependency.",
+      "reason": "Conditional logger reentrancy finding in test dependencies; no custom logger invoking rand::rng is installed."
+    }
+  ]
 }

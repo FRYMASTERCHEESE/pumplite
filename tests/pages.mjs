@@ -118,14 +118,14 @@ try {
 
   assert.equal(
     pumpBundles.length,
-    1,
-    'Legacy Pump compatibility SDK bundle must exist exactly once'
+    0,
+    'Retired legacy Pump SDK bundle must not be published'
   );
 
   assert.equal(
     pumpLoaderBundles.length,
-    1,
-    'Legacy Pump compatibility loader must exist exactly once'
+    0,
+    'Retired legacy Pump loader must not be published'
   );
 
   assert.equal(
@@ -133,8 +133,8 @@ try {
       name =>
         /^solana-pump-/.test(name)
     ).length,
-    2,
-    'Legacy Pump compatibility build must contain exactly its SDK and loader'
+    0,
+    'No retired Pump compatibility chunk may ship'
   );
   assert.equal(chunks.filter(name => /^base-(?!v[23]-)/.test(name)).length, 1, 'Base V1 compatibility bundle must exist exactly once');
   assert.equal(chunks.filter(name => /^base-v2-/.test(name)).length, 1, 'Base V2 bundle must exist exactly once');
@@ -1147,14 +1147,12 @@ try {
     );
     assert.ok(!requests.some(url => /\/(solana|base)-/.test(url)), 'No wallet SDK is fetched initially');
     assert.equal(await page.locator('body').evaluate(el => el.scrollWidth <= innerWidth), true);
-    // Resolve production/compatibility adapter graphs without calling
-    // connect or signing. The raw Pump SDK chunk must never be imported
-    // directly because its reviewed loader installs browser Buffer first.
+    // Resolve only the production adapter graphs without calling
+    // connect or signing. Retired Pump compatibility chunks must not ship.
     const adapterChunks =
       chunks.filter(
         chunk =>
           /^solana-tiny-/.test(chunk) ||
-          /^solana-pump-loader-/.test(chunk) ||
           /^base-(?!v[23]-)/.test(chunk) ||
           /^base-v2-/.test(chunk) ||
           /^base-v3-/.test(chunk)

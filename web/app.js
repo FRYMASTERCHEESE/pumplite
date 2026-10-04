@@ -919,23 +919,25 @@ async function getAdapter() {
 
   if (chain === 'solana') {
     /*
-     * Pump browser Buffer bootstrap.
+     * PumpLite production Solana support is intentionally
+     * restricted to the reviewed tiny adapter.
      *
-     * Some Pump/Solana SDK dependencies use the Node-compatible
-     * Buffer global while their modules are evaluating.
-     *
-     * This MUST happen before importing solana-pump.js.
-     * Loading Buffer does not access a wallet, sign anything,
-     * submit a transaction or spend SOL.
+     * Legacy Pump/PumpSwap compatibility is retired so its
+     * unused SDK dependency graph cannot enter the release.
      */
+    if (
+      state.config?.solana?.protocol !==
+        'tiny'
+    ) {
+      throw Error(
+        'Unsupported Solana protocol configuration'
+      );
+    }
+
     module =
-      state.config?.solana?.protocol === 'tiny'
-        ? await import(
-            './adapters/solana-tiny.js'
-          )
-        : await import(
-            './adapters/solana-pump-loader.js'
-          );
+      await import(
+        './adapters/solana-tiny.js'
+      );
   } else {
     module =
       state.config?.base?.contractVersion === 3

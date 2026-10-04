@@ -1,9 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import {
+  readFile
+} from 'node:fs/promises';
 
 test(
-  'Pump adapter separates read RPC from signed transaction broadcast',
+  'legacy Pump compatibility is retired and tiny owns the reviewed write path',
   async () => {
     const config =
       JSON.parse(
@@ -13,7 +15,19 @@ test(
         )
       );
 
-    const source =
+    const app =
+      await readFile(
+        'web/app.js',
+        'utf8'
+      );
+
+    const tiny =
+      await readFile(
+        'web/adapters/solana-tiny.js',
+        'utf8'
+      );
+
+    const retired =
       await readFile(
         'web/adapters/solana-pump.js',
         'utf8'
@@ -26,72 +40,60 @@ test(
       );
 
     assert.equal(
-      config.solana.rpcUrl,
-      'https://pumplite-rpc.coreyedge123.workers.dev/rpc'
+      config.solana.protocol,
+      'tiny'
     );
 
-    assert.deepEqual(
-      config.solana.rpcFallbackUrls,
-      [
-        'https://solana-rpc.publicnode.com'
-      ]
+    assert.equal(
+      config.solana.transactionsEnabled,
+      false
     );
 
-    const required = [
-      [
-        /let\s+writeConnection\s*=/,
-        'separate writeConnection'
-      ],
-      [
-        /async\s+function\s+writeNetwork\s*\(/,
-        'writeNetwork verification'
-      ],
-      [
-        /writeConnection\s*\.\s*getGenesisHash\s*\(/,
-        'write RPC genesis verification'
-      ],
-      [
-        /writeConnection\s*\.\s*getLatestBlockhash\s*\(/,
-        'write RPC latest blockhash'
-      ],
-      [
-        /writeConnection\s*\.\s*simulateTransaction\s*\(/,
-        'write RPC simulation'
-      ],
-      [
-        /writeConnection\s*\.\s*sendRawTransaction\s*\(/,
-        'write RPC broadcast'
-      ],
-      [
-        /writeConnection\s*\.\s*confirmTransaction\s*\(/,
-        'write RPC confirmation'
-      ]
-    ];
+    assert.match(
+      app,
+      /adapters\/solana-tiny\.js/
+    );
+
+    assert.doesNotMatch(
+      app,
+      /solana-pump-loader\.js/
+    );
+
+    assert.match(
+      retired,
+      /Legacy Pump compatibility is retired/
+    );
+
+    assert.doesNotMatch(
+      retired,
+      /@pump-fun|@solana\/spl-token|bn\.js/
+    );
 
     for (
-      const [
-        pattern,
-        label
-      ] of required
+      const pattern of [
+        /const\s+writeConnection\s*=/,
+        /async\s+function\s+writeNetwork\s*\(/,
+        /writeConnection[\s\S]*getGenesisHash/,
+        /writeConnection[\s\S]*getLatestBlockhash/,
+        /simulateTransaction/,
+        /sendRawTransaction/,
+        /confirmTransaction/
+      ]
     ) {
       assert.match(
-        source,
-        pattern,
-        'Missing reviewed broadcast behavior: ' +
-        label
+        tiny,
+        pattern
       );
     }
 
     assert.doesNotMatch(
-      source,
-      /await\s+connection\s*\.\s*sendRawTransaction\s*\(/,
-      'Read-only PumpLite Worker connection must never broadcast'
+      worker,
+      /^\s*"sendTransaction",?\s*$/m
     );
 
     assert.doesNotMatch(
       worker,
-      /^\s*"sendTransaction",?\s*$/m,
-      'PumpLite Worker must remain read-only'
+      /^\s*"sendRawTransaction",?\s*$/m
     );
 
     assert.match(
