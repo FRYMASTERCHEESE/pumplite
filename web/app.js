@@ -125,10 +125,10 @@ function controls() {
       '1 billion';
 
     $('create-supply-mode-fact').textContent =
-      'PumpLite · fixed curve';
+      'Fixed Solana curve';
 
     $('create-supply-help').textContent =
-      'PumpLite uses the deployed Solana Mainnet bonding curve with fixed 1 billion supply capacity, 30 SOL virtual reserve and 0.25% trading fee.';
+      'Fixed supply: 1 billion tokens · Virtual reserve: 30 SOL · Trading fee: 0.25%.';
   }
 
   $('v2-supply-mode').disabled =
