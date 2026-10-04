@@ -200,10 +200,16 @@ function controls() {
   $('metadata-image').disabled = state.busy || !metadataEnabled;
   $('publish-metadata').disabled = state.busy || !metadataEnabled;
   $('metadata-upload-help').textContent =
-    !metadataEnabled ? 'Metadata publishing is currently disabled.' :
-    !$('metadata-image').files?.length ? 'Choose a PNG, JPEG or WebP token image, then tap Publish.' :
-    !state.wallet ? 'Tap Publish. PumpLite will request access to your Base wallet, then ask for authorization signatures. These signatures do not spend ETH.' :
-    'Ready to publish with your connected wallet. Authorization signatures do not spend ETH.';
+    !metadataEnabled
+      ? 'Metadata publishing is currently disabled.'
+      : !$('metadata-image').files?.length
+        ? 'Choose a PNG, JPEG or WebP token image, then tap Publish.'
+        : !state.wallet
+          ? state.chain === 'solana'
+            ? 'Connect Phantom first. Metadata authorization does not spend SOL.'
+            : 'Tap Publish to connect your Base wallet. Metadata authorization does not spend ETH.'
+          : 'Ready to publish. Metadata authorization does not spend ' +
+            (state.chain === 'solana' ? 'SOL.' : 'ETH.');
   $('chain').disabled = state.busy; $('connect').disabled = state.busy;
   $('create').disabled =
     state.busy ||
@@ -261,8 +267,7 @@ function controls() {
   }
   $('trade-use-display').disabled =
     state.busy ||
-    state.chain !== 'base' ||
-    ![2, 3].includes(state.market?.contractVersion);
+    !simpleBuySupported();
   $('initial-buy-submit').disabled = state.busy;
   $('initial-buy-close').disabled = state.busy;
 }
@@ -951,18 +956,6 @@ function marketPriceWei(m) {
   if (!m) return null;
 
   if (
-    m.protocol === 'pump' &&
-    typeof m.pumpVirtualTokenReserves === 'bigint' &&
-    m.pumpVirtualTokenReserves > 0n
-  ) {
-    return (
-      m.virtualNative *
-      10n ** BigInt(m.decimals)
-    ) /
-    m.pumpVirtualTokenReserves;
-  }
-
-  if (
     typeof m.tokenReserve !== 'bigint' ||
     m.tokenReserve <= 0n
   ) return null;
@@ -1371,6 +1364,12 @@ function renderHomeMarkets() {
   const root = $('home-markets');
   root.replaceChildren();
 
+  const networkName =
+    state.config?.[state.chain]?.name ||
+    (state.chain === 'solana'
+      ? 'Solana Mainnet'
+      : 'Base Mainnet');
+
   const newest = [...state.markets]
     .sort((a, b) =>
       Number(b.launchedAt || 0) -
@@ -1393,13 +1392,15 @@ function renderHomeMarkets() {
     empty.textContent =
       ready()
         ? 'No markets returned yet. Tap Refresh live to try again.'
-        : 'Base deployment is not configured.';
+        : networkName + ' deployment is not configured.';
     root.append(empty);
   }
 
   $('home-live-status').textContent =
     newest.length
-      ? 'Showing real Base market data. Auto-refresh runs while this HTTPS page is open.'
+      ? 'Showing real ' +
+        networkName +
+        ' market data. Auto-refresh runs while this HTTPS page is open.'
       : 'No invented activity is displayed.';
 }
 
@@ -1993,7 +1994,7 @@ function switchChain(chain) {
 
   $('create-trading-fee-label').textContent =
     'Trading fee';
-  state.chain = chain; state.epoch++; state.adapter = null; state.wallet = null; state.market = null; state.next = null; state.markets=[]; state.pendingLaunches=[]; state.registry=null; state.platformStats=null;
+  state.chain = chain; state.epoch++; state.adapter = null; state.wallet = null; state.market = null; state.next = null; state.markets=[]; state.pendingLaunches=[]; state.featuredPlite=null; state.registry=null; state.platformStats=null;
   syncTradeHelperMode();
   $('create-network').textContent =
     chain === 'base'
@@ -2009,10 +2010,10 @@ function switchChain(chain) {
     (chain === 'solana' ?
       state.config[chain].name + ' · no deployment configured (coming soon / deployment pending). Token creation and trading are disabled.' :
       state.config[chain].name + ' · no deployment configured (available after deployment). Token creation and trading are disabled.');
-  $('markets').replaceChildren();
-  const empty = document.createElement('p'); empty.className = 'empty';
-  empty.textContent = ready() ? 'Press Refresh to read markets from the chain.' : 'No verified deployment configured. No market data is displayed.';
-  $('markets').append(empty); $('more').hidden = true; invalidateQuote();
+  $('more').hidden = true;
+  invalidateQuote();
+  renderDiscovery();
+  controls();
   status(state.config[chain].name + ' selected. Wallet disconnected.');
 }
 $('chain').addEventListener('change', () => {
@@ -2033,7 +2034,7 @@ $('chain').addEventListener('change', () => {
     // transaction is requested by this preload.
     void getAdapter().catch(error => {
       status(
-        'Pump Mainnet wallet support could not load: ' +
+        'PumpLite Solana Mainnet wallet support could not load: ' +
         (
           error?.message ||
           'unknown browser error'
@@ -2976,7 +2977,7 @@ function normalizeTradeNative(
     value
       .toFixed(decimals)
       .replace(/0+$/, '')
-      .replace(/.$/, '');
+      .replace(/\.$/, '');
 
   if (
     !text ||
@@ -4294,7 +4295,7 @@ try {
             'error';
 
           status(
-            'Pump Mainnet wallet support could not load: ' +
+            'PumpLite Solana Mainnet wallet support could not load: ' +
             (
               error?.message ||
               'unknown browser error'
