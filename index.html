@@ -477,7 +477,7 @@
         <section id="trade-quick-buy" class="trade-helper simple-buy-card" aria-labelledby="trade-quick-buy-title">
           <p class="eyebrow">SIMPLE BUY</p>
           <h3 id="trade-quick-buy-title">Buy tokens simply</h3>
-          <p class="fine">Enter NZD or USD. PumpLite shows approximately how many tokens you will receive, then refreshes the real on-chain quote before your wallet asks you to approve the Base ETH transaction.</p>
+          <p id="trade-quick-buy-copy" class="fine">Enter NZD or USD. PumpLite shows approximately how many tokens you will receive, then refreshes the real on-chain quote before your wallet asks you to approve the Base ETH transaction.</p>
 
           <div class="simple-buy-entry">
             <div id="trade-spend-field">
@@ -525,8 +525,8 @@
             <button id="get-quote" type="button" class="outline full">Preview sale</button>
 
             <dl class="quote">
-              <div><dt>Expected Base ETH</dt><dd id="quote-output">-</dd></div>
-              <div><dt>Minimum Base ETH</dt><dd id="quote-min">-</dd></div>
+              <div><dt id="quote-output-label">Expected Base ETH</dt><dd id="quote-output">-</dd></div>
+              <div><dt id="quote-min-label">Minimum Base ETH</dt><dd id="quote-min">-</dd></div>
               <div><dt>Platform fee</dt><dd id="quote-fee">-</dd></div>
               <div id="quote-support-row" hidden><dt>Mayhem support</dt><dd id="quote-support">-</dd></div>
             </dl>

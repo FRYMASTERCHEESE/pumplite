@@ -51,8 +51,7 @@ test(
     );
 
     assert.equal(
-      config.solana
-        .discoveryUrl,
+      config.solana.discoveryUrl,
       null
     );
 
@@ -81,17 +80,15 @@ test(
       /\/launch\/finalize-verified/
     );
 
-    for (
-      const marker of [
-        'getSignatureStatuses',
-        'getTransaction',
-        'getAccountInfo',
-        'getTokenAccountsByOwner',
-        'On-chain PumpLite mint state failed verification',
-        'On-chain token metadata does not match the signed PumpLite launch',
-        '/launch/finalize'
-      ]
-    ) {
+    for (const marker of [
+      'getSignatureStatuses',
+      'getTransaction',
+      'getAccountInfo',
+      'getTokenAccountsByOwner',
+      'On-chain PumpLite mint state failed verification',
+      'On-chain token metadata does not match the signed PumpLite launch',
+      '/launch/finalize'
+    ]) {
       assert.ok(
         rpc.includes(marker),
         'Missing independent finalizer marker: ' +
@@ -126,7 +123,27 @@ test(
 
     assert.match(
       ui,
-      /activate\.disabled =\s*true/
+      /activateReservedFirstBuyer/
+    );
+
+    assert.match(
+      ui,
+      /retryFinalizeFirstBuyer/
+    );
+
+    assert.match(
+      ui,
+      /First buy amount \(SOL\)/
+    );
+
+    assert.doesNotMatch(
+      ui,
+      /final release checks/i
+    );
+
+    assert.doesNotMatch(
+      ui,
+      /final spend-review unlock/i
     );
 
     assert.doesNotMatch(

@@ -2294,7 +2294,9 @@ export function adapter(
         mint:
           built.mint.toBase58(),
         market:
-          built.market.toBase58()
+          built.market.toBase58(),
+        buyer:
+          buyer.toBase58()
       };
 
       return {

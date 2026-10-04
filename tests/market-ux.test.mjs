@@ -296,7 +296,7 @@ test(
 
     assert.match(
       app,
-      /minimumOutput\(q\.output, 100\)/
+      /minimumOutput\(\s*q\.output,\s*100\s*\)/
     );
 
     assert.match(

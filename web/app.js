@@ -71,14 +71,8 @@ function controls() {
   $('base-v2-create-options').hidden = !baseModern;
   $('base-v3-mode-options').hidden = !baseV3;
 
-  $('solana-pump-options').hidden =
-    state.chain !== 'solana' ||
-    state.config?.solana?.protocol !== 'pump';
-
-  $('solana-mayhem').disabled =
-    state.busy ||
-    state.chain !== 'solana' ||
-    state.config?.solana?.protocol !== 'pump';
+  $('solana-pump-options').hidden = true;
+  $('solana-mayhem').disabled = true;
   $('v2-initial-mayhem-row').hidden = baseV3;
   $('base-contract-version-label').textContent =
     baseV3 ? 'V3' : 'V2';
@@ -135,20 +129,6 @@ function controls() {
 
     $('create-supply-help').textContent =
       'PumpLite uses the deployed Solana Mainnet bonding curve with fixed 1 billion supply capacity, 30 SOL virtual reserve and 0.25% trading fee.';
-  }
-
-  if (
-    state.chain === 'solana' &&
-    state.config?.solana?.protocol === 'pump'
-  ) {
-    $('create-supply-fact').textContent =
-      '1 billion';
-
-    $('create-supply-mode-fact').textContent =
-      'Pump V2 · Token-2022';
-
-    $('create-supply-help').textContent =
-      'Pump handles the live bonding curve and routes graduated SOL-paired coins to their canonical PumpSwap pool. Mayhem is selected when the coin is created.';
   }
 
   $('v2-supply-mode').disabled =
@@ -251,10 +231,10 @@ function controls() {
         state.config,
         'solana'
       )
-        ? 'Pump Mainnet transactions are currently locked.'
+        ? 'PumpLite Solana Mainnet transactions are currently disabled.'
         : state.wallet
-          ? 'Phantom connected. Create coin will open the optional first-buy step.'
-          : 'Connect Phantom first, then create your Pump Mainnet coin.';
+          ? 'Phantom connected. Create coin will publish a free 0 SOL PumpLite launch.'
+          : 'Connect Phantom first, then create your free PumpLite Solana launch.';
 
     $('creation-review').textContent =
       'PumpLite Solana creator cost is 0 SOL. Creating a launch uses a Phantom message signature only. No Solana transaction, rent payment or network fee is submitted by the creator.';
@@ -425,7 +405,7 @@ function tradesForChartRange() {
   );
 }
 
-function clearMarketChart(message) {
+function clearMarketChart(message, unit = 'ETH', symbol = 'TOKEN') {
   $('price-chart').replaceChildren();
   const empty = document.createElement('p');
   empty.className = 'price-chart-empty';
@@ -433,7 +413,7 @@ function clearMarketChart(message) {
   $('price-chart').append(empty);
 
   $('price-chart-current').textContent = '-';
-  $('price-chart-pair').textContent = 'ETH / TOKEN';
+  $('price-chart-pair').textContent = unit + ' / ' + symbol;
   $('price-chart-change').textContent = 'No trades yet';
   $('price-chart-change').className = 'chart-change';
   $('price-chart-high').textContent = '-';
@@ -651,15 +631,13 @@ async function loadMarket24hStats(market) {
 
   if (state.chain !== 'base') {
     $('volume-24h').textContent =
-      'Pump protocol';
+      'Not indexed';
 
     $('trades-24h').textContent =
-      'Live route';
+      'Not indexed';
 
     $('market-24h-status').textContent =
-      market.graduated
-        ? 'Graduated Pump coin. Trades route through its canonical PumpSwap pool.'
-        : 'Live Pump bonding-curve market on Solana Mainnet.';
+      'Live PumpLite bonding-curve market on Solana Mainnet. Rolling 24h trade indexing is not enabled yet.';
 
     return;
   }
@@ -852,7 +830,11 @@ async function loadMarketChart(market) {
     ![2, 3].includes(market.contractVersion)
   ) {
     clearMarketChart(
-      'Trade chart is available for Base V2/V3 markets.'
+      state.chain === 'solana'
+        ? 'PumpLite Solana trade history charting is not indexed yet. Current price and reserves still come from the live market.'
+        : 'Trade chart is available for Base V2/V3 markets.',
+      market.unit,
+      market.symbol
     );
     return;
   }
@@ -1170,48 +1152,103 @@ async function refreshRegistry() {
   catch { $('verification-list-status').textContent='Reviewed list unavailable. Verified badges are hidden; factory provenance is separate.'; }
 }
 function renderPlatformStats() {
-  const loaded = state.markets;
-  const totalReserve = loaded.reduce(
-    (sum, m) => sum + m.nativeReserve,
-    0n
-  );
-  const totalVolume = loaded.reduce(
-    (sum, m) => sum + m.volume,
-    0n
-  );
+  const loaded =
+    state.markets;
+
+  const totalReserve =
+    loaded.reduce(
+      (sum, m) =>
+        sum +
+        m.nativeReserve,
+      0n
+    );
+
+  const totalVolume =
+    loaded.reduce(
+      (sum, m) =>
+        sum +
+        m.volume,
+      0n
+    );
+
+  const nativeDecimals =
+    loaded[0]?.nativeDecimals ??
+    (
+      state.chain === 'solana'
+        ? 9
+        : 18
+    );
+
+  const nativeUnit =
+    loaded[0]?.unit ||
+    (
+      state.chain === 'solana'
+        ? 'SOL'
+        : 'ETH'
+    );
 
   const marketCount =
-    Number(state.platformStats?.marketCount ?? loaded.length);
+    Number(
+      state.platformStats?.marketCount ??
+      loaded.length
+    );
 
   $('platform-market-count').textContent =
-    Number.isFinite(marketCount)
-      ? String(marketCount)
+    Number.isFinite(
+      marketCount
+    )
+      ? String(
+          marketCount
+        )
       : '-';
 
   $('platform-loaded-reserve').textContent =
-    compactAmount(totalReserve, 18, 6) + ' ETH';
+    compactAmount(
+      totalReserve,
+      nativeDecimals,
+      6
+    ) +
+    ' ' +
+    nativeUnit;
 
   $('platform-loaded-volume').textContent =
-    compactAmount(totalVolume, 18, 6) + ' ETH';
+    compactAmount(
+      totalVolume,
+      nativeDecimals,
+      6
+    ) +
+    ' ' +
+    nativeUnit;
 
   const complete =
-    Number.isFinite(marketCount) &&
-    marketCount === loaded.length;
+    Number.isFinite(
+      marketCount
+    ) &&
+    marketCount ===
+      loaded.length;
 
   $('platform-reserve-label').textContent =
-    complete ? 'All markets' : 'Loaded markets';
+    complete
+      ? 'All markets'
+      : 'Loaded markets';
 
   $('platform-volume-label').textContent =
-    complete ? 'Total volume' : 'Loaded volume';
+    complete
+      ? 'Total volume'
+      : 'Loaded volume';
 
   $('platform-block').textContent =
     state.platformStats?.blockNumber
-      ? Number(state.platformStats.blockNumber).toLocaleString()
+      ? Number(
+          state.platformStats.blockNumber
+        ).toLocaleString()
       : '-';
 
   $('platform-last-refresh').textContent =
     loaded.length
-      ? 'Updated ' + new Date().toLocaleTimeString()
+      ? 'Updated ' +
+        new Date()
+          .toLocaleTimeString()
       : 'Waiting for chain read';
 }
 
@@ -1394,11 +1431,15 @@ async function renderPendingSolanaLaunches() {
       state.adapter,
     wallet:
       state.wallet,
+    treasury:
+      state.config?.solana?.treasury,
     transactionsEnabled:
       transactionConfigEnabled(
         state.config,
         'solana'
       ),
+    refresh:
+      () => discover(false),
     run:
       action,
     status
@@ -1442,7 +1483,9 @@ function renderDiscovery() {
     document.createTextNode(
       state.markets.length
         ? ' Updated ' + new Date().toLocaleTimeString()
-        : ' Waiting for Base market data'
+        : state.chain === 'solana'
+          ? ' Waiting for Solana market data'
+          : ' Waiting for Base market data'
     )
   );
 }
@@ -1602,7 +1645,9 @@ function renderMarket(m) {
   $('volume-24h').textContent = 'Loading…';
   $('trades-24h').textContent = 'Loading…';
   $('market-24h-status').textContent =
-    'Preparing the rolling 24h Base activity read…';
+    state.chain === 'solana'
+      ? 'Preparing PumpLite Solana market status...'
+      : 'Preparing the rolling 24h Base activity read...';
   $('virtual').textContent = formatUnits(m.virtualNative, m.nativeDecimals) + ' ' + m.unit;
   $('market-age').textContent = launchAge(m);
   $('market-block').textContent = Number(m.provenance?.block || 0).toLocaleString();
@@ -1806,6 +1851,8 @@ function renderMarket(m) {
   } else {
     queueMicrotask(() => void updateTradeBuyEstimate());
   }
+
+  syncTradeHelperMode();
 }
 async function reconcilePortableReview(market) {
   state.reviewProof = null;
@@ -1942,15 +1989,12 @@ function switchChain(chain) {
   state.adapter?.disconnect();
 
   $('create-trading-fee').textContent =
-    chain === 'solana'
-      ? 'Pump'
-      : '0.25%';
+    '0.25%';
 
   $('create-trading-fee-label').textContent =
-    chain === 'solana'
-      ? 'protocol fees apply'
-      : 'Trading fee';
+    'Trading fee';
   state.chain = chain; state.epoch++; state.adapter = null; state.wallet = null; state.market = null; state.next = null; state.markets=[]; state.pendingLaunches=[]; state.registry=null; state.platformStats=null;
+  syncTradeHelperMode();
   $('create-network').textContent =
     chain === 'base'
       ? 'Base Mainnet · ETH pair'
@@ -2522,47 +2566,113 @@ function creationData() {
 }
 
 function updateInitialBuySymbol() {
-  $('initial-buy-symbol').textContent =
-    $('symbol').value.trim() || 'TOKEN';
+  const symbol =
+    $('symbol').value.trim() ||
+    'TOKEN';
 
-  const native =
-    state.chain === 'solana'
-      ? 'SOL'
-      : 'ETH';
+  const solana =
+    state.chain ===
+    'solana';
+
+  const title =
+    $('initial-buy-title');
+
+  const token =
+    document.createElement(
+      'span'
+    );
+
+  token.id =
+    'initial-buy-symbol';
+
+  token.textContent =
+    symbol;
+
+  title.replaceChildren();
+
+  if (solana) {
+    title.append(
+      'Publish ',
+      token,
+      ' for 0 SOL?'
+    );
+  } else {
+    title.append(
+      'How much ',
+      token,
+      ' do you want to buy?'
+    );
+  }
+
+  const dialog =
+    $('initial-buy-dialog');
+
+  const eyebrow =
+    dialog.querySelector(
+      '.eyebrow'
+    );
+
+  if (eyebrow) {
+    eyebrow.textContent =
+      solana
+        ? 'FREE SOLANA LAUNCH'
+        : 'OPTIONAL FIRST BUY';
+  }
+
+  const amountBox =
+    dialog.querySelector(
+      '.initial-buy-amount'
+    );
+
+  const fiatRow =
+    dialog.querySelector(
+      '.initial-buy-fiat-row'
+    );
+
+  if (amountBox) {
+    amountBox.hidden =
+      solana;
+  }
+
+  if (fiatRow) {
+    fiatRow.hidden =
+      solana;
+  }
 
   const unit =
-    $('initial-buy-dialog')
-      .querySelector(
-        '.initial-buy-amount strong'
-      );
+    amountBox?.querySelector(
+      'strong'
+    );
 
   if (unit) {
-    unit.textContent = native;
+    unit.textContent =
+      solana
+        ? 'SOL'
+        : 'ETH';
   }
 
   const label =
-    $('initial-buy-dialog')
-      .querySelector(
-        'label[for="initial-buy-eth"]'
-      );
+    dialog.querySelector(
+      'label[for="initial-buy-eth"]'
+    );
 
   if (label) {
     label.textContent =
-      'Optional first buy amount in ' +
-      native;
+      solana
+        ? 'Creator cost'
+        : 'Optional first buy amount in ETH';
   }
 
   const intro =
-    $('initial-buy-dialog')
-      .querySelector('p.muted');
+    dialog.querySelector(
+      'p.muted'
+    );
 
   if (intro) {
     intro.textContent =
-      'Use 0 ' +
-      native +
-      ' to create only. Enter more than 0 ' +
-      native +
-      ' if you also want your connected wallet to buy the new token after creation.';
+      solana
+        ? 'Your creator cost is fixed at 0 SOL. Phantom signs a message only. The first buyer funds the real on-chain mint and first purchase later.'
+        : 'Use 0 ETH to create only. Enter more than 0 ETH if you also want your connected wallet to buy the new token immediately after creation.';
   }
 }
 
@@ -2760,256 +2870,692 @@ $('initial-buy-currency').addEventListener(
 
 let tradeDisplaySequence = 0;
 
-function syncTradeHelperMode() {
-  const symbol = state.market?.symbol || 'tokens';
-  $('trade-use-display').hidden = false;
-  $('trade-spend-field').hidden = false;
-  $('trade-use-display').textContent = 'Buy ' + symbol;
-  $('trade-use-display').disabled =
-    state.busy ||
-    state.chain !== 'base' ||
-    ![2, 3].includes(state.market?.contractVersion);
+function tradeNative() {
+  return state.chain ===
+    'solana'
+      ? 'SOL'
+      : 'ETH';
 }
 
-function normalizeTradeEth(value) {
-  if (!Number.isFinite(value) || value <= 0) {
-    throw Error('Enter an amount greater than 0');
+function simpleBuySupported() {
+  if (!state.market) {
+    return false;
   }
 
-  const text = value
-    .toFixed(18)
-    .replace(/0+$/, '')
-    .replace(/\.$/, '');
+  if (
+    state.chain ===
+    'solana'
+  ) {
+    return (
+      state.config?.solana?.protocol ===
+        'tiny' &&
+      state.market?.protocol ===
+        'tiny'
+    );
+  }
 
-  if (!text || text === '0') {
-    throw Error('Amount is too small to convert to ETH');
+  return (
+    state.chain ===
+      'base' &&
+    [2, 3].includes(
+      state.market
+        ?.contractVersion
+    )
+  );
+}
+
+function syncTradeHelperMode() {
+  const symbol =
+    state.market?.symbol ||
+    'tokens';
+
+  const native =
+    tradeNative();
+
+  const supported =
+    simpleBuySupported();
+
+  $('trade-quick-buy').hidden =
+    !supported;
+
+  $('trade-use-display').textContent =
+    'Buy ' +
+    symbol;
+
+  $('trade-use-display').disabled =
+    state.busy ||
+    !supported;
+
+  $('trade-quick-buy-copy').textContent =
+    state.chain === 'solana'
+      ? 'Enter NZD or USD. PumpLite converts it to SOL and refreshes the live quote before Phantom approval.'
+      : 'Enter NZD or USD. PumpLite refreshes the live Base ETH quote before wallet approval.';
+
+  $('simple-buy-note').textContent =
+    state.chain === 'solana'
+      ? 'Final payment is SOL. Phantom shows the transaction and network fee. PumpLite uses 1% slippage protection.'
+      : 'Final payment is Base ETH. Your wallet shows the transaction and network fee. PumpLite uses 1% slippage protection.';
+
+  $('trade-minimum-note').textContent =
+    'Enter tokens to sell. The live quote shows expected ' +
+    native +
+    ' before wallet approval.';
+
+  $('quote-output-label').textContent =
+    'Expected ' +
+    (
+      state.chain === 'base'
+        ? 'Base ETH'
+        : 'SOL'
+    );
+
+  $('quote-min-label').textContent =
+    'Minimum ' +
+    (
+      state.chain === 'base'
+        ? 'Base ETH'
+        : 'SOL'
+    );
+}
+
+function normalizeTradeNative(
+  value,
+  decimals,
+  unit
+) {
+  if (
+    !Number.isFinite(value) ||
+    value <= 0
+  ) {
+    throw Error(
+      'Enter an amount greater than 0'
+    );
+  }
+
+  const text =
+    value
+      .toFixed(decimals)
+      .replace(/0+$/, '')
+      .replace(/.$/, '');
+
+  if (
+    !text ||
+    text === '0'
+  ) {
+    throw Error(
+      'Amount is too small to convert to ' +
+      unit
+    );
   }
 
   return text;
 }
 
-function formatTradeDisplay(value, currency) {
-  return formatInitialBuyFiat(value, currency);
+function formatTradeDisplay(
+  value,
+  currency
+) {
+  return formatInitialBuyFiat(
+    value,
+    currency
+  );
 }
 
-function formatSimpleTokenAmount(value, decimals = 18) {
-  const text = formatUnits(value, decimals, 6);
-  const number = Number(text);
+function formatSimpleTokenAmount(
+  value,
+  decimals = 18
+) {
+  const text =
+    formatUnits(
+      value,
+      decimals,
+      6
+    );
 
-  if (!Number.isFinite(number)) return text;
+  const number =
+    Number(text);
+
+  if (
+    !Number.isFinite(
+      number
+    )
+  ) {
+    return text;
+  }
 
   return new Intl.NumberFormat(
     'en-NZ',
-    { maximumFractionDigits: 6 }
+    {
+      maximumFractionDigits:
+        6
+    }
   ).format(number);
 }
 
-async function tradeDisplayEthAmount() {
-  const text = $('trade-display-amount').value.trim();
-  const source = $('trade-display-currency').value;
-  const amount = Number(text);
+async function tradeDisplayNativeAmount() {
+  const text =
+    $('trade-display-amount')
+      .value
+      .trim();
 
-  if (!Number.isFinite(amount) || amount <= 0) {
-    throw Error('Enter a valid amount greater than 0');
+  const source =
+    $('trade-display-currency')
+      .value;
+
+  const amount =
+    Number(text);
+
+  if (
+    !Number.isFinite(amount) ||
+    amount <= 0
+  ) {
+    throw Error(
+      'Enter a valid amount greater than 0'
+    );
   }
 
-  if (!['NZD', 'USD'].includes(source)) {
-    throw Error('Simple buy supports NZD or USD');
+  if (
+    !['NZD', 'USD']
+      .includes(source)
+  ) {
+    throw Error(
+      'Simple buy supports NZD or USD'
+    );
   }
 
-  const rates = await loadInitialBuyRates();
-  const rate = Number(rates[source]);
+  const native =
+    tradeNative();
 
-  if (!Number.isFinite(rate) || rate <= 0) {
-    throw Error('Live ' + source + ' to ETH estimate is temporarily unavailable');
+  const rates =
+    await loadInitialBuyRates(
+      native
+    );
+
+  const rate =
+    Number(
+      rates[source]
+    );
+
+  if (
+    !Number.isFinite(rate) ||
+    rate <= 0
+  ) {
+    throw Error(
+      'Live ' +
+      source +
+      ' to ' +
+      native +
+      ' estimate is temporarily unavailable'
+    );
   }
 
-  return normalizeTradeEth(amount / rate);
+  const decimals =
+    state.market
+      ?.nativeDecimals ??
+    (
+      state.chain ===
+        'solana'
+        ? 9
+        : 18
+    );
+
+  return normalizeTradeNative(
+    amount /
+      rate,
+    decimals,
+    native
+  );
+}
+
+async function simpleBuyQuote(
+  market,
+  amount
+) {
+  if (
+    state.chain ===
+    'solana'
+  ) {
+    return (
+      await getAdapter()
+    ).quote(
+      market,
+      'buy',
+      amount
+    );
+  }
+
+  return quoteBaseV2(
+    market,
+    'buy',
+    amount
+  );
 }
 
 async function updateTradeBuyEstimate() {
-  const sequence = ++tradeDisplaySequence;
+  const sequence =
+    ++tradeDisplaySequence;
+
   syncTradeHelperMode();
 
-  const output = $('trade-display-estimate');
-  const tokenOutput = $('simple-buy-output');
-  const note = $('simple-buy-note');
-  const text = $('trade-display-amount').value.trim();
-  const symbol = state.market?.symbol || 'TOKEN';
+  const output =
+    $('trade-display-estimate');
+
+  const tokenOutput =
+    $('simple-buy-output');
+
+  const text =
+    $('trade-display-amount')
+      .value
+      .trim();
+
+  const symbol =
+    state.market?.symbol ||
+    'TOKEN';
 
   if (!text) {
-    tokenOutput.textContent = '- ' + symbol;
-    output.textContent = 'Enter an amount above to see the live estimate.';
-    return;
-  }
+    tokenOutput.textContent =
+      '- ' +
+      symbol;
 
-  const source = $('trade-display-currency').value;
-  const amount = Number(text);
+    output.textContent =
+      'Enter an amount above to see the live estimate.';
 
-  if (!Number.isFinite(amount) || amount <= 0) {
-    tokenOutput.textContent = '- ' + symbol;
-    output.textContent = 'Enter a valid amount greater than 0.';
     return;
   }
 
   if (
-    state.chain !== 'base' ||
-    ![2, 3].includes(state.market?.contractVersion)
+    !simpleBuySupported()
   ) {
-    tokenOutput.textContent = '- ' + symbol;
-    output.textContent = 'Open a Base V2 market to use simple buy.';
+    tokenOutput.textContent =
+      '- ' +
+      symbol;
+
+    output.textContent =
+      state.chain ===
+        'solana'
+        ? 'Open an activated PumpLite Solana market to buy.'
+        : 'Open a Base V2/V3 market to use simple buy.';
+
     return;
   }
 
+  const source =
+    $('trade-display-currency')
+      .value;
+
+  const displayAmount =
+    Number(text);
+
+  if (
+    !Number.isFinite(
+      displayAmount
+    ) ||
+    displayAmount <= 0
+  ) {
+    tokenOutput.textContent =
+      '- ' +
+      symbol;
+
+    output.textContent =
+      'Enter a valid amount greater than 0.';
+
+    return;
+  }
+
+  const native =
+    tradeNative();
+
   output.textContent =
-    'Calculating the current ' + source + ' curve estimate...';
+    'Calculating the current ' +
+    source +
+    ' / ' +
+    native +
+    ' on-chain estimate...';
 
   try {
-    const ethText = await tradeDisplayEthAmount();
-    if (sequence !== tradeDisplaySequence) return;
+    const nativeText =
+      await tradeDisplayNativeAmount();
 
-    const amountWei = parseUnits(
-      ethText,
-      state.market.nativeDecimals
-    );
+    if (
+      sequence !==
+      tradeDisplaySequence
+    ) {
+      return;
+    }
 
-    const q = quoteBaseV2(state.market, 'buy', amountWei);
+    const amountRaw =
+      parseUnits(
+        nativeText,
+        state.market.nativeDecimals
+      );
 
-    if (sequence !== tradeDisplaySequence) return;
+    const q =
+      await simpleBuyQuote(
+        state.market,
+        amountRaw
+      );
+
+    if (
+      sequence !==
+      tradeDisplaySequence
+    ) {
+      return;
+    }
 
     tokenOutput.textContent =
       '~ ' +
-      formatSimpleTokenAmount(q.output, state.market.decimals) +
+      formatSimpleTokenAmount(
+        q.output,
+        state.market.decimals
+      ) +
       ' ' +
       state.market.symbol;
 
     output.textContent =
-      formatTradeDisplay(amount, source) +
+      formatTradeDisplay(
+        displayAmount,
+        source
+      ) +
       ' ~ ' +
-      ethText +
-      ' Base ETH - current curve estimate.';
+      nativeText +
+      ' ' +
+      native +
+      ' - current on-chain estimate.';
 
-    note.textContent =
-      (q.support > 0n
-        ? 'Mayhem support is included in this estimate. '
-        : '') +
+    $('simple-buy-note').textContent =
+      (
+        q.support > 0n
+          ? 'Mayhem support is included in this estimate. '
+          : ''
+      ) +
       'PumpLite refreshes the market again when you tap Buy ' +
       state.market.symbol +
-      '. Your wallet shows the real Base ETH amount and network gas before final approval. Simple buy uses 1% slippage protection.';
+      '. Your wallet shows the real ' +
+      native +
+      ' amount and network fee before final approval. Simple buy uses 1% slippage protection.';
   } catch (error) {
-    if (sequence !== tradeDisplaySequence) return;
-    tokenOutput.textContent = '- ' + symbol;
+    if (
+      sequence !==
+      tradeDisplaySequence
+    ) {
+      return;
+    }
+
+    tokenOutput.textContent =
+      '- ' +
+      symbol;
+
     output.textContent =
       error?.message ||
       'Live buy estimate is temporarily unavailable.';
   }
 }
 
-async function updateTradeSellDisplay(ethOutput) {
-  if ($('side').value !== 'sell') return;
+async function updateTradeSellDisplay(
+  nativeOutput
+) {
+  if (
+    $('side').value !==
+    'sell'
+  ) {
+    return;
+  }
 
-  const currency = $('trade-display-currency').value;
-  const eth = Number(ethOutput);
+  const currency =
+    $('trade-display-currency')
+      .value;
 
-  if (!Number.isFinite(eth) || eth <= 0) return;
+  const amount =
+    Number(
+      nativeOutput
+    );
+
+  if (
+    !Number.isFinite(
+      amount
+    ) ||
+    amount <= 0
+  ) {
+    return;
+  }
+
+  const native =
+    tradeNative();
 
   try {
-    const rates = await loadInitialBuyRates();
-    const rate = Number(rates[currency]);
-    if (!Number.isFinite(rate) || rate <= 0) return;
+    const rates =
+      await loadInitialBuyRates(
+        native
+      );
+
+    const rate =
+      Number(
+        rates[currency]
+      );
+
+    if (
+      !Number.isFinite(rate) ||
+      rate <= 0
+    ) {
+      return;
+    }
 
     status(
-      'Advanced sell quote: about ' +
-      formatTradeDisplay(eth * rate, currency) +
+      'Sell quote: about ' +
+      formatTradeDisplay(
+        amount *
+          rate,
+        currency
+      ) +
       ' from ' +
-      normalizeTradeEth(eth) +
-      ' Base ETH. The real payout is Base ETH.'
+      normalizeTradeNative(
+        amount,
+        state.market
+          ?.nativeDecimals ??
+          (
+            state.chain ===
+              'solana'
+              ? 9
+              : 18
+          ),
+        native
+      ) +
+      ' ' +
+      native +
+      '. The real payout is ' +
+      native +
+      '.'
     );
   } catch {}
 }
 
-$('trade-display-amount').addEventListener(
-  'input',
-  () => void updateTradeBuyEstimate()
-);
+$('trade-display-amount')
+  .addEventListener(
+    'input',
+    () =>
+      void updateTradeBuyEstimate()
+  );
 
-$('trade-display-currency').addEventListener(
-  'change',
-  () => void updateTradeBuyEstimate()
-);
+$('trade-display-currency')
+  .addEventListener(
+    'change',
+    () =>
+      void updateTradeBuyEstimate()
+  );
 
 $('side').addEventListener(
   'change',
-  () => syncTradeHelperMode()
+  () =>
+    syncTradeHelperMode()
 );
 
-$('trade-use-display').addEventListener(
-  'click',
-  () => action(async () => {
-    if (
-      state.chain !== 'base' ||
-      ![2, 3].includes(state.market?.contractVersion)
-    ) {
-      throw Error('Simple buy is available for Base V2 markets');
-    }
+$('trade-use-display')
+  .addEventListener(
+    'click',
+    () =>
+      action(
+        async () => {
+          if (
+            !simpleBuySupported()
+          ) {
+            throw Error(
+              state.chain ===
+                'solana'
+                ? 'Open an activated PumpLite Solana market first'
+                : 'Simple buy requires a Base V2/V3 market'
+            );
+          }
 
-    const source = $('trade-display-currency').value;
-    const displayAmount = Number(
-      $('trade-display-amount').value.trim()
-    );
+          const source =
+            $('trade-display-currency')
+              .value;
 
-    if (!Number.isFinite(displayAmount) || displayAmount <= 0) {
-      throw Error('Enter a valid NZD or USD amount greater than 0');
-    }
+          const displayAmount =
+            Number(
+              $('trade-display-amount')
+                .value
+                .trim()
+            );
 
-    const ethText = await tradeDisplayEthAmount();
-    const amountWei = parseUnits(ethText, 18);
+          if (
+            !Number.isFinite(
+              displayAmount
+            ) ||
+            displayAmount <= 0
+          ) {
+            throw Error(
+              'Enter a valid NZD or USD amount greater than 0'
+            );
+          }
 
-    if (!state.wallet) {
-      await connectBaseWalletFromGesture();
-    }
+          if (
+            !state.wallet
+          ) {
+            if (
+              state.chain ===
+              'base'
+            ) {
+              await connectBaseWalletFromGesture();
+            } else {
+              throw Error(
+                'Connect Phantom before buying on Solana'
+              );
+            }
+          }
 
-    requireWrite();
+          requireWrite();
 
-    const active = await getAdapter();
-    const fresh = await active.market(state.market.id);
-    state.market = fresh;
-    renderMarket(fresh);
+          const native =
+            tradeNative();
 
-    const q = quoteBaseV2(fresh, 'buy', amountWei);
-    const min = minimumOutput(q.output, 100);
-    const expected =
-      formatSimpleTokenAmount(q.output, fresh.decimals);
+          const active =
+            await getAdapter();
 
-    $('simple-buy-output').textContent =
-      '~ ' + expected + ' ' + fresh.symbol;
+          const fresh =
+            await active.market(
+              state.market.id
+            );
 
-    $('trade-display-estimate').textContent =
-      formatTradeDisplay(displayAmount, source) +
-      ' -> about ' +
-      expected +
-      ' ' +
-      fresh.symbol +
-      '. Opening your wallet for the final Base ETH review.';
+          state.market =
+            fresh;
 
-    status(
-      'Review the wallet transaction: approximately ' +
-      expected +
-      ' ' +
-      fresh.symbol +
-      ' for ' +
-      formatTradeDisplay(displayAmount, source) +
-      ' (' +
-      ethText +
-      ' Base ETH), plus network gas.'
-    );
+          renderMarket(
+            fresh
+          );
 
-    await active.trade(fresh, 'buy', amountWei, min);
-    await refreshMarketAfterAction(fresh.id);
-  })
-);
+          const nativeText =
+            await tradeDisplayNativeAmount();
+
+          const amountRaw =
+            parseUnits(
+              nativeText,
+              fresh.nativeDecimals
+            );
+
+          const q =
+            state.chain ===
+              'solana'
+              ? await active.quote(
+                  fresh,
+                  'buy',
+                  amountRaw
+                )
+              : quoteBaseV2(
+                  fresh,
+                  'buy',
+                  amountRaw
+                );
+
+          const min =
+            minimumOutput(
+              q.output,
+              100
+            );
+
+          const expected =
+            formatSimpleTokenAmount(
+              q.output,
+              fresh.decimals
+            );
+
+          $('simple-buy-output')
+            .textContent =
+            '~ ' +
+            expected +
+            ' ' +
+            fresh.symbol;
+
+          $('trade-display-estimate')
+            .textContent =
+            formatTradeDisplay(
+              displayAmount,
+              source
+            ) +
+            ' -> about ' +
+            expected +
+            ' ' +
+            fresh.symbol +
+            '. Opening your wallet for final ' +
+            native +
+            ' review.';
+
+          status(
+            'Review the wallet transaction: approximately ' +
+            expected +
+            ' ' +
+            fresh.symbol +
+            ' for ' +
+            formatTradeDisplay(
+              displayAmount,
+              source
+            ) +
+            ' (' +
+            nativeText +
+            ' ' +
+            native +
+            '), plus the network fee.'
+          );
+
+          await active.trade(
+            fresh,
+            'buy',
+            amountRaw,
+            min,
+            state.chain ===
+              'solana'
+              ? 1
+              : undefined
+          );
+
+          await refreshMarketAfterAction(
+            fresh.id
+          );
+        }
+      )
+  );
 
 syncTradeHelperMode();
+
 $('symbol').addEventListener(
   'input',
   updateInitialBuySymbol
@@ -3207,8 +3753,30 @@ $('initial-buy-form').addEventListener('submit', e => {
         status(
           'Free PumpLite launch signed and published. Creator cost: 0 SOL. Launch ' +
           draft.id.slice(0, 12) +
-          '… No transaction was submitted.'
+          '... No transaction was submitted. Opening Markets.'
         );
+
+        showHomePage(
+          'markets'
+        );
+
+        try {
+          await discover(
+            false
+          );
+
+          status(
+            'Launch ' +
+            draft.id.slice(0, 12) +
+            '... is published and shown under Free Solana launches awaiting first buyer.'
+          );
+        } catch {
+          status(
+            'Launch ' +
+            draft.id.slice(0, 12) +
+            '... is safely published. Tap Refresh live if the pending card has not appeared yet.'
+          );
+        }
 
         return;
       }
