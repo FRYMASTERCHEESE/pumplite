@@ -1,262 +1,123 @@
+import assert from 'node:assert/strict';
 import {
-  Connection,
-  Keypair,
-  PublicKey
-} from '@solana/web3.js';
+  readFile
+} from 'node:fs/promises';
 
-import {
-  OnlinePumpSdk,
-  PUMP_SDK
-} from '@pump-fun/pump-sdk';
+const PROGRAM =
+  '3CHqrdJzwWQj1QikCzpjBhC8iQ3paaMtD1x9kwoW1rku';
 
-import {
-  OnlinePumpAmmSdk,
-  PUMP_AMM_SDK
-} from '@pump-fun/pump-swap-sdk';
-
-const RPC =
-  'https://solana-rpc.publicnode.com';
-
-const MAINNET =
-  '5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d';
-
-const PUMP =
-  new PublicKey(
-    '6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P'
-  );
-
-const AMM =
-  new PublicKey(
-    'pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA'
-  );
-
-const MAYHEM =
-  new PublicKey(
-    'MAyhSmzXzV1pTf7LsNkrNwkWKTo4ougAJ1PPg47MD4e'
-  );
-
-console.log('');
-console.log('============================================');
-console.log(' PUMPLITE PUMP MAINNET VERIFY');
-console.log(' READ ONLY / UNSIGNED / ZERO SOL');
-console.log('============================================');
-
-const connection =
-  new Connection(
-    RPC,
-    'confirmed'
-  );
-
-const genesis =
-  await connection.getGenesisHash();
-
-if (genesis !== MAINNET) {
-  throw Error(
-    'RPC is not Solana Mainnet'
-  );
-}
-
-console.log(
-  'Solana Mainnet genesis verified ✅'
-);
-
-const [
-  pumpAccount,
-  ammAccount,
-  mayhemAccount
-] =
-  await Promise.all([
-    connection.getAccountInfo(
-      PUMP,
-      'confirmed'
-    ),
-    connection.getAccountInfo(
-      AMM,
-      'confirmed'
-    ),
-    connection.getAccountInfo(
-      MAYHEM,
-      'confirmed'
+const config =
+  JSON.parse(
+    await readFile(
+      'config.json',
+      'utf8'
     )
-  ]);
-
-if (!pumpAccount?.executable) {
-  throw Error(
-    'Pump program is not executable'
-  );
-}
-
-if (!ammAccount?.executable) {
-  throw Error(
-    'PumpSwap program is not executable'
-  );
-}
-
-if (!mayhemAccount?.executable) {
-  throw Error(
-    'Mayhem program is not executable'
-  );
-}
-
-console.log(
-  'Pump program executable ✅'
-);
-
-console.log(
-  'PumpSwap program executable ✅'
-);
-
-console.log(
-  'Mayhem program executable ✅'
-);
-
-for (const [
-  label,
-  value
-] of [
-  [
-    'createV2Instruction',
-    PUMP_SDK.createV2Instruction
-  ],
-  [
-    'buyInstructions',
-    PUMP_SDK.buyInstructions
-  ],
-  [
-    'sellInstructions',
-    PUMP_SDK.sellInstructions
-  ],
-  [
-    'PumpSwap buyQuoteInput',
-    PUMP_AMM_SDK.buyQuoteInput
-  ],
-  [
-    'PumpSwap sellBaseInput',
-    PUMP_AMM_SDK.sellBaseInput
-  ]
-]) {
-  if (typeof value !== 'function') {
-    throw Error(
-      label +
-      ' is missing from the installed official SDK'
-    );
-  }
-}
-
-const online =
-  new OnlinePumpSdk(
-    connection
   );
 
-const onlineAmm =
-  new OnlinePumpAmmSdk(
-    connection
+const adapter =
+  await readFile(
+    'web/adapters/solana-tiny.js',
+    'utf8'
   );
 
-if (
-  typeof online.fetchGlobal !==
-    'function' ||
-  typeof online.fetchFeeConfig !==
-    'function' ||
-  typeof onlineAmm.swapSolanaState !==
-    'function'
-) {
-  throw Error(
-    'Required official online SDK methods are missing'
+const instructions =
+  await readFile(
+    'web/solana-tiny-instructions.js',
+    'utf8'
   );
-}
-
-await Promise.all([
-  online.fetchGlobal(),
-  online.fetchFeeConfig()
-]);
-
-console.log(
-  'Live Pump Global + fee config readable ✅'
-);
-
-const owner =
-  Keypair.generate();
-
-const normalMint =
-  Keypair.generate();
-
-const normal =
-  await PUMP_SDK
-    .createV2Instruction({
-      mint:
-        normalMint.publicKey,
-      name:
-        'PumpLite Verify',
-      symbol:
-        'PLVERIFY',
-      uri:
-        'https://example.com/pumplite.json',
-      creator:
-        owner.publicKey,
-      user:
-        owner.publicKey,
-      mayhemMode:
-        false,
-      holderReward:
-        false
-    });
-
-if (!normal.programId.equals(PUMP)) {
-  throw Error(
-    'Normal create instruction targeted an unexpected program'
-  );
-}
-
-console.log(
-  'Unsigned Pump V2 creation instruction verified ✅'
-);
-
-const mayhemMint =
-  Keypair.generate();
-
-const mayhem =
-  await PUMP_SDK
-    .createV2Instruction({
-      mint:
-        mayhemMint.publicKey,
-      name:
-        'PumpLite Mayhem',
-      symbol:
-        'PLMAYHEM',
-      uri:
-        'https://example.com/pumplite-mayhem.json',
-      creator:
-        owner.publicKey,
-      user:
-        owner.publicKey,
-      mayhemMode:
-        true,
-      holderReward:
-        false
-    });
-
-if (!mayhem.programId.equals(PUMP)) {
-  throw Error(
-    'Mayhem create instruction targeted an unexpected program'
-  );
-}
-
-console.log(
-  'Unsigned Pump Mayhem instruction verified ✅'
-);
-
-console.log(
-  'Bonding-curve Buy/Sell builders verified ✅'
-);
-
-console.log(
-  'PumpSwap Buy/Sell builders verified ✅'
-);
 
 console.log('');
-console.log('NO PRIVATE KEY USED ✅');
-console.log('NO WALLET SIGNATURE REQUESTED ✅');
-console.log('NO TRANSACTION SENT ✅');
-console.log('NO SOL SPENT ✅');
 console.log('============================================');
+console.log(' PUMPLITE TINY MAINNET VERIFY');
+console.log(' STATIC / READ ONLY / ZERO SOL');
+console.log('============================================');
+
+assert.equal(
+  config.solana.protocol,
+  'tiny'
+);
+
+assert.equal(
+  config.solana.programId,
+  PROGRAM
+);
+
+assert.equal(
+  config.solana.clientVersion,
+  5
+);
+
+assert.equal(
+  config.solana.treasury,
+  'BNpFPPuy2h12dryy4dayemjA4YS17ccVaF82jBDuiwct'
+);
+
+assert.equal(
+  config.solana.genesisHash,
+  '5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d'
+);
+
+assert.equal(
+  config.solana.transactionsEnabled,
+  false
+);
+
+assert.equal(
+  config.solana.discoveryUrl,
+  null
+);
+
+assert.equal(
+  config.solana.ammProgramId,
+  undefined
+);
+
+assert.equal(
+  config.solana.mayhemProgramId,
+  undefined
+);
+
+assert.deepEqual(
+  config.solana.rpcFallbackUrls,
+  [
+    'https://solana-rpc.publicnode.com'
+  ]
+);
+
+for (const marker of [
+  'buildTinyFirstBuyerActivationInstructions',
+  'simulateTransaction',
+  'sendRawTransaction',
+  'Wallet changed a PumpLite instruction'
+]) {
+  assert.ok(
+    adapter.includes(marker),
+    'Missing PumpLite tiny adapter marker: ' +
+      marker
+  );
+}
+
+for (const marker of [
+  'buildTinyFirstBuyerActivationInstructions',
+  'TINY_TOKEN_PROGRAM',
+  'SystemProgram.programId'
+]) {
+  assert.ok(
+    instructions.includes(marker),
+    'Missing PumpLite tiny instruction marker: ' +
+      marker
+  );
+}
+
+assert.doesNotMatch(
+  adapter,
+  /fromSecretKey/
+);
+
+console.log('PumpLite tiny Mainnet identity pinned ✅');
+console.log('Creator free-launch path remains transaction locked ✅');
+console.log('Browser-local first-buyer activation implementation present ✅');
+console.log('No wallet used ✅');
+console.log('No signature requested ✅');
+console.log('No transaction submitted ✅');
+console.log('No SOL spent ✅');

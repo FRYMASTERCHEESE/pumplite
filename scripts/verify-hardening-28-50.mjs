@@ -90,17 +90,18 @@ requireIncludes(marketSource, [
 ], 'Market immutable roles');
 pass(30, 'treasury and controller immutability');
 
-// 31 - reviewed Pump Mainnet identity
-assert.equal(config.solana.protocol, 'pump', 'Solana protocol drift');
-assert.equal(config.solana.programId, '6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P', 'Pump program drift');
-assert.equal(config.solana.ammProgramId, 'pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA', 'PumpSwap program drift');
-assert.equal(config.solana.mayhemProgramId, 'MAyhSmzXzV1pTf7LsNkrNwkWKTo4ougAJ1PPg47MD4e', 'Mayhem program drift');
-assert.equal(config.solana.transactionsEnabled, true, 'Pump Mainnet transactions unexpectedly disabled');
+// 31 - reviewed PumpLite tiny Mainnet identity
+assert.equal(config.solana.protocol, 'tiny', 'Solana protocol drift');
+assert.equal(config.solana.programId, '3CHqrdJzwWQj1QikCzpjBhC8iQ3paaMtD1x9kwoW1rku', 'PumpLite program drift');
+assert.equal(config.solana.clientVersion, 5, 'PumpLite client version drift');
+assert.equal(config.solana.ammProgramId, undefined, 'Legacy AMM program must remain absent');
+assert.equal(config.solana.mayhemProgramId, undefined, 'Legacy Mayhem program must remain absent');
+assert.equal(config.solana.transactionsEnabled, false, 'PumpLite Mainnet safety lock unexpectedly enabled');
 requireIncludes(releaseManifestSource, [
-  "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P",
-  "Reviewed Pump Mainnet release configuration mismatch"
-], 'Release manifest Pump Mainnet seal');
-pass(31, 'reviewed Pump Mainnet deployment seal');
+  "3CHqrdJzwWQj1QikCzpjBhC8iQ3paaMtD1x9kwoW1rku",
+  "Reviewed PumpLite tiny Mainnet integration configuration mismatch"
+], 'Release manifest PumpLite tiny Mainnet seal');
+pass(31, 'reviewed PumpLite tiny Mainnet safety seal');
 
 // 32 - First 50 public claim configuration
 assert.equal(config.base.holderClaim.enabled, true, 'Holder claim unexpectedly disabled');

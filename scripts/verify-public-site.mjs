@@ -364,27 +364,37 @@ async function verifyOnce() {
 
   assert.equal(
     liveConfig.solana.transactionsEnabled,
-    true
+    false
   );
 
   assert.equal(
     liveConfig.solana.protocol,
-    'pump'
+    'tiny'
   );
 
   assert.equal(
     liveConfig.solana.programId,
-    '6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P'
+    '3CHqrdJzwWQj1QikCzpjBhC8iQ3paaMtD1x9kwoW1rku'
+  );
+
+  assert.equal(
+    liveConfig.solana.clientVersion,
+    5
   );
 
   assert.equal(
     liveConfig.solana.ammProgramId,
-    'pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA'
+    undefined
   );
 
   assert.equal(
     liveConfig.solana.mayhemProgramId,
-    'MAyhSmzXzV1pTf7LsNkrNwkWKTo4ougAJ1PPg47MD4e'
+    undefined
+  );
+
+  assert.equal(
+    liveConfig.solana.discoveryUrl,
+    null
   );
 
   assert.deepEqual(
@@ -447,7 +457,7 @@ async function verifyOnce() {
   console.log('App asset:', expectedApp);
   console.log('Claim asset:', expectedClaim);
   console.log(
-    'Base V2 live; reviewed Pump Mainnet Solana integration is enabled.'
+    'Base V2 live; PumpLite tiny Solana Mainnet integration is safety locked pending final activation.'
   );
   console.log(
     'No wallet used. No signature requested. No transaction submitted.'

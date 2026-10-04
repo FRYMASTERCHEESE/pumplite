@@ -20,7 +20,7 @@ test('public-site verifier is read-only and covers live production pages', async
     'assets/verified-tokens.json',
     'assets/styles.css',
     'id="mobile-phantom"',
-    'Base V2 live; reviewed Pump Mainnet Solana integration is enabled.',
+    'Base V2 live; PumpLite tiny Solana Mainnet integration is safety locked pending final activation.',
     'No wallet used. No signature requested. No transaction submitted.'
   ]) {
     assert.ok(

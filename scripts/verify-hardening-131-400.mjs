@@ -238,8 +238,8 @@ okGate(203, "First 50 claim amount", String(config.base?.holderClaim?.claimAmoun
 okGate(204, "First 50 maximum claims", Number(config.base?.holderClaim?.maxClaims) === 50);
 okGate(205, "metadata uploads enabled", config.metadataUploads?.enabled === true);
 okGate(206, "Solana network name", config.solana?.name === 'Solana Mainnet');
-okGate(207, "reviewed Pump Mainnet program identity", config.solana?.programId === '6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P');
-okGate(208, "reviewed Pump Mainnet transactions enabled", config.solana?.transactionsEnabled === true);
+okGate(207, "reviewed PumpLite tiny Mainnet identity", config.solana?.protocol === 'tiny' && config.solana?.programId === '3CHqrdJzwWQj1QikCzpjBhC8iQ3paaMtD1x9kwoW1rku' && config.solana?.clientVersion === 5 && config.solana?.ammProgramId === undefined && config.solana?.mayhemProgramId === undefined);
+okGate(208, "reviewed PumpLite Mainnet transaction safety lock", config.solana?.transactionsEnabled === false);
 okGate(209, "Solana treasury identity", config.solana?.treasury === 'BNpFPPuy2h12dryy4dayemjA4YS17ccVaF82jBDuiwct');
 okGate(210, "Solana Mainnet genesis hash", config.solana?.genesisHash === '5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d');
 okGate(211, "Solana explorer identity", config.solana?.explorer === 'https://solscan.io');

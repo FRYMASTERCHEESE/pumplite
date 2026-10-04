@@ -24,16 +24,16 @@ for(const path of paths){
 const config=JSON.parse(await readFile('config.json','utf8'));
 if('transactionsEnabled' in config)throw Error('Legacy global transaction switch is not permitted');
 if(
- config.solana.protocol!=='pump' ||
- config.solana.programId!=='6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P' ||
- config.solana.ammProgramId!=='pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA' ||
- config.solana.mayhemProgramId!=='MAyhSmzXzV1pTf7LsNkrNwkWKTo4ougAJ1PPg47MD4e' ||
- config.solana.transactionsEnabled!==true ||
+ config.solana.protocol!=='tiny' ||
+ config.solana.programId!=='3CHqrdJzwWQj1QikCzpjBhC8iQ3paaMtD1x9kwoW1rku' ||
+ config.solana.transactionsEnabled!==false ||
  config.solana.genesisHash!=='5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d' ||
- config.solana.clientVersion!==4 ||
- config.solana.pumpSdkVersion!=='2.0.0' ||
- config.solana.pumpSwapSdkVersion!=='1.20.0'
-)throw Error('Reviewed Pump Mainnet release configuration mismatch');
+ config.solana.clientVersion!==5 ||
+ config.solana.ammProgramId!==undefined ||
+ config.solana.mayhemProgramId!==undefined ||
+ !Array.isArray(config.solana.rpcFallbackUrls) ||
+ config.solana.rpcFallbackUrls[0]!=='https://solana-rpc.publicnode.com'
+)throw Error('Reviewed PumpLite tiny Mainnet integration configuration mismatch');
 
 if(
  config.base.chainId!==8453 ||
