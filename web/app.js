@@ -4226,7 +4226,7 @@ async function loadPublicConfig() {
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       const response = await fetch(
-        './config.json?boot=20260930d&attempt=' + attempt,
+        './config.json?boot=20261005pumplite1&attempt=' + attempt,
         { cache: 'no-store' }
       );
 
