@@ -17,7 +17,7 @@ const PLITE_MARKET_ADDRESS = '0xa522A4Ef81fD31daec390ab46A32D4886e1461C7';
 const PLITE_MARKET_ID = PLITE_MARKET_ADDRESS.toLowerCase();
 const PLITE_UNISWAP_V2_PAIR_ADDRESS = '0xDAD81f9f5DbF71Ce54D63f96eE45231D97d6B086';
 const BASE_WETH_ADDRESS = '0x4200000000000000000000000000000000000006';
-const state = { config: null, chain: 'base', adapter: null, wallet: null, market: null, quote: null, busy: false, epoch: 0, next: null, markets: [], featuredPlite: null, registry: null, reviewProof: null, reviewSchemaReady: false, platformStats: null };
+const state = { config: null, chain: 'base', adapter: null, wallet: null, market: null, quote: null, busy: false, epoch: 0, next: null, markets: [], pendingLaunches: [], featuredPlite: null, registry: null, reviewProof: null, reviewSchemaReady: false, platformStats: null };
 function status(message, href) {
   $('status-text').textContent = message;
   $('status-link').hidden = !href;
@@ -1363,7 +1363,47 @@ function renderHomeMarkets() {
       : 'No invented activity is displayed.';
 }
 
+async function renderPendingSolanaLaunches() {
+  const existing =
+    document.getElementById(
+      'solana-pending-launch-section'
+    );
+
+  if (
+    state.chain !==
+      'solana'
+  ) {
+    existing?.remove();
+    return;
+  }
+
+  const module =
+    await import(
+      './solana-launch-ui.js'
+    );
+
+  module.renderPendingLaunches({
+    anchor:
+      $('markets'),
+    launches:
+      state.pendingLaunches,
+    adapter:
+      state.adapter,
+    wallet:
+      state.wallet,
+    transactionsEnabled:
+      transactionConfigEnabled(
+        state.config,
+        'solana'
+      ),
+    run:
+      action,
+    status
+  });
+}
+
 function renderDiscovery() {
+  void renderPendingSolanaLaunches();
   $('markets').replaceChildren();
 
   const visible = visibleMarkets();
@@ -1380,7 +1420,9 @@ function renderDiscovery() {
         ? 'No verified markets match the current search.'
         : state.markets.length
           ? 'No loaded markets match your search.'
-          : 'No markets loaded. Refresh live to read the Base factory.';
+          : state.chain === 'solana'
+            ? 'No activated Solana markets yet. Free pending launches appear above.'
+            : 'No markets loaded. Refresh live to read the Base factory.';
     $('markets').append(empty);
   }
 
@@ -1412,6 +1454,24 @@ async function discover(append = false) {
   const adapter = await getAdapter();
   const result =
     await adapter.list(append ? state.next : 0);
+
+  if (
+    state.chain ===
+      'solana' &&
+    typeof adapter
+      .pendingLaunches ===
+      'function'
+  ) {
+    const pending =
+      await adapter
+        .pendingLaunches(0);
+
+    state.pendingLaunches =
+      pending.launches;
+  } else {
+    state.pendingLaunches =
+      [];
+  }
 
   try {
     state.platformStats =
@@ -1887,7 +1947,7 @@ function switchChain(chain) {
     chain === 'solana'
       ? 'protocol fees apply'
       : 'Trading fee';
-  state.chain = chain; state.epoch++; state.adapter = null; state.wallet = null; state.market = null; state.next = null; state.markets=[]; state.registry=null; state.platformStats=null;
+  state.chain = chain; state.epoch++; state.adapter = null; state.wallet = null; state.market = null; state.next = null; state.markets=[]; state.pendingLaunches=[]; state.registry=null; state.platformStats=null;
   $('create-network').textContent =
     chain === 'base'
       ? 'Base Mainnet · ETH pair'

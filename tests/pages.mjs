@@ -1153,7 +1153,11 @@ try {
     const adapterChunks =
       chunks.filter(
         chunk =>
-          !/^solana-pump-(?!loader-)/.test(chunk)
+          /^solana-tiny-/.test(chunk) ||
+          /^solana-pump-loader-/.test(chunk) ||
+          /^base-(?!v[23]-)/.test(chunk) ||
+          /^base-v2-/.test(chunk) ||
+          /^base-v3-/.test(chunk)
       );
 
     for (const chunk of adapterChunks) {

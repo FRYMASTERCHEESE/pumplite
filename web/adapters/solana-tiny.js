@@ -712,6 +712,84 @@ export function adapter(
     return signature;
   }
 
+  async function finalizeLaunchRegistry(
+    launchId,
+    signature,
+    expected
+  ) {
+    const url =
+      new URL(
+        config.rpcUrl
+      );
+
+    url.pathname =
+      "/launch/finalize";
+
+    url.search = "";
+    url.hash = "";
+
+    const response =
+      await boundedFetch(
+        url,
+        {
+          method:
+            "POST",
+          headers: {
+            "Content-Type":
+              "application/json"
+          },
+          body:
+            JSON.stringify({
+              launchId,
+              signature
+            })
+        },
+        {
+          maxBytes:
+            8192
+        }
+      );
+
+    let reply;
+
+    try {
+      reply =
+        await response.json();
+    } catch {
+      throw Error(
+        "PumpLite activation finalizer returned invalid JSON"
+      );
+    }
+
+    const activation =
+      reply?.activation;
+
+    if (
+      !response.ok ||
+      reply?.ok !== true ||
+      activation?.launchId !==
+        launchId ||
+      activation?.mint !==
+        expected.mint ||
+      activation?.market !==
+        expected.market ||
+      activation?.buyer !==
+        expected.buyer ||
+      activation?.transactionSignature !==
+        signature ||
+      !Number.isSafeInteger(
+        activation?.slot
+      )
+    ) {
+      throw Error(
+        reply?.error ||
+        "PumpLite activation finalization failed"
+      );
+    }
+
+    return activation;
+  }
+
   async function market(id) {
     await network();
 
@@ -1239,6 +1317,160 @@ export function adapter(
           ),
         next: page.next
       };
+    },
+
+    async pendingLaunches(
+      offset = 0
+    ) {
+      await network();
+
+      if (
+        !Number.isSafeInteger(
+          offset
+        ) ||
+        offset < 0 ||
+        offset % 8 !== 0
+      ) {
+        throw Error(
+          "Invalid pending launch page"
+        );
+      }
+
+      const url =
+        new URL(
+          config.rpcUrl
+        );
+
+      url.pathname =
+        "/launch/pending/" +
+        offset +
+        ".json";
+
+      url.search = "";
+      url.hash = "";
+
+      const response =
+        await boundedFetch(
+          url,
+          {},
+          {
+            maxBytes:
+              16_384
+          }
+        );
+
+      let page;
+
+      try {
+        page =
+          await response.json();
+      } catch {
+        throw Error(
+          "PumpLite pending launch registry returned invalid JSON"
+        );
+      }
+
+      if (
+        !response.ok ||
+        page?.schemaVersion !== 1 ||
+        page?.programId !==
+          program().toBase58() ||
+        !Array.isArray(
+          page.launches
+        ) ||
+        page.launches.length > 8 ||
+        (
+          page.next !== null &&
+          (
+            page.next !==
+              offset + 8 ||
+            page.launches.length !==
+              8
+          )
+        )
+      ) {
+        throw Error(
+          "Invalid PumpLite pending launch page"
+        );
+      }
+
+      for (
+        const launch of
+          page.launches
+      ) {
+        if (
+          typeof launch?.id !==
+            "string" ||
+          !/^[0-9a-f]{64}$/
+            .test(launch.id) ||
+          launch?.programId !==
+            program().toBase58() ||
+          launch?.status !==
+            "pending" ||
+          typeof launch?.creator !==
+            "string" ||
+          typeof launch?.name !==
+            "string" ||
+          typeof launch?.symbol !==
+            "string"
+        ) {
+          throw Error(
+            "Invalid PumpLite pending launch record"
+          );
+        }
+      }
+
+      return {
+        launches:
+          page.launches,
+        next:
+          page.next
+      };
+    },
+
+    async retryFinalizeFirstBuyer({
+      launchId
+    }) {
+      const buyer =
+        await wallet();
+
+      const local =
+        localFirstBuyer.get(
+          launchId
+        );
+
+      if (
+        !local?.submitted ||
+        local.submitted.buyer !==
+          buyer.toBase58()
+      ) {
+        throw Error(
+          "No submitted PumpLite activation is available in this browser"
+        );
+      }
+
+      const activation =
+        await finalizeLaunchRegistry(
+          launchId,
+          local.submitted
+            .signature,
+          {
+            mint:
+              local.submitted
+                .mint,
+            market:
+              local.submitted
+                .market,
+            buyer:
+              local.submitted
+                .buyer
+          }
+        );
+
+      local.finalized =
+        activation;
+
+      return activation;
     },
 
     market,

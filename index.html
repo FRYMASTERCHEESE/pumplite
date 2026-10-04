@@ -17,7 +17,7 @@
 <link rel="alternate" type="application/json" title="PumpLite official token list" href="./token-list.json">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="PumpLite">
-<meta property="og:title" content="PumpLite · Base Mainnet token launchpad">
+<meta property="og:title" content="PumpLite Ã‚Â· Base Mainnet token launchpad">
 <meta property="og:description" content="Launch and trade Base tokens with wallet-signed transactions and transparent on-chain bonding-curve data.">
 <meta property="og:url" content="https://frymastercheese.github.io/pumplite/">
 <meta property="og:image" content="https://frymastercheese.github.io/pumplite/assets/plite-logo-200.png">
@@ -26,7 +26,7 @@
 <meta name="twitter:description" content="Launch and trade Base tokens with transparent on-chain market data and official PLITE verification evidence.">
 <meta name="twitter:image" content="https://frymastercheese.github.io/pumplite/assets/plite-logo-200.png">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://pumplite-rpc.coreyedge123.workers.dev https://solana-rpc.publicnode.com wss://solana-rpc.publicnode.com https://mainnet.base.org https://base-rpc.publicnode.com https://api.coinbase.com; object-src 'none'; base-uri 'none'; form-action 'none'">
-<title>PumpLite · Token launches, kept simple</title>
+<title>PumpLite Ã‚Â· Token launches, kept simple</title>
 <link rel="stylesheet" href="./assets/styles.css">
 <script defer src="./assets/phantom-diagnostic.js"></script>
 <script type="module" src="./assets/app.js?boot=20261003pump3"></script>
@@ -34,7 +34,7 @@
 <body>
 <a class="skip-link" id="skip-content" href="#main-content">Skip to main content</a>
 <header>
-  <a class="brand" href="#" aria-label="PumpLite home"><span class="mark" aria-hidden="true">↗</span> PumpLite<span class="beta">BASE MAINNET</span></a>
+  <a class="brand" href="#" aria-label="PumpLite home"><span class="mark" aria-hidden="true">Ã¢â€ â€”</span> PumpLite<span class="beta">BASE MAINNET</span></a>
   <div class="header-controls">
     <label class="sr-only" for="chain">Network</label>
     <select id="chain"><option value="solana">Solana Mainnet</option><option value="base">Base Mainnet</option></select>
@@ -52,7 +52,7 @@
     <p id="phantom-tap">Tap monitor loaded. No wallet request sent.</p>
     <p id="wallet-diagnostic">Wallet diagnostics are available if a connection problem occurs.</p>
   </div>
-  <div class="notice" id="deployment" role="status">Loading verified Base Mainnet configuration… Trading remains disabled until verification completes.</div>
+  <div class="notice" id="deployment" role="status">Loading verified Base Mainnet configurationÃ¢â‚¬Â¦ Trading remains disabled until verification completes.</div>
   <section id="home">
     <nav class="page-nav home-page-tabs" aria-label="PumpLite pages">
       <button type="button" id="show-home" class="outline" aria-pressed="true">Home</button>
@@ -135,7 +135,7 @@
       </section>
       <section class="panel launch" id="create-section" tabindex="-1" hidden>
         <p class="eyebrow">CREATE ON PUMPLITE</p><h2>Create your token</h2>
-        <p id="create-network" class="network-pill">Base Mainnet · ETH pair</p>
+        <p id="create-network" class="network-pill">Base Mainnet Ã‚Â· ETH pair</p>
         <div class="launch-facts"><span><b id="create-supply-fact">1 billion</b><small id="create-supply-mode-fact">Fixed supply</small></span><span><b>0%</b>PumpLite creation fee</span><span><b id="create-trading-fee">0.25%</b><small id="create-trading-fee-label">Trading fee</small></span></div>
         <p id="create-supply-help" class="fine">No creator allocation. All supply starts in the market vault. No future minting.</p>
 
@@ -197,7 +197,7 @@
           <fieldset><legend><span>02</span> Make it recognizable</legend>
           <div class="media-picker"><img id="image-preview" alt="Your selected token image" width="96" height="96" hidden><div><label for="metadata-image">Token image</label><input id="metadata-image" type="file" accept="image/png,image/jpeg,image/webp"><p class="fine">PNG, JPEG or WebP, up to 12 MB. Prepared locally as a plain PNG, up to 1024px and 512 KiB.</p></div></div>
           <p id="media-status" class="fine" role="status">Choose your own image. Nothing uploads until you approve publishing.</p>
-          <label for="banner-uri">Banner URI <span class="muted">optional</span></label><input id="banner-uri" placeholder="ipfs://… or https://…" maxlength="500" autocomplete="off">
+          <label for="banner-uri">Banner URI <span class="muted">optional</span></label><input id="banner-uri" placeholder="ipfs://Ã¢â‚¬Â¦ or https://Ã¢â‚¬Â¦" maxlength="500" autocomplete="off">
           <p class="fine">Use a banner already pinned to persistent storage. Banner file uploads are not part of the current service. Remote media is not fetched automatically.</p>
           </fieldset>
           <fieldset><legend><span>03</span> Help people find you</legend>
@@ -212,8 +212,8 @@
           <p id="metadata-upload-help" class="fine">Wallet-authorized publishing is separate from the paid creation transaction.</p>
           <p id="metadata-publish-status" class="fine" role="status" aria-live="polite">Ready when your image and wallet are connected.</p>
           <details id="advanced-metadata"><summary>Metadata URI and local JSON download</summary>
-          <label for="uri">Published metadata URI</label><input id="uri" placeholder="https://… or ipfs://…" maxlength="200" autocomplete="off">
-          <label for="image-uri">Published image URI</label><input id="image-uri" placeholder="ipfs://… or https://…" maxlength="500">
+          <label for="uri">Published metadata URI</label><input id="uri" placeholder="https://Ã¢â‚¬Â¦ or ipfs://Ã¢â‚¬Â¦" maxlength="200" autocomplete="off">
+          <label for="image-uri">Published image URI</label><input id="image-uri" placeholder="ipfs://Ã¢â‚¬Â¦ or https://Ã¢â‚¬Â¦" maxlength="500">
           <button id="download-metadata" type="button" class="outline full">Copy metadata JSON</button>
           <p class="fine">Mobile wallet browsers often block file downloads. This button copies the complete metadata JSON instead. You can paste it into a file later if you need the manual backup.</p></details>
           <p id="creation-review" class="fine">Check the name, ticker and metadata first. PumpLite charges 0% to create; Base network gas still applies. If PumpLite does not yet have wallet access, tapping Create coin will request access to the same wallet you are using.</p>
@@ -245,8 +245,8 @@
     </section>
   </section>
   <section id="market-page" hidden>
-    <a id="back" class="back" href="#">← All markets</a>
-    <div class="section-title market-heading"><div><p class="eyebrow" id="market-symbol">TOKEN MARKET</p><h1 id="market-name">Loading market…</h1></div><button id="refresh-market" class="outline">Refresh market</button></div>
+    <a id="back" class="back" href="#">Ã¢â€ Â All markets</a>
+    <div class="section-title market-heading"><div><p class="eyebrow" id="market-symbol">TOKEN MARKET</p><h1 id="market-name">Loading marketÃ¢â‚¬Â¦</h1></div><button id="refresh-market" class="outline">Refresh market</button></div>
     <div id="market-badges" class="badges"></div>
     <p id="market-source" class="muted"></p>
       <p id="market-metadata" class="fine"></p>
@@ -558,7 +558,7 @@
 
   <dialog id="initial-buy-dialog" class="initial-buy-dialog" aria-labelledby="initial-buy-title">
     <form id="initial-buy-form">
-      <button id="initial-buy-close" class="dialog-close" type="button" aria-label="Close">×</button>
+      <button id="initial-buy-close" class="dialog-close" type="button" aria-label="Close">Ãƒâ€”</button>
       <p class="eyebrow">OPTIONAL FIRST BUY</p>
       <h2 id="initial-buy-title">How much <span id="initial-buy-symbol">TOKEN</span> do you want to buy?</h2>
       <p class="muted">Use 0 ETH to create only. Enter more than 0 ETH if you also want your same connected wallet to buy the new token immediately after creation.</p>
@@ -576,7 +576,7 @@
           <option value="USD">United States dollars (USD)</option>
         </select>
       </div>
-      <p id="initial-buy-fiat-estimate" class="fine" role="status">0 ETH · creation only. Base gas still applies.</p>
+      <p id="initial-buy-fiat-estimate" class="fine" role="status">0 ETH Ã‚Â· creation only. Base gas still applies.</p>
       <p id="initial-buy-flow-status" class="fine" role="status">Nothing has been submitted yet.</p>
 
       <div class="create-fee-note">
@@ -589,7 +589,7 @@
     </form>
   </dialog>
 
-  <div id="status" class="status" role="status" aria-live="polite"><span id="status-text">No wallet connected. No transactions submitted.</span><a id="status-link" target="_blank" rel="noopener noreferrer" hidden>View transaction ↗</a></div>
+  <div id="status" class="status" role="status" aria-live="polite"><span id="status-text">No wallet connected. No transactions submitted.</span><a id="status-link" target="_blank" rel="noopener noreferrer" hidden>View transaction Ã¢â€ â€”</a></div>
 </main>
 <footer><b>PumpLite</b><span>Solana + Base - Mainnet only</span><p><a href="./terms.html">Terms</a> | <a href="./privacy.html">Privacy</a> | <a href="./risk.html">Risk disclosure</a> | <a href="./verification.html">Verification</a> | <a href="./status.html">Status</a> | <a href="./.well-known/security.txt">Security</a></p><p>Official project contact: <a href="mailto:coreyedge123@gmail.com">coreyedge123@gmail.com</a></p><p>Tokens can lose all value. Wallet approval spends real funds. The current contracts have not received an independent third-party smart-contract audit; availability depends on the selected network deployment.</p></footer>
 </body>

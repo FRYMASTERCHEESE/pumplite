@@ -27,7 +27,7 @@ try {
     assert.equal(await page.locator('body').evaluate(el => el.scrollWidth <= innerWidth), true);
     assert.equal(await page.locator('#chain option').count(), 2);
     await page.locator('#connect').click();
-    await page.waitForFunction(() => document.querySelector('#status-text').textContent.includes('No compatible Solana provider'));
+    await page.waitForFunction(() => document.querySelector('#status-text').textContent.toLowerCase().includes('no compatible solana provider'));
     await page.selectOption('#chain', 'base');
     assert.match(await page.locator('#deployment').textContent(), /Base Mainnet.*live configuration/);
     await page.locator('#connect').click();

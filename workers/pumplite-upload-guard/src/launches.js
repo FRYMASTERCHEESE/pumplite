@@ -15,10 +15,137 @@ const RESERVATION_PREFIX =
   "version=1\n";
 
 const RESERVATION_TTL_MS =
-  120_000;
+  300_000;
 
 const enc =
   new TextEncoder();
+
+const GENESIS_HASH =
+  "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d";
+
+const PDA_MARKER =
+  "ProgramDerivedAddress";
+
+function encodeBase58(bytes) {
+  const alphabet =
+    "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+
+  let zeros = 0;
+
+  while (
+    zeros < bytes.length &&
+    bytes[zeros] === 0
+  ) {
+    zeros++;
+  }
+
+  let number = 0n;
+
+  for (const byte of bytes) {
+    number =
+      number * 256n +
+      BigInt(byte);
+  }
+
+  let body = "";
+
+  while (number > 0n) {
+    const digit =
+      Number(
+        number % 58n
+      );
+
+    body =
+      alphabet[digit] +
+      body;
+
+    number /= 58n;
+  }
+
+  return (
+    "1".repeat(zeros) +
+    body
+  );
+}
+
+export async function
+derivePumpLiteMarketAddress(
+  mint
+) {
+  const mintBytes =
+    decodeBase58(mint);
+
+  const programBytes =
+    decodeBase58(PROGRAM_ID);
+
+  if (
+    !mintBytes ||
+    mintBytes.length !== 32 ||
+    !programBytes ||
+    programBytes.length !== 32
+  ) {
+    fail(
+      "Invalid reservation mint"
+    );
+  }
+
+  const seed =
+    enc.encode("market");
+
+  const marker =
+    enc.encode(
+      PDA_MARKER
+    );
+
+  const all =
+    new Uint8Array(
+      seed.length +
+      mintBytes.length +
+      1 +
+      programBytes.length +
+      marker.length
+    );
+
+  let offset = 0;
+
+  all.set(
+    seed,
+    offset
+  );
+  offset += seed.length;
+
+  all.set(
+    mintBytes,
+    offset
+  );
+  offset += mintBytes.length;
+
+  all[offset] = 255;
+  offset++;
+
+  all.set(
+    programBytes,
+    offset
+  );
+  offset += programBytes.length;
+
+  all.set(
+    marker,
+    offset
+  );
+
+  const digest =
+    new Uint8Array(
+      await crypto.subtle.digest(
+        "SHA-256",
+        all
+      )
+    );
+
+  return encodeBase58(
+    digest
+  );
+}
 
 export const LAUNCH_SCHEMA = `
 CREATE TABLE IF NOT EXISTS solana_launches (
@@ -62,6 +189,22 @@ CREATE INDEX IF NOT EXISTS
   solana_launch_reservations_expiry
 ON solana_launch_reservations(
   expires_at
+);
+
+CREATE TABLE IF NOT EXISTS solana_launch_activations (
+  launch_id TEXT PRIMARY KEY,
+  mint TEXT NOT NULL UNIQUE,
+  market TEXT NOT NULL UNIQUE,
+  buyer TEXT NOT NULL,
+  transaction_signature TEXT NOT NULL UNIQUE,
+  slot INTEGER NOT NULL,
+  activated_at INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS
+  solana_launch_activations_time
+ON solana_launch_activations(
+  activated_at DESC
 );
 `;
 
@@ -469,6 +612,20 @@ validateBuyerReservation(
   ) {
     fail(
       "Invalid reservation"
+    );
+  }
+
+  const expectedMarket =
+    await derivePumpLiteMarketAddress(
+      record.mint
+    );
+
+  if (
+    record.market !==
+    expectedMarket
+  ) {
+    fail(
+      "Reservation market mismatch"
     );
   }
 
@@ -1010,6 +1167,400 @@ function reserveLaunch(
     );
 }
 
+
+function loadActivation(
+  sql,
+  launchId
+) {
+  return one(
+    sql.exec(
+      `SELECT
+         launch_id,
+         mint,
+         market,
+         buyer,
+         transaction_signature,
+         slot,
+         activated_at
+       FROM solana_launch_activations
+       WHERE launch_id = ?`,
+      launchId
+    )
+  );
+}
+
+function publicActivation(
+  row
+) {
+  return {
+    launchId:
+      String(
+        row.launch_id
+      ),
+
+    mint:
+      String(row.mint),
+
+    market:
+      String(row.market),
+
+    buyer:
+      String(row.buyer),
+
+    transactionSignature:
+      String(
+        row.transaction_signature
+      ),
+
+    slot:
+      Number(row.slot),
+
+    activatedAt:
+      Number(
+        row.activated_at
+      )
+  };
+}
+
+function validPublicKey(
+  value
+) {
+  if (
+    typeof value !==
+      "string"
+  ) {
+    return false;
+  }
+
+  const bytes =
+    decodeBase58(value);
+
+  return Boolean(
+    bytes &&
+    bytes.length === 32
+  );
+}
+
+function finalizeVerified(
+  ctx,
+  body,
+  now
+) {
+  if (
+    !body ||
+    typeof body !== "object" ||
+    Array.isArray(body) ||
+    body.version !== 1 ||
+    body.chain !== "solana" ||
+    body.programId !== PROGRAM_ID ||
+    typeof body.launchId !== "string" ||
+    !/^[0-9a-f]{64}$/
+      .test(body.launchId) ||
+    !validPublicKey(
+      body.mint
+    ) ||
+    !validPublicKey(
+      body.market
+    ) ||
+    !validPublicKey(
+      body.buyer
+    ) ||
+    typeof body.transactionSignature !==
+      "string" ||
+    decodeBase58(
+      body.transactionSignature
+    )?.length !== 64 ||
+    !Number.isSafeInteger(
+      body.slot
+    ) ||
+    body.slot < 0
+  ) {
+    fail(
+      "Invalid verified activation"
+    );
+  }
+
+  return ctx.storage
+    .transactionSync(
+      () => {
+        const sql =
+          ctx.storage.sql;
+
+        const launch =
+          loadLaunch(
+            sql,
+            body.launchId
+          );
+
+        if (!launch) {
+          return {
+            missing: true
+          };
+        }
+
+        const existing =
+          loadActivation(
+            sql,
+            body.launchId
+          );
+
+        if (existing) {
+          const same =
+            existing.mint ===
+              body.mint &&
+            existing.market ===
+              body.market &&
+            existing.buyer ===
+              body.buyer &&
+            existing.transaction_signature ===
+              body.transactionSignature;
+
+          return same
+            ? {
+                ok: true,
+                activation:
+                  publicActivation(
+                    existing
+                  )
+              }
+            : {
+                conflict: true
+              };
+        }
+
+        if (
+          launch.status !==
+            "pending"
+        ) {
+          return {
+            conflict: true
+          };
+        }
+
+        const reservation =
+          loadReservation(
+            sql,
+            body.launchId
+          );
+
+        if (
+          !reservation ||
+          reservation.mint !==
+            body.mint ||
+          reservation.market !==
+            body.market ||
+          reservation.buyer !==
+            body.buyer
+        ) {
+          return {
+            conflict: true
+          };
+        }
+
+        try {
+          sql.exec(
+            `INSERT INTO
+               solana_launch_activations
+               (
+                 launch_id,
+                 mint,
+                 market,
+                 buyer,
+                 transaction_signature,
+                 slot,
+                 activated_at
+               )
+             VALUES
+               (?, ?, ?, ?, ?, ?, ?)`,
+            body.launchId,
+            body.mint,
+            body.market,
+            body.buyer,
+            body.transactionSignature,
+            body.slot,
+            now
+          );
+        } catch {
+          return {
+            conflict: true
+          };
+        }
+
+        sql.exec(
+          `UPDATE solana_launches
+           SET status = 'activated'
+           WHERE id = ?`,
+          body.launchId
+        );
+
+        sql.exec(
+          `UPDATE solana_launch_reservations
+           SET status = 'completed'
+           WHERE launch_id = ?`,
+          body.launchId
+        );
+
+        return {
+          ok: true,
+          activation:
+            publicActivation(
+              loadActivation(
+                sql,
+                body.launchId
+              )
+            )
+        };
+      }
+    );
+}
+
+function parseActivatedOffset(
+  pathname
+) {
+  const match =
+    /^\/launch\/activated\/([0-9]+)\.json$/
+      .exec(pathname);
+
+  if (!match) {
+    return null;
+  }
+
+  const offset =
+    Number(match[1]);
+
+  if (
+    !Number.isSafeInteger(
+      offset
+    ) ||
+    offset < 0 ||
+    offset % 8 !== 0 ||
+    offset > 100_000
+  ) {
+    return null;
+  }
+
+  return offset;
+}
+
+function activatedPage(
+  ctx,
+  offset
+) {
+  const sql =
+    ctx.storage.sql;
+
+  const rows =
+    sql.exec(
+      `SELECT
+         a.launch_id,
+         a.mint,
+         a.market,
+         a.slot,
+         a.activated_at
+       FROM solana_launch_activations a
+       JOIN solana_launches l
+         ON l.id = a.launch_id
+       WHERE l.status = 'activated'
+       ORDER BY
+         a.activated_at DESC,
+         a.launch_id ASC
+       LIMIT 8 OFFSET ?`,
+      offset
+    ).toArray();
+
+  const slotRow =
+    one(
+      sql.exec(
+        `SELECT
+           COALESCE(
+             MAX(slot),
+             0
+           ) AS slot
+         FROM solana_launch_activations`
+      )
+    );
+
+  return {
+    schemaVersion: 1,
+    programId:
+      PROGRAM_ID,
+
+    genesisHash:
+      GENESIS_HASH,
+
+    slot:
+      Number(
+        slotRow?.slot || 0
+      ),
+
+    markets:
+      rows.map(
+        row =>
+          String(row.mint)
+      ),
+
+    next:
+      rows.length === 8
+        ? offset + 8
+        : null
+  };
+}
+
+function finalizeContext(
+  ctx,
+  launchId
+) {
+  const sql =
+    ctx.storage.sql;
+
+  const launch =
+    loadLaunch(
+      sql,
+      launchId
+    );
+
+  if (!launch) {
+    return null;
+  }
+
+  const reservation =
+    loadReservation(
+      sql,
+      launchId
+    );
+
+  const activation =
+    loadActivation(
+      sql,
+      launchId
+    );
+
+  return {
+    schemaVersion: 1,
+    programId:
+      PROGRAM_ID,
+
+    launch:
+      publicLaunch(
+        launch
+      ),
+
+    reservation:
+      reservation
+        ? publicReservation(
+            reservation
+          )
+        : null,
+
+    activation:
+      activation
+        ? publicActivation(
+            activation
+          )
+        : null
+  };
+}
+
 function parseOffset(
   pathname
 ) {
@@ -1090,12 +1641,24 @@ export function isLaunchRoute(
         pathname ===
           "/launch/register" ||
         pathname ===
-          "/launch/reserve"
+          "/launch/reserve" ||
+        pathname ===
+          "/launch/finalize-verified"
       )
     ) ||
     (
       method === "GET" &&
       /^\/launch\/pending\/[0-9]+\.json$/
+        .test(pathname)
+    ) ||
+    (
+      method === "GET" &&
+      /^\/launch\/activated\/[0-9]+\.json$/
+        .test(pathname)
+    ) ||
+    (
+      method === "GET" &&
+      /^\/launch\/finalize-context\/[0-9a-f]{64}\.json$/
         .test(pathname)
     ) ||
     (
@@ -1116,6 +1679,96 @@ handleLaunchRequest(
     new URL(
       request.url
     );
+
+  if (
+    request.method === "GET"
+  ) {
+    const activatedOffset =
+      parseActivatedOffset(
+        url.pathname
+      );
+
+    if (
+      activatedOffset !==
+        null
+    ) {
+      return json(
+        activatedPage(
+          ctx,
+          activatedOffset
+        )
+      );
+    }
+
+    const contextMatch =
+      /^\/launch\/finalize-context\/([0-9a-f]{64})\.json$/
+        .exec(
+          url.pathname
+        );
+
+    if (contextMatch) {
+      const context =
+        finalizeContext(
+          ctx,
+          contextMatch[1]
+        );
+
+      if (!context) {
+        return json(
+          {
+            error:
+              "Launch not found"
+          },
+          404
+        );
+      }
+
+      return json(
+        context
+      );
+    }
+  }
+
+  if (
+    request.method === "POST" &&
+    url.pathname ===
+      "/launch/finalize-verified"
+  ) {
+    const result =
+      finalizeVerified(
+        ctx,
+        await readBody(
+          request
+        ),
+        now
+      );
+
+    if (result.missing) {
+      return json(
+        {
+          error:
+            "Launch not found"
+        },
+        404
+      );
+    }
+
+    if (result.conflict) {
+      return json(
+        {
+          error:
+            "Activation conflicts with canonical PumpLite launch"
+        },
+        409
+      );
+    }
+
+    return json({
+      ok: true,
+      activation:
+        result.activation
+    });
+  }
 
   if (
     request.method === "POST" &&

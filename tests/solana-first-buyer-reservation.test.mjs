@@ -8,7 +8,8 @@ import {
 } from 'node:crypto';
 
 import {
-  validateBuyerReservation
+  validateBuyerReservation,
+  derivePumpLiteMarketAddress
 } from '../workers/pumplite-upload-guard/src/launches.js';
 
 if (!globalThis.crypto) {
@@ -140,6 +141,11 @@ test(
       signedAt:
         now
     };
+
+    record.market =
+      await derivePumpLiteMarketAddress(
+        record.mint
+      );
 
     const message =
       'PumpLite First Buyer Reservation\n' +
