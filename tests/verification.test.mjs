@@ -127,6 +127,6 @@ test('shipped registry is valid and reviewed Base + PumpLite Mainnet deployments
 
   assert.equal(
     live.solana.transactionsEnabled,
-    false
+    true
   );
 });

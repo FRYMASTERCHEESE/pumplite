@@ -13,7 +13,7 @@
     "treasury": "BNpFPPuy2h12dryy4dayemjA4YS17ccVaF82jBDuiwct",
     "explorer": "https://solscan.io",
     "discoveryUrl": null,
-    "transactionsEnabled": false,
+    "transactionsEnabled": true,
     "clientVersion": 5
   },
   "base": {

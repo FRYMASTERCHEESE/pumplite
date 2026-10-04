@@ -1,3 +1,4 @@
+import {verifySolanaRentBrowser} from './solana-rent-browser.mjs';
 import { verifyBrowser } from './verified-browser.mjs';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
@@ -141,6 +142,7 @@ try {
   assert.equal(chunks.filter(name => /^base-v3-/.test(name)).length, 1, 'Base V3 Classic/Mayhem bundle must exist exactly once');
   browser = await chromium.launch({ headless: true, ...(process.env.BROWSER_EXECUTABLE ? { executablePath: process.env.BROWSER_EXECUTABLE } : {}) });
   await verifyBrowser(browser,base);
+  await verifySolanaRentBrowser(browser, base);
 
   // V3 injected-wallet boot does not race wallet discovery.
   // discoverEvm performs an immediate refresh, so an already-injected

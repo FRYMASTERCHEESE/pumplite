@@ -133,7 +133,7 @@ test(
 
     assert.equal(
       config.solana.transactionsEnabled,
-      false
+      true
     );
 
     assert.equal(

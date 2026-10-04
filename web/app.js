@@ -287,6 +287,7 @@ function controls() {
   $('initial-buy-close').disabled = state.busy;
 }
 function invalidateQuote() {
+  $('solana-rent-panel').hidden=true; $('solana-rent-consent').checked=false;
   state.quote = null;
   for (const id of ['quote-output','quote-min','quote-fee','quote-support']) $(id).textContent = '—';
   $('quote-age').textContent = 'Get a current quote before signing.';
@@ -3414,11 +3415,17 @@ $('get-quote').addEventListener('click', () => action(async () => {
     [2, 3].includes(m.contractVersion)
       ? formatUnits(q.support, m.nativeDecimals, m.nativeDecimals) + ' ' + m.unit
       : '—';
+  if(state.chain==='solana'&&side==='sell'&&q.rentTopUp>0n){
+    $('solana-rent-panel').hidden=false;
+    $('solana-rent-consent').checked=false;
+    $('solana-rent-details').textContent='Additional market rent deposit: '+formatUnits(q.rentTopUp,9,9)+' SOL. Expected proceeds after this deposit: '+formatUnits(q.output-q.rentTopUp,9,9)+' SOL; minimum after deposit: '+formatUnits(min-q.rentTopUp,9,9)+' SOL, before network fees. The exact deposit is rechecked before signing; market movement may change how much is needed. Preview again if it increases.';
+    if(q.rentTopUp>=min){invalidateQuote();throw Error('Rent support would consume the minimum sale proceeds. Try a smaller partial sale.');}
+  }
   $('quote-age').textContent = 'Quoted at ' + new Date().toLocaleTimeString() + '. Valid for review for 30 seconds; chain slippage protection still applies.';
 
   if (side === 'sell') {
     void updateTradeSellDisplay(
-      Number(formatUnits(q.output, m.nativeDecimals, m.nativeDecimals))
+      Number(formatUnits(q.output-(q.rentTopUp||0n), m.nativeDecimals, m.nativeDecimals))
     );
   }
 }));
@@ -3428,13 +3435,16 @@ $('trade-form').addEventListener('submit', e => { e.preventDefault(); action(asy
   if (!q || Date.now() - q.at > 30_000 || q.market !== state.market?.id || q.chain !== state.chain) {
     invalidateQuote(); throw Error('Quote expired. Request a fresh quote.');
   }
+  const rentConsent={accepted:$('solana-rent-consent').checked, maximum:q.rentTopUp||0n};
+  if(state.chain==='solana'&&q.rentTopUp>0n&&!rentConsent.accepted)throw Error('Accept the disclosed rent support before reviewing this sale in Phantom.');
   invalidateQuote();
   await (await getAdapter()).trade(
     state.market,
     q.side,
     q.amount,
     q.min,
-    q.slippagePercent
+    q.slippagePercent,
+    rentConsent
   );
   await refreshMarketAfterAction(state.market.id);
 }); });

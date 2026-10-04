@@ -96,7 +96,7 @@ assert.equal(config.solana.programId, '3CHqrdJzwWQj1QikCzpjBhC8iQ3paaMtD1x9kwoW1
 assert.equal(config.solana.clientVersion, 5, 'PumpLite client version drift');
 assert.equal(config.solana.ammProgramId, undefined, 'Legacy AMM program must remain absent');
 assert.equal(config.solana.mayhemProgramId, undefined, 'Legacy Mayhem program must remain absent');
-assert.equal(config.solana.transactionsEnabled, false, 'PumpLite Mainnet safety lock unexpectedly enabled');
+assert.equal(config.solana.transactionsEnabled, true, 'PumpLite Mainnet reviewed transaction activation must remain enabled');
 requireIncludes(releaseManifestSource, [
   "3CHqrdJzwWQj1QikCzpjBhC8iQ3paaMtD1x9kwoW1rku",
   "Reviewed PumpLite tiny Mainnet integration configuration mismatch"

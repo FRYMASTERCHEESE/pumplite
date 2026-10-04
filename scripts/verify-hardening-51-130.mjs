@@ -160,8 +160,8 @@ assert.equal(config.solana.mayhemProgramId, undefined);
 pass(68, 'reviewed PumpLite tiny Mainnet program identity');
 
 // 69
-assert.equal(config.solana.transactionsEnabled, false);
-pass(69, 'reviewed PumpLite Mainnet transaction safety lock');
+assert.equal(config.solana.transactionsEnabled, true);
+pass(69, 'reviewed PumpLite Mainnet transaction activation');
 
 // 70
 assert.match(config.solana.treasury, /^[1-9A-HJ-NP-Za-km-z]{32,44}$/);

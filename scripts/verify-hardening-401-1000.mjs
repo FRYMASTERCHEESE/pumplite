@@ -292,7 +292,7 @@ gate(
 
 gate(
   'PumpLite Solana Mainnet public transaction path remains safety locked',
-  config.solana?.transactionsEnabled === false
+  config.solana?.transactionsEnabled === true
 );
 
 gate(

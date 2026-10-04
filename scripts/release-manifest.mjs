@@ -26,7 +26,7 @@ if('transactionsEnabled' in config)throw Error('Legacy global transaction switch
 if(
  config.solana.protocol!=='tiny' ||
  config.solana.programId!=='3CHqrdJzwWQj1QikCzpjBhC8iQ3paaMtD1x9kwoW1rku' ||
- config.solana.transactionsEnabled!==false ||
+ config.solana.transactionsEnabled!==true ||
  config.solana.genesisHash!=='5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d' ||
  config.solana.clientVersion!==5 ||
  config.solana.ammProgramId!==undefined ||

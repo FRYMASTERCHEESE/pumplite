@@ -49,7 +49,7 @@ test(
 
     assert.equal(
       current.solana.transactionsEnabled,
-      false
+      true
     );
 
     assert.equal(
@@ -65,7 +65,7 @@ test(
         current,
         'solana'
       ),
-      false
+      true
     );
 
     assert.equal(

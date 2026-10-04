@@ -73,7 +73,7 @@ test('tiny builder is the reviewed PumpLite production route', async () => {
 
   assert.equal(
     config.solana.transactionsEnabled,
-    false
+      true
   );
 });
 

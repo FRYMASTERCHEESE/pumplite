@@ -36,6 +36,8 @@ test(
 
     let submitted = 0;
     let simulated = 0;
+    let signedCount=0, preflightError=false;
+    const signatureChecks=[];
 
     const provider = {
       publicKey:
@@ -49,6 +51,7 @@ test(
       },
 
       async signTransaction(tx) {
+        signedCount++;
         /*
          * Mimic the behavior observed from real Phantom:
          *
@@ -152,7 +155,7 @@ test(
          */
         this._rpcRequest =
           async (
-            method
+            method, params
           ) => {
             assert.equal(
               method,
@@ -160,11 +163,12 @@ test(
             );
 
             simulated++;
+            signatureChecks.push(params[1].sigVerify);
 
             return {
               result: {
                 value: {
-                  err: null,
+                  err: preflightError ? {InsufficientFundsForRent:{account_index:4}} : null,
                   logs: []
                 }
               }
@@ -288,8 +292,8 @@ test(
 
     assert.equal(
       simulated,
-      1,
-      'exact signed transaction must be simulated'
+      2,
+      'unsigned preflight and exact signed transaction must both be simulated'
     );
 
     assert.equal(
@@ -297,5 +301,10 @@ test(
       1,
       'synthetic transaction must reach mocked submission exactly once'
     );
+    assert.deepEqual(signatureChecks,[false,true]);
+    preflightError=true;
+    await assert.rejects(client.create({name:'Blocked',symbol:'BLOCK',uri:'https://example.invalid/blocked.json'}),/Pre-sign simulation failed/);
+    assert.equal(signedCount,1,'failed preflight must not request another wallet signature');
+    assert.equal(submitted,1,'failed preflight must not broadcast');
   }
 );

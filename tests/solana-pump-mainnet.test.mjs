@@ -56,7 +56,7 @@ test(
         config,
         'solana'
       ),
-      false
+      true
     );
   }
 );

@@ -17,7 +17,7 @@ test(
 
     assert.equal(
       config.solana.transactionsEnabled,
-      false
+      true
     );
 
     const source =

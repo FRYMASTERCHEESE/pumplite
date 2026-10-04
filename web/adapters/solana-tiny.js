@@ -1,3 +1,4 @@
+import { rentSupport, requireRentConsent } from '../solana-rent.js';
 import {
   Connection,
   PublicKey,
@@ -377,6 +378,8 @@ export function adapter(
         })
       );
 
+    const preview = await writeConnection._rpcRequest('simulateTransaction', [tx.serialize({requireAllSignatures:false,verifySignatures:false}).toString('base64'), {encoding:'base64',sigVerify:false,replaceRecentBlockhash:true,commitment:'confirmed'}]);
+    if(preview.error || !preview.result?.value || preview.result.value.err !== null) throw Error('Pre-sign simulation failed: '+JSON.stringify(preview.error || preview.result?.value?.err || 'missing response'));
     notify(
       'Review and approve the PumpLite transaction in Phantom.'
     );
@@ -1643,10 +1646,10 @@ export function adapter(
         );
       }
 
-      return {
-        output,
-        fee
-      };
+      const rentValue = await connection.getMinimumBalanceForRentExemption(0, 'confirmed');
+      if(!Number.isSafeInteger(rentValue)||rentValue<0)throw Error('Invalid Mainnet rent quote');
+      const rentTopUp = rentSupport(native, gross, BigInt(rentValue));
+      return { output, fee, rentTopUp, proceedsAfterRent: output-rentTopUp };
     },
 
     async createFreeDraft({
@@ -2343,7 +2346,9 @@ export function adapter(
       m,
       side,
       amount,
-      min
+      min,
+      _slippage,
+      rentConsent
     ) {
       const owner =
         await wallet();
@@ -2397,9 +2402,12 @@ export function adapter(
           min
         });
 
-      return send(
-        instructions
-      );
+      if(side==='sell') {
+        const freshQuote = await this.quote(verified, side, amount);
+        requireRentConsent(freshQuote.rentTopUp, min, rentConsent);
+        if(freshQuote.rentTopUp>0n) instructions.push(SystemProgram.transfer({fromPubkey:owner,toPubkey:marketAddress,lamports:freshQuote.rentTopUp}));
+      }
+      return send(instructions);
     }
   };
 }

@@ -46,9 +46,8 @@ test(
       );
 
     assert.equal(
-      config.solana
-        .transactionsEnabled,
-      false
+      config.solana.transactionsEnabled,
+      true
     );
 
     assert.equal(
