@@ -1,11 +1,14 @@
-import test from 'node:test';
+﻿import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   readFile
 } from 'node:fs/promises';
+import {
+  existsSync
+} from 'node:fs';
 
 test(
-  'legacy Pump compatibility is retired and tiny owns the reviewed write path',
+  'retired Pump compatibility files stay absent and tiny owns the reviewed write path',
   async () => {
     const config =
       JSON.parse(
@@ -24,12 +27,6 @@ test(
     const tiny =
       await readFile(
         'web/adapters/solana-tiny.js',
-        'utf8'
-      );
-
-    const retired =
-      await readFile(
-        'web/adapters/solana-pump.js',
         'utf8'
       );
 
@@ -56,17 +53,23 @@ test(
 
     assert.doesNotMatch(
       app,
-      /solana-pump-loader\.js/
+      /solana-pump(?:-loader)?\.js/
     );
 
-    assert.match(
-      retired,
-      /Legacy Pump compatibility is retired/
+    assert.equal(
+      existsSync(
+        'web/adapters/solana-pump.js'
+      ),
+      false,
+      'Retired Pump adapter must stay deleted'
     );
 
-    assert.doesNotMatch(
-      retired,
-      /@pump-fun|@solana\/spl-token|bn\.js/
+    assert.equal(
+      existsSync(
+        'web/adapters/solana-pump-loader.js'
+      ),
+      false,
+      'Retired Pump loader must stay deleted'
     );
 
     for (
