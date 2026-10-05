@@ -198,29 +198,29 @@ export function adapter(
     makeConnection(urls[0]);
 
   /*
-   * Keep read RPC and signed transaction RPC separate.
+   * Keep normal read fallback behavior separate from the real
+   * transaction path.
    *
-   * Production config pins rpcFallbackUrls[0] to the reviewed
-   * public Solana Mainnet endpoint. Tests may intentionally omit
-   * the fallback and use their mocked rpcUrl instead.
+   * Every write-critical step uses PumpLite's reviewed RPC worker:
+   * blockhash, rent lookup, fee lookup, pre-sign simulation,
+   * post-sign simulation, broadcast and confirmation.
+   *
+   * This prevents a Phantom-approved purchase from being stopped
+   * by a browser-blocked public Solana RPC endpoint.
    */
   const writeUrl =
-    (config.rpcFallbackUrls || [])[0] ||
     config.rpcUrl;
 
   const writeConnection =
     makeConnection(writeUrl);
 
   /*
-   * Public RPC remains available for reviewed read/preflight work.
-   *
-   * The FINAL signed PumpLite transaction is broadcast through
-   * PumpLite's own RPC worker so browser-side public RPC blocking
-   * cannot silently stop a Phantom-approved purchase.
+   * Final broadcast uses the same reviewed PumpLite RPC worker as
+   * the rest of the write-critical path.
    */
   const broadcastConnection =
     makeConnection(
-      config.rpcUrl
+      writeUrl
     );
 
   async function broadcastNetwork() {
