@@ -335,9 +335,26 @@ renderPendingLaunches({
   const saved =
     savedLaunchIds();
 
+  const orderedLaunches =
+    [...launches].sort(
+      (a, b) =>
+        Number(
+          b.registeredAt || 0
+        ) -
+        Number(
+          a.registeredAt || 0
+        )
+    );
+
+  const newestMineByIdentity =
+    new Set();
+
+  let hiddenMineDuplicates =
+    0;
+
   for (
     const launch of
-      launches
+      orderedLaunches
   ) {
     const mine =
       saved.has(
@@ -348,6 +365,34 @@ renderPendingLaunches({
         wallet ===
           launch.creator
       );
+
+    if (mine) {
+      const identity =
+        [
+          String(
+            launch.creator || ''
+          ),
+          String(
+            launch.name || ''
+          ).toLowerCase(),
+          String(
+            launch.symbol || ''
+          ).toLowerCase()
+        ].join('|');
+
+      if (
+        newestMineByIdentity.has(
+          identity
+        )
+      ) {
+        hiddenMineDuplicates++;
+        continue;
+      }
+
+      newestMineByIdentity.add(
+        identity
+      );
+    }
 
     const treasuryBuyer =
       Boolean(
@@ -473,15 +518,16 @@ renderPendingLaunches({
       "button";
 
     reserve.disabled =
-      !wallet ||
-      treasuryBuyer;
+      !wallet;
 
     const activate =
       make(
         "button",
         "primary",
         transactionsEnabled
-          ? "Review activation + first buy in Phantom"
+          ? treasuryBuyer
+            ? "Different Phantom wallet required"
+            : "Review activation + first buy in Phantom"
           : "Solana activation disabled"
       );
 
@@ -573,6 +619,25 @@ renderPendingLaunches({
       () => {
         run(
           async () => {
+            if (
+              treasuryBuyer
+            ) {
+              adapter.disconnect();
+
+              status(
+                "PumpLite treasury disconnected. Switch to another account in Phantom, then reconnect PumpLite."
+              );
+
+              if (
+                typeof refresh ===
+                "function"
+              ) {
+                await refresh();
+              }
+
+              return;
+            }
+
             const reserved =
               await adapter
                 .reserveFirstBuyer({
@@ -790,5 +855,26 @@ renderPendingLaunches({
     );
 
     updatePreview();
+  }
+
+  if (
+    hiddenMineDuplicates >
+    0
+  ) {
+    list.prepend(
+      make(
+        "p",
+        "fine",
+        "Showing your newest matching launch. " +
+          hiddenMineDuplicates +
+          " older duplicate launch draft" +
+          (
+            hiddenMineDuplicates === 1
+              ? " is"
+              : "s are"
+          ) +
+          " hidden here. Nothing was deleted."
+      )
+    );
   }
 }
