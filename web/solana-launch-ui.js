@@ -804,7 +804,29 @@ renderPendingLaunches({
                       quote.minimum
                   });
             } catch (error) {
+              const message =
+                error?.message ||
+                "Coin purchase could not complete.";
+
+              result.textContent =
+                "Buy was NOT submitted: " +
+                message;
+
+              status(
+                "Buy was NOT submitted: " +
+                message
+              );
+
               updatePreview();
+
+              /*
+               * updatePreview changes the quote only. Restore the
+               * important failure directly on this coin card.
+               */
+              result.textContent =
+                "Buy was NOT submitted: " +
+                message;
+
               throw error;
             }
 

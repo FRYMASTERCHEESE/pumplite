@@ -505,15 +505,14 @@ export function adapter(
       }
     }
 
-    if (
-      extra > 0 &&
-      (!limitSeen || !priceSeen)
-    ) {
-      throw Error(
-        'Incomplete Compute Budget prefix'
-      );
-    }
-
+    /*
+     * Phantom may add either or both recognized priority-fee
+     * instructions. Each one has already been independently
+     * validated above.
+     *
+     * Do not require both to exist: Phantom controls its current
+     * priority-fee normalization policy.
+     */
     for (
       let i = 0;
       i < original.instructions.length;
@@ -593,6 +592,10 @@ export function adapter(
       );
     }
 
+    notify(
+      'Phantom approval received. PumpLite is verifying the fully signed transaction before broadcast.'
+    );
+
     const fee =
       await writeConnection
         .getFeeForMessage(
@@ -613,6 +616,10 @@ export function adapter(
 
     const raw =
       signed.serialize();
+
+    notify(
+      'Signatures verified. Running final Solana simulation before broadcast.'
+    );
 
     const simulation =
       await writeConnection
