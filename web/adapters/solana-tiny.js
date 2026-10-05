@@ -211,6 +211,26 @@ export function adapter(
   const writeConnection =
     makeConnection(writeUrl);
 
+  /*
+   * Public RPC remains available for reviewed read/preflight work.
+   *
+   * The FINAL signed PumpLite transaction is broadcast through
+   * PumpLite's own RPC worker so browser-side public RPC blocking
+   * cannot silently stop a Phantom-approved purchase.
+   */
+  const broadcastConnection =
+    makeConnection(
+      config.rpcUrl
+    );
+
+  async function broadcastNetwork() {
+    const hash =
+      await broadcastConnection
+        .getGenesisHash();
+
+    assertSolanaMainnet(hash);
+  }
+
   async function writeNetwork() {
     const hash =
       await writeConnection
@@ -686,15 +706,21 @@ export function adapter(
         signed.signature
       );
 
+    /*
+     * Confirm the PumpLite broadcast relay is itself Mainnet before
+     * sending the already fully-signed transaction.
+     */
+    await broadcastNetwork();
+
     notify(
-      'Simulation passed. Submitting to Solana Mainnet.',
+      'Simulation passed. Broadcasting the signed PumpLite transaction to Solana Mainnet.',
       config.explorer +
       '/tx/' +
       expectedSignature
     );
 
     const signature =
-      await writeConnection
+      await broadcastConnection
         .sendRawTransaction(
           raw,
           {

@@ -41,7 +41,8 @@ const ALLOWED_METHODS = new Set([
   "getTransaction",
   "getVersion",
   "isBlockhashValid",
-  "simulateTransaction"
+  "simulateTransaction",
+  "sendTransaction"
 ]);
 
 const MAX_BODY_BYTES = 100_000;
@@ -1418,6 +1419,165 @@ export default {
         403,
         origin
       );
+    }
+
+    /*
+     * Signed transaction broadcasting is intentionally restricted.
+     *
+     * Only a normal-sized Solana transaction that contains BOTH:
+     * - the deployed PumpLite program
+     * - the PumpLite treasury
+     *
+     * may use this relay.
+     *
+     * This prevents the endpoint from becoming a generic public
+     * Solana transaction broadcaster.
+     */
+    if (
+      payload.method ===
+        "sendTransaction"
+    ) {
+      if (
+        !Array.isArray(
+          payload.params
+        ) ||
+        typeof payload.params[0] !==
+          "string" ||
+        payload.params[0].length < 100 ||
+        payload.params[0].length > 2000
+      ) {
+        return jsonResponse(
+          {
+            jsonrpc: "2.0",
+            id:
+              payload.id ?? null,
+            error: {
+              code: -32602,
+              message:
+                "Invalid PumpLite transaction"
+            }
+          },
+          400,
+          origin
+        );
+      }
+
+      let transaction;
+
+      try {
+        const binary =
+          atob(
+            payload.params[0]
+          );
+
+        transaction =
+          Uint8Array.from(
+            binary,
+            char =>
+              char.charCodeAt(0)
+          );
+      } catch {
+        return jsonResponse(
+          {
+            jsonrpc: "2.0",
+            id:
+              payload.id ?? null,
+            error: {
+              code: -32602,
+              message:
+                "Invalid PumpLite transaction encoding"
+            }
+          },
+          400,
+          origin
+        );
+      }
+
+      if (
+        transaction.length < 100 ||
+        transaction.length > 1232
+      ) {
+        return jsonResponse(
+          {
+            jsonrpc: "2.0",
+            id:
+              payload.id ?? null,
+            error: {
+              code: -32602,
+              message:
+                "Invalid PumpLite transaction size"
+            }
+          },
+          400,
+          origin
+        );
+      }
+
+      const contains =
+        needle => {
+          if (
+            !needle ||
+            needle.length !== 32
+          ) {
+            return false;
+          }
+
+          outer:
+          for (
+            let offset = 0;
+            offset <=
+              transaction.length -
+                needle.length;
+            offset++
+          ) {
+            for (
+              let index = 0;
+              index < needle.length;
+              index++
+            ) {
+              if (
+                transaction[
+                  offset + index
+                ] !==
+                needle[index]
+              ) {
+                continue outer;
+              }
+            }
+
+            return true;
+          }
+
+          return false;
+        };
+
+      if (
+        !contains(
+          decode58(
+            PROGRAM_ID
+          )
+        ) ||
+        !contains(
+          decode58(
+            TREASURY
+          )
+        )
+      ) {
+        return jsonResponse(
+          {
+            jsonrpc: "2.0",
+            id:
+              payload.id ?? null,
+            error: {
+              code: -32602,
+              message:
+                "Transaction is not a PumpLite transaction"
+            }
+          },
+          403,
+          origin
+        );
+      }
     }
 
     if (!env.HELIUS_RPC_URL) {
