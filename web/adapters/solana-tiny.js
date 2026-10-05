@@ -2072,7 +2072,7 @@ export function adapter(
         true
       ) {
         throw Error(
-          'PumpLite first-buyer Mainnet activation is still safety locked'
+          'PumpLite Solana Mainnet coin activation is still safety locked'
         );
       }
 
@@ -2083,21 +2083,6 @@ export function adapter(
         new PublicKey(
           config.treasury
         );
-
-      /*
-       * The deployed curve pays its fee to treasury via System CPI.
-       * Do not use treasury itself as first buyer: that would turn
-       * the fee transfer into a source/destination self-transfer.
-       */
-      if (
-        buyer.equals(
-          treasury
-        )
-      ) {
-        throw Error(
-          'The PumpLite treasury wallet cannot be the first buyer'
-        );
-      }
 
       if (
         typeof launchId !==
@@ -2119,7 +2104,7 @@ export function adapter(
         buyMinimum <= 0n
       ) {
         throw Error(
-          'Invalid first-buyer amount'
+          'Invalid coin purchase amount'
         );
       }
 
@@ -2134,7 +2119,7 @@ export function adapter(
         !local.reservation
       ) {
         throw Error(
-          'First-buyer reservation is not available in this browser. Reserve again.'
+          'Coin purchase preparation is not available in this browser. Prepare the purchase again.'
         );
       }
 
@@ -2150,7 +2135,7 @@ export function adapter(
           local.market.toBase58()
       ) {
         throw Error(
-          'Local first-buyer reservation changed'
+          'Local coin purchase preparation changed'
         );
       }
 
@@ -2162,7 +2147,7 @@ export function adapter(
           Date.now() + 15_000
       ) {
         throw Error(
-          'First-buyer reservation expired or is too close to expiry. Reserve again.'
+          'Coin purchase preparation expired or is too close to expiry. Prepare the purchase again.'
         );
       }
 

@@ -449,14 +449,6 @@ renderPendingLaunches({
       );
     }
 
-    const treasuryBuyer =
-      Boolean(
-        wallet &&
-        treasury &&
-        wallet ===
-          treasury
-      );
-
     const card =
       make(
         "article",
@@ -519,9 +511,7 @@ renderPendingLaunches({
       make(
         "p",
         "fine",
-        treasuryBuyer
-          ? "This connected wallet is the PumpLite treasury and cannot be the first buyer. Connect a different Phantom wallet."
-          : "Ready to buy."
+        "Ready to buy."
       );
 
     const amountLabel =
@@ -571,11 +561,9 @@ renderPendingLaunches({
       make(
         "button",
         "outline",
-        treasuryBuyer
-          ? "Use a different Phantom wallet"
-          : wallet
-            ? "Reserve first-buyer mint"
-            : "Connect Phantom to reserve"
+        wallet
+          ? "Prepare coin purchase"
+          : "Connect Phantom to buy"
       );
 
     reserve.type =
@@ -589,11 +577,9 @@ renderPendingLaunches({
         "button",
         "primary",
         transactionsEnabled
-          ? treasuryBuyer
-            ? "Treasury wallet cannot activate"
-            : wallet
-              ? "Buy " + launch.symbol
-              : "Connect Phantom to buy"
+          ? wallet
+            ? "Buy " + launch.symbol
+            : "Connect Phantom to buy"
           : "Solana buying disabled"
       );
 
@@ -698,8 +684,7 @@ renderPendingLaunches({
 
         activate.disabled =
           !transactionsEnabled ||
-          !wallet ||
-          treasuryBuyer;
+          !wallet;
       } catch (error) {
         preview.textContent =
           error.message;
@@ -722,25 +707,6 @@ renderPendingLaunches({
       () => {
         run(
           async () => {
-            if (
-              treasuryBuyer
-            ) {
-              adapter.disconnect();
-
-              status(
-                "PumpLite treasury disconnected. Switch to another account in Phantom, then reconnect PumpLite."
-              );
-
-              if (
-                typeof refresh ===
-                "function"
-              ) {
-                await refresh();
-              }
-
-              return;
-            }
-
             const reserved =
               await adapter
                 .reserveFirstBuyer({
@@ -768,7 +734,7 @@ renderPendingLaunches({
               "Reserve again";
 
             status(
-              "First-buyer reservation ready. Review the SOL amount before activation."
+              "Coin purchase prepared. Review the SOL amount before buying."
             );
 
             updatePreview();

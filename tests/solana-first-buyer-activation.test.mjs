@@ -73,7 +73,7 @@ test(
       /\/launch\//
     );
 
-    assert.match(
+    assert.doesNotMatch(
       method,
       /treasury wallet cannot be the first buyer/
     );
