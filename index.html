@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="referrer" content="no-referrer">
 <meta name="theme-color" content="#090a0f">
-<meta name="description" content="PumpLite: a Solana and Base Mainnet token launchpad with free Solana creator launches, wallet-signed trading and transparent bonding curves.">
+<meta name="description" content="PumpLite: a Solana and Base Mainnet coin launchpad with free Solana creator launches, wallet-signed trading and transparent bonding curves.">
 <meta name="application-name" content="PumpLite">
 <meta name="robots" content="index,follow">
 <meta name="color-scheme" content="dark">
@@ -14,11 +14,11 @@
 <link rel="icon" type="image/svg+xml" href="./assets/plite-icon-48.svg">
 <link rel="apple-touch-icon" href="./assets/plite-logo-200.png">
 <link rel="manifest" href="./manifest.webmanifest">
-<link rel="alternate" type="application/json" title="PumpLite official token list" href="./token-list.json">
+<link rel="alternate" type="application/json" title="PumpLite official coin list" href="./token-list.json">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="PumpLite">
 <meta property="og:title" content="PumpLite · Solana + Base Mainnet launchpad">
-<meta property="og:description" content="Launch and trade tokens on Solana and Base Mainnet with wallet-signed transactions and transparent on-chain bonding-curve data.">
+<meta property="og:description" content="Launch and trade coins on Solana and Base Mainnet with wallet-signed transactions and transparent on-chain bonding-curve data.">
 <meta property="og:url" content="https://frymastercheese.github.io/pumplite/">
 <meta property="og:image" content="https://frymastercheese.github.io/pumplite/assets/plite-logo-200.png">
 <meta name="twitter:card" content="summary">
@@ -29,7 +29,7 @@
 <title>PumpLite · Solana + Base Mainnet launchpad</title>
 <link rel="stylesheet" href="./assets/styles.css">
 <script defer src="./assets/phantom-diagnostic.js"></script>
-<script type="module" src="./assets/app.js?boot=20261005pumplite2"></script>
+<script type="module" src="./assets/app.js?boot=20261005pumplite3"></script>
 </head>
 <body>
 <a class="skip-link" id="skip-content" href="#main-content">Skip to main content</a>
@@ -56,7 +56,7 @@
   <section id="home">
     <nav class="page-nav home-page-tabs" aria-label="PumpLite pages">
       <button type="button" id="show-home" class="outline" aria-pressed="true">Home</button>
-      <button type="button" id="show-create" class="outline" aria-pressed="false">Create Token</button>
+      <button type="button" id="show-create" class="outline" aria-pressed="false">Create Coin</button>
       <button type="button" id="show-explore" class="outline" aria-pressed="false">Markets &amp; Trade</button>
       <button type="button" id="show-help" class="outline" aria-pressed="false">Help &amp; Safety</button>
     </nav>
@@ -68,11 +68,11 @@
           <h1>Discover. Launch.<br>Trade on-chain.</h1>
           <p class="intro">Launch on Solana or Base Mainnet with wallet-signed trading, transparent bonding curves and real on-chain market data.</p>
           <div class="hero-actions">
-            <button id="hero-explore" class="primary compact-action" type="button">Explore tokens</button>
-            <button id="hero-create" class="outline compact-action" type="button">Create token</button>
+            <button id="hero-explore" class="primary compact-action" type="button">Explore coins</button>
+            <button id="hero-create" class="outline compact-action" type="button">Create coin</button>
           </div>
         </div>
-        <aside class="featured-token-card" aria-label="Featured PumpLite token">
+        <aside class="featured-token-card" aria-label="Featured PumpLite coin">
           <div class="featured-token-head">
             <div class="token-avatar token-avatar-featured" aria-hidden="true">PL</div>
             <div><small>FEATURED</small><strong>PumpLite</strong><span>PLITE / ETH</span></div>
@@ -118,10 +118,10 @@
     </section>
     <div class="workspace" id="home-workspace">
       <section class="panel discovery" id="explore-section" tabindex="-1" hidden>
-        <div class="section-title"><div><p class="eyebrow">EXPLORE</p><h2>Live token markets</h2></div><button id="refresh" class="outline">Refresh live</button></div>
+        <div class="section-title"><div><p class="eyebrow">EXPLORE</p><h2>Live coin markets</h2></div><button id="refresh" class="outline">Refresh live</button></div>
         <p class="muted">Newest PumpLite markets read from the selected Mainnet network. Prices, reserves and volume come from the chain.</p>
         <div class="market-toolbar">
-          <label class="market-search-label" for="market-filter">Search tokens<input id="market-filter" placeholder="Name, ticker, token or market" autocomplete="off"></label>
+          <label class="market-search-label" for="market-filter">Search coins<input id="market-filter" placeholder="Name, ticker, coin or market" autocomplete="off"></label>
           <label class="market-sort-label" for="market-sort">Sort<select id="market-sort"><option value="newest">Newest</option><option value="volume">Volume</option><option value="reserve">Reserve</option><option value="distributed">Distributed</option></select></label>
         </div>
         <div class="market-filter-row">
@@ -134,7 +134,7 @@
         <button id="more" class="outline full-width-action" hidden>Load more markets</button>
       </section>
       <section class="panel launch" id="create-section" tabindex="-1" hidden>
-        <p class="eyebrow">CREATE ON PUMPLITE</p><h2>Create your token</h2>
+        <p class="eyebrow">CREATE ON PUMPLITE</p><h2>Create your coin</h2>
         <p id="create-network" class="network-pill">Base Mainnet · ETH pair</p>
         <div class="launch-facts"><span><b id="create-supply-fact">1 billion</b><small id="create-supply-mode-fact">Fixed supply</small></span><span><b>0%</b><small>PumpLite creation fee</small></span><span><b id="create-trading-fee">0.25%</b><small id="create-trading-fee-label">Trading fee</small></span></div>
         <p id="create-supply-help" class="fine">No creator allocation. All supply starts in the market vault. No future minting.</p>
@@ -195,7 +195,7 @@
           <label for="description">Description</label><textarea id="description" placeholder="What is this project about?" maxlength="2000" rows="4"></textarea>
           </fieldset>
           <fieldset><legend><span>02</span> Make it recognizable</legend>
-          <div class="media-picker"><img id="image-preview" alt="Your selected token image" width="96" height="96" hidden><div><label for="metadata-image">Token image</label><input id="metadata-image" type="file" accept="image/png,image/jpeg,image/webp"><p class="fine">PNG, JPEG or WebP, up to 12 MB. Prepared locally as a plain PNG, up to 1024px and 512 KiB.</p></div></div>
+          <div class="media-picker"><img id="image-preview" alt="Your selected coin image" width="96" height="96" hidden><div><label for="metadata-image">Coin image</label><input id="metadata-image" type="file" accept="image/png,image/jpeg,image/webp"><p class="fine">PNG, JPEG or WebP, up to 12 MB. Prepared locally as a plain PNG, up to 1024px and 512 KiB.</p></div></div>
           <p id="media-status" class="fine" role="status">Choose your own image. Nothing uploads until you approve publishing.</p>
           <label for="banner-uri">Banner URI <span class="muted">optional</span></label><input id="banner-uri" placeholder="ipfs://… or https://…" maxlength="500" autocomplete="off">
           <p class="fine">Use a banner already pinned to persistent storage. Banner file uploads are not part of the current service. Remote media is not fetched automatically.</p>
@@ -230,7 +230,7 @@
       <h2>Using PumpLite safely</h2>
 
       <div class="help-grid">
-        <article><h3>Create Token</h3><p class="fine">Create a real token on Base or Solana Mainnet, publish metadata and review wallet requests before approving them.</p></article>
+        <article><h3>Create Coin</h3><p class="fine">Create a real coin on Base or Solana Mainnet, publish metadata and review wallet requests before approving them.</p></article>
         <article><h3>Markets &amp; Trade</h3><p class="fine">Browse real PumpLite markets, buy with the simple NZD/USD helper, or sell through your connected wallet.</p></article>
         <article><h3>PLITE Claim</h3><p class="fine">Use the single PLITE Claim link in the header to open the separate First 50 claim page.</p></article>
         <article><h3>Wallet Safety</h3><p class="fine">Never enter a seed phrase or private key into PumpLite. Check Base Mainnet, the address and the amount before approving a transaction.</p></article>
@@ -252,13 +252,13 @@
       <p id="market-metadata" class="fine"></p>
     <section id="verification-panel" class="panel verification-panel verification-panel-compact" aria-labelledby="verification-title">
       <p class="eyebrow">VERIFICATION</p>
-      <h2 id="verification-title">Token verification</h2>
+      <h2 id="verification-title">Coin verification</h2>
       <p id="verification-state" class="verification-state">Identity has not been checked.</p>
 
       <details id="verification-details-toggle" class="clean-details verification-details-toggle">
         <summary>View verification details</summary>
         <dl id="verification-details" class="identity-details"></dl>
-        <p class="fine">Verified means PumpLite reviewed the token's identity/provenance. It is not an endorsement, safety guarantee, price promise, investment recommendation, or security audit.</p>
+        <p class="fine">Verified means PumpLite reviewed the coin's identity/provenance. It is not an endorsement, safety guarantee, price promise, investment recommendation, or security audit.</p>
       </details>
 
       <details id="owner-review-panel" class="owner-review clean-details" hidden>
@@ -346,10 +346,10 @@
           <div><dt>24h curve volume</dt><dd id="volume-24h">-</dd></div>
           <div><dt>24h trades</dt><dd id="trades-24h">-</dd></div>
           <div><dt>Cumulative curve volume</dt><dd id="volume">-</dd></div>
-          <div><dt>Tokens in market</dt><dd id="token-reserve">-</dd></div>
+          <div><dt>Coins in market</dt><dd id="token-reserve">-</dd></div>
         </dl>
         <p id="market-24h-status" class="fine">Rolling 24h Base activity has not been loaded yet.</p>
-        <p class="fine">Curve backing is real native network currency held by the PumpLite market. SOL is used on Solana and ETH on Base. External DEX liquidity is separate. Curve-implied market cap uses the current on-chain curve price and token supply.</p>
+        <p class="fine">Curve backing is real native network currency held by the PumpLite market. SOL is used on Solana and ETH on Base. External DEX liquidity is separate. Curve-implied market cap uses the current on-chain curve price and coin supply.</p>
 
         <section id="plite-dex-liquidity" class="dex-liquidity-card" aria-labelledby="plite-dex-title" hidden>
           <p class="eyebrow">EXTERNAL DEX LIQUIDITY</p>
@@ -397,7 +397,7 @@
             <dl class="stats">
               <div><dt>Supply</dt><dd id="v2-supply-status">-</dd></div>
               <div><dt>Market support</dt><dd id="v2-support-total">-</dd></div>
-              <div><dt>Tokens burned</dt><dd id="v2-burned-total">-</dd></div>
+              <div><dt>Coins burned</dt><dd id="v2-burned-total">-</dd></div>
               <div><dt>Launch age</dt><dd id="market-age">-</dd></div>
               <div><dt>Block / slot</dt><dd id="market-block">-</dd></div>
               <div><dt>Virtual pricing offset</dt><dd id="virtual">-</dd></div>
@@ -408,7 +408,7 @@
             <p id="distribution-label" class="fine"></p>
 
             <h3>How the curve works</h3>
-            <p class="muted">Buys add native currency and remove tokens. Sells return tokens and withdraw native currency. Quotes round down. The virtual offset sets starting pricing; it is not money available to withdraw.</p>
+            <p class="muted">Buys add native currency and remove coins. Sells return coins and withdraw native currency. Quotes round down. The virtual offset sets starting pricing; it is not money available to withdraw.</p>
             <p class="fine">No scheduled graduation, liquidity migration, owner withdrawal, or price guarantee. Direct donations are excluded from quotes and cannot be recovered. Rounding can leave locked dust. Other traders may move the price within your slippage limit.</p>
           </details>
 
@@ -465,7 +465,7 @@
 
         <div class="links">
           <a id="market-link" target="_blank" rel="noopener noreferrer">Market</a>
-          <a id="token-link" target="_blank" rel="noopener noreferrer">Token</a>
+          <a id="token-link" target="_blank" rel="noopener noreferrer">Coin</a>
         </div>
       </section>
       <section class="panel clean-trade-panel">
@@ -476,8 +476,8 @@
 
         <section id="trade-quick-buy" class="trade-helper simple-buy-card" aria-labelledby="trade-quick-buy-title">
           <p class="eyebrow">SIMPLE BUY</p>
-          <h3 id="trade-quick-buy-title">Buy tokens simply</h3>
-          <p id="trade-quick-buy-copy" class="fine">Enter NZD or USD. PumpLite shows approximately how many tokens you will receive, then refreshes the real on-chain quote before your wallet asks you to approve the Base ETH transaction.</p>
+          <h3 id="trade-quick-buy-title">Buy coins simply</h3>
+          <p id="trade-quick-buy-copy" class="fine">Enter NZD or USD. PumpLite shows approximately how many coins you will receive, then refreshes the real on-chain quote before your wallet asks you to approve the Base ETH transaction.</p>
 
           <div class="simple-buy-entry">
             <div id="trade-spend-field">
@@ -500,24 +500,24 @@
             <span id="trade-display-estimate">Enter an amount above to see the live estimate.</span>
           </div>
 
-          <button id="trade-use-display" type="button" class="primary full simple-buy-button">Buy tokens</button>
+          <button id="trade-use-display" type="button" class="primary full simple-buy-button">Buy coins</button>
           <p id="simple-buy-note" class="fine">The final purchase uses Base ETH. Your wallet remains the final approval step and shows the Base network fee before you sign. PumpLite uses 1% slippage protection for this simple-buy button.</p>
         </section>
 
         <section class="simple-sell-card" aria-labelledby="simple-sell-title">
           <p class="eyebrow">SELL</p>
-          <h3 id="simple-sell-title">Sell tokens</h3>
+          <h3 id="simple-sell-title">Sell coins</h3>
 
           <form id="trade-form">
             <label class="sr-only" for="side">Direction</label>
             <select id="side" hidden aria-label="Trade direction">
-              <option value="sell" selected>Sell tokens</option>
+              <option value="sell" selected>Sell coins</option>
             </select>
 
             <label for="amount" id="amount-label">Amount (TOKEN)</label>
             <input id="amount" maxlength="96" inputmode="decimal" placeholder="0.00" required autocomplete="off">
 
-            <p id="trade-minimum-note" class="fine">Enter how many tokens you want to sell. Your live quote shows the Base ETH you would receive before you approve anything.</p>
+            <p id="trade-minimum-note" class="fine">Enter how many coins you want to sell. Your live quote shows the Base ETH you would receive before you approve anything.</p>
 
             <label for="slippage">Slippage tolerance (%)</label>
             <input id="slippage" type="number" min="0.01" max="5" step="0.01" value="1" required>
@@ -542,7 +542,7 @@
 
           <form id="base-v2-burn-form" hidden>
             <h3>Buy &amp; Burn</h3>
-            <p class="fine">Spend ETH through the real curve and permanently burn the purchased V2 tokens.</p>
+            <p class="fine">Spend ETH through the real curve and permanently burn the purchased V2 coins.</p>
 
             <label for="v2-burn-amount">Amount (ETH)</label>
             <input id="v2-burn-amount" inputmode="decimal" placeholder="0.00" maxlength="32">
@@ -582,7 +582,7 @@
 
       <div class="create-fee-note">
         <b>0 SOL PumpLite creator cost</b>
-        <small>On Solana, creating a PumpLite launch uses a free Phantom message signature only. The creator submits no Solana transaction and pays no rent or network fee. On-chain activation is funded later by the first buyer. Base network rules are shown separately when Base is selected.</small>
+        <small>On Solana, publishing a PumpLite coin uses a free Phantom message signature only. The creator submits no Solana transaction and pays no rent or network fee. The coin appears as Ready to Buy. When someone buys it, the normal Buy Coin flow handles the real on-chain activation and purchase. Base network rules are shown separately when Base is selected.</small>
       </div>
 
       <button id="initial-buy-submit" class="primary full" type="submit">Create coin</button>
@@ -592,6 +592,6 @@
 
   <div id="status" class="status" role="status" aria-live="polite"><span id="status-text">No wallet connected. No transactions submitted.</span><a id="status-link" target="_blank" rel="noopener noreferrer" hidden>View transaction →</a></div>
 </main>
-<footer><b>PumpLite</b><span>Solana + Base - Mainnet only</span><p><a href="./terms.html">Terms</a> | <a href="./privacy.html">Privacy</a> | <a href="./risk.html">Risk disclosure</a> | <a href="./verification.html">Verification</a> | <a href="./status.html">Status</a> | <a href="./.well-known/security.txt">Security</a></p><p>Official project contact: <a href="mailto:coreyedge123@gmail.com">coreyedge123@gmail.com</a></p><p>Tokens can lose all value. Wallet approval spends real funds. The current contracts have not received an independent third-party smart-contract audit; availability depends on the selected network deployment.</p></footer>
+<footer><b>PumpLite</b><span>Solana + Base - Mainnet only</span><p><a href="./terms.html">Terms</a> | <a href="./privacy.html">Privacy</a> | <a href="./risk.html">Risk disclosure</a> | <a href="./verification.html">Verification</a> | <a href="./status.html">Status</a> | <a href="./.well-known/security.txt">Security</a></p><p>Official project contact: <a href="mailto:coreyedge123@gmail.com">coreyedge123@gmail.com</a></p><p>Coins can lose all value. Wallet approval spends real funds. The current contracts have not received an independent third-party smart-contract audit; availability depends on the selected network deployment.</p></footer>
 </body>
 </html>
