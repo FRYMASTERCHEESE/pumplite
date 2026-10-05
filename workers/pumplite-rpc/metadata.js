@@ -117,7 +117,26 @@ export async function metadataRoute(request, env, path, headers) {
       method:'POST',headers:{'Content-Type':'application/json',Authorization:authorization},
       body:JSON.stringify({path,bytes:bytes.length,sha256:digest,...(imageCid?{imageCid}:{})}),signal:controller.signal
     }),controller.signal);
-    if(grant.status!==204) { controller.abort(); return reply({error:'Upload not authorized'},403); }
+    if (grant.status !== 204) {
+      const status =
+        grant.status === 429
+          ? 429
+          : grant.status === 401
+            ? 401
+            : 403;
+
+      controller.abort();
+
+      return reply(
+        {
+          error:
+            status === 429
+              ? 'Metadata upload limit reached'
+              : 'Upload not authorized'
+        },
+        status
+      );
+    }
     const form=new FormData();
     form.set('network','public');
     form.set('file',new Blob([bytes],{type:isImage?'image/png':'application/json'}),isImage?'token-logo.png':'token-metadata.json');

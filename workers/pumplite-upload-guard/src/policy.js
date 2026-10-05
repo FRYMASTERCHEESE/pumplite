@@ -5,10 +5,17 @@ export const POLICY = Object.freeze({
   maxJsonBytes: 4096,
   maxControlBodyBytes: 2048,
   maxSubjectLength: 128,
-  perSubjectRequestsPerDay: 10,
-  globalRequestsPerDay: 40,
-  perSubjectBytesPerDay: 6 * 1024 * 1024,
-  globalBytesPerDay: 24 * 1024 * 1024,
+  /*
+   * One complete coin metadata publish uses two requests:
+   * image + JSON.
+   *
+   * 50 requests allows up to 25 complete publishes per wallet/day.
+   * The global cap remains bounded to protect the upload service.
+   */
+  perSubjectRequestsPerDay: 50,
+  globalRequestsPerDay: 500,
+  perSubjectBytesPerDay: 30 * 1024 * 1024,
+  globalBytesPerDay: 300 * 1024 * 1024,
   maxActiveIssueChallenges: 100,
   maxActiveIssueChallengesPerSubject: 3
 });
