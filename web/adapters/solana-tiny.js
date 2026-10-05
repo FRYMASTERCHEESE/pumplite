@@ -1,3 +1,4 @@
+import { snapshotTransaction, publicInstructionSequence, validateWalletTransaction } from '../solana-transaction-validation.js';
 import { rentSupport, requireRentConsent } from '../solana-rent.js';
 import {
   Connection,
@@ -416,6 +417,8 @@ export function adapter(
         })
       );
 
+    const snapshot = snapshotTransaction(original);
+
     const preview = await writeConnection._rpcRequest('simulateTransaction', [tx.serialize({requireAllSignatures:false,verifySignatures:false}).toString('base64'), {encoding:'base64',sigVerify:false,replaceRecentBlockhash:true,commitment:'confirmed'}]);
     if(preview.error || !preview.result?.value || preview.result.value.err !== null) throw Error('Pre-sign simulation failed: '+JSON.stringify(preview.error || preview.result?.value?.err || 'missing response'));
     notify(
@@ -433,116 +436,15 @@ export function adapter(
       await selected
         .signTransaction(tx);
 
-    if (
-      !signed?.feePayer ||
-      !signed.feePayer.equals(owner)
-    ) {
-      throw Error(
-        'Wallet changed the fee payer'
-      );
+    // Only public instruction metadata. No signatures, serialized transactions or secrets.
+    const diagnostic = JSON.stringify({sameTransactionInstance:signed===tx,
+      originalCount:snapshot.instructions.length, returned:publicInstructionSequence(signed)});
+    try {
+      validateWalletTransaction(snapshot, signed);
+    } catch (error) {
+      throw Error(error.message+'; Phantom public instruction sequence: '+diagnostic);
     }
-
-    if (
-      signed.recentBlockhash !==
-      tx.recentBlockhash
-    ) {
-      throw Error(
-        'Wallet changed the blockhash'
-      );
-    }
-
-    const computeBudget =
-      new PublicKey(
-        'ComputeBudget111111111111111111111111111111'
-      );
-
-    const extra = signed.instructions.length - original.instructions.length;
-    // Public instruction metadata only: never log signatures or serialized transactions.
-    const names = {1:'RequestHeapFrame',2:'SetComputeUnitLimit',3:'SetComputeUnitPrice',4:'SetLoadedAccountsDataSizeLimit'};
-    const details = signed.instructions.slice(0, Math.max(0, Math.min(extra, 8))).map(ix => {
-      const data = Buffer.from(ix.data);
-      if (!ix.programId.equals(computeBudget)) return 'non-Compute-Budget program';
-      const value = data.length === 5 ? data.readUInt32LE(1).toString() : data.length === 9 && data[0] === 3 ? data.readBigUInt64LE(1).toString() : 'invalid length';
-      return (names[data[0]] || 'unknown variant '+data[0])+'='+value+' (keys='+ix.keys.length+')';
-    }).join(', ');
-    const rejectBudget = reason => { throw Error(reason+'; wallet extras='+extra+': '+details); };
-    if (extra < 0 || extra > 4) rejectBudget('Wallet added unexpected instructions');
-    const seen = new Set();
-    for (let i = 0; i < extra; i++) {
-      const ix = signed.instructions[i];
-      if (!ix.programId.equals(computeBudget) || ix.keys.length !== 0) rejectBudget('Wallet added unsupported instruction');
-      const data = Buffer.from(ix.data);
-      const variant = data[0];
-      if (![1,2,3,4].includes(variant) || data.length !== (variant === 3 ? 9 : 5)) rejectBudget('Unsupported Compute Budget instruction');
-      if (seen.has(variant)) rejectBudget('Duplicate Compute Budget instruction');
-      seen.add(variant);
-      if (variant === 3) continue; // Exact u64 price; existing total-fee cap below remains enforced.
-      const value = data.readUInt32LE(1);
-      if (variant === 1 && (value < 32768 || value > 262144 || value % 1024 !== 0)) rejectBudget('Unsafe heap frame');
-      if (variant === 2 && (value < 1000 || value > 1400000)) rejectBudget('Unsafe compute limit');
-      if (variant === 4 && (value < 1 || value > 67108864)) rejectBudget('Unsafe loaded account data limit');
-    }
-    if (extra) notify('Phantom Compute Budget: '+details);
-
-    for (
-      let i = 0;
-      i < original.instructions.length;
-      i++
-    ) {
-      const expected =
-        original.instructions[i];
-
-      const actual =
-        signed.instructions[
-          i + extra
-        ];
-
-      if (
-        !actual ||
-        !expected.programId.equals(
-          actual.programId
-        ) ||
-        !Buffer.from(
-          expected.data
-        ).equals(
-          Buffer.from(
-            actual.data
-          )
-        ) ||
-        expected.keys.length !==
-          actual.keys.length
-      ) {
-        throw Error(
-          'Wallet changed a PumpLite instruction'
-        );
-      }
-
-      for (
-        let k = 0;
-        k < expected.keys.length;
-        k++
-      ) {
-        const a =
-          expected.keys[k];
-
-        const b =
-          actual.keys[k];
-
-        if (
-          !a.pubkey.equals(
-            b.pubkey
-          ) ||
-          a.isSigner !==
-            b.isSigner ||
-          a.isWritable !==
-            b.isWritable
-        ) {
-          throw Error(
-            'Wallet changed a PumpLite account'
-          );
-        }
-      }
-    }
+    notify('Phantom public instruction sequence: '+diagnostic);
 
     /*
      * Phantom has signed first. Now apply only the disposable
