@@ -300,7 +300,7 @@ export function adapter(
     assertSolanaMainnet(hash);
   }
 
-  async function wallet() {
+  function connectedWallet() {
     if (
       !connected ||
       !selected?.publicKey?.equals(
@@ -312,22 +312,36 @@ export function adapter(
       );
     }
 
-    const attempt = revision;
+    return connected;
+  }
+
+  async function wallet() {
+    const owner =
+      connectedWallet();
+
+    const attempt =
+      revision;
 
     await network();
 
     if (
-      attempt !== revision ||
-      !selected?.publicKey?.equals(
-        connected
-      )
+      attempt !== revision
     ) {
       throw Error(
         'Wallet changed or disconnected; reconnect'
       );
     }
 
-    return connected;
+    const current =
+      connectedWallet();
+
+    if (!current.equals(owner)) {
+      throw Error(
+        'Wallet changed or disconnected; reconnect'
+      );
+    }
+
+    return current;
   }
 
   async function send(
@@ -1208,7 +1222,7 @@ export function adapter(
       }
 
       const owner =
-        await wallet();
+        connectedWallet();
 
       const attempt =
         revision;
@@ -1676,7 +1690,7 @@ export function adapter(
       uri
     }) {
       const owner =
-        await wallet();
+        connectedWallet();
 
       if (
         typeof selected?.signMessage !==
@@ -1863,7 +1877,7 @@ export function adapter(
       launchId
     }) {
       const owner =
-        await wallet();
+        connectedWallet();
 
       if (
         typeof launchId !==
