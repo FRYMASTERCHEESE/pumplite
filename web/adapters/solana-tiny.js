@@ -1864,7 +1864,7 @@ export function adapter(
         'function'
       ) {
         throw Error(
-          'Phantom message signing is required to reserve first-buyer activation'
+          'Phantom message signing is required to prepare this coin purchase'
         );
       }
 
@@ -1916,12 +1916,12 @@ export function adapter(
         JSON.stringify(record);
 
       const message =
-        'PumpLite First Buyer Reservation\n' +
+        'PumpLite Coin Purchase Preparation\n' +
         'version=1\n' +
         canonical;
 
       notify(
-        'Sign the PumpLite first-buyer reservation message. This is NOT a transaction and cannot spend SOL.'
+        'Sign the PumpLite coin purchase preparation message. This is NOT a transaction and cannot spend SOL.'
       );
 
       const signed =
@@ -2033,7 +2033,7 @@ export function adapter(
         )
       ) {
         throw Error(
-          'PumpLite first-buyer reservation failed'
+          'PumpLite coin purchase preparation failed'
         );
       }
 
@@ -2041,7 +2041,7 @@ export function adapter(
         reservation;
 
       notify(
-        'First-buyer mint reserved for this PumpLite launch. No transaction has been submitted.'
+        'Coin purchase prepared. No transaction has been submitted yet.'
       );
 
       return {

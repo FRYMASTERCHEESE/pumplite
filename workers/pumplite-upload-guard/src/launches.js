@@ -14,6 +14,10 @@ const RESERVATION_PREFIX =
   "PumpLite First Buyer Reservation\n" +
   "version=1\n";
 
+const PURCHASE_PREPARATION_PREFIX =
+  "PumpLite Coin Purchase Preparation\n" +
+  "version=1\n";
+
 const RESERVATION_TTL_MS =
   300_000;
 
@@ -643,15 +647,23 @@ validateBuyerReservation(
   const canonical =
     JSON.stringify(record);
 
-  const message =
+  const oldMessage =
     RESERVATION_PREFIX +
     canonical;
 
-  if (
-    body.message !== message
-  ) {
+  const newMessage =
+    PURCHASE_PREPARATION_PREFIX +
+    canonical;
+
+  const message =
+    body.message === oldMessage ||
+    body.message === newMessage
+      ? body.message
+      : "";
+
+  if (!message) {
     fail(
-      "Reservation message mismatch"
+      "Coin purchase preparation message mismatch"
     );
   }
 

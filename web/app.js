@@ -125,10 +125,10 @@ function controls() {
       '1 billion';
 
     $('create-supply-mode-fact').textContent =
-      'Fixed Solana curve';
+      'Creator mint locked';
 
     $('create-supply-help').textContent =
-      'Fixed supply: 1 billion tokens · Virtual reserve: 30 SOL · Trading fee: 0.25%.';
+      'Maximum supply: 1 billion coins - creator minting is locked - coins are distributed through the PumpLite curve - virtual reserve: 30 SOL - trading fee: 0.25%.';
   }
 
   $('v2-supply-mode').disabled =
@@ -239,11 +239,11 @@ function controls() {
       )
         ? 'PumpLite Solana Mainnet transactions are currently disabled.'
         : state.wallet
-          ? 'Phantom connected. Create coin will publish a free 0 SOL PumpLite launch.'
-          : 'Connect Phantom first, then create your free PumpLite Solana launch.';
+          ? 'Phantom connected. Create coin will publish a free 0 SOL PumpLite coin listing.'
+          : 'Connect Phantom first, then publish your free PumpLite Solana coin.';
 
     $('creation-review').textContent =
-      'PumpLite Solana creator cost is 0 SOL. Creating a launch uses a Phantom message signature only. No Solana transaction, rent payment or network fee is submitted by the creator.';
+      'Publishing a PumpLite Solana coin costs 0 SOL. Phantom signs a message only, so the creator pays no rent or network fee. The coin appears as Ready to Buy and becomes on-chain when someone buys it.';
   }
 
   $('get-quote').disabled =
@@ -2616,7 +2616,7 @@ function updateInitialBuySymbol() {
   if (eyebrow) {
     eyebrow.textContent =
       solana
-        ? 'FREE SOLANA LAUNCH'
+        ? 'FREE SOLANA COIN'
         : 'OPTIONAL FIRST BUY';
   }
 
@@ -2672,7 +2672,7 @@ function updateInitialBuySymbol() {
   if (intro) {
     intro.textContent =
       solana
-        ? 'Your creator cost is fixed at 0 SOL. Phantom signs a message only. The first buyer funds the real on-chain mint and first purchase later.'
+        ? 'Publishing costs 0 SOL. Phantom signs a message only. Your coin appears as Ready to Buy, and PumpLite handles activation when somebody presses Buy Coin.'
         : 'Use 0 ETH to create only. Enter more than 0 ETH if you also want your connected wallet to buy the new token immediately after creation.';
   }
 }
@@ -3727,12 +3727,12 @@ $('initial-buy-form').addEventListener('submit', e => {
       ) {
         if (initialBuy !== 0n) {
           throw Error(
-            'PumpLite creator cost is fixed at 0 SOL. The first buyer will fund on-chain activation.'
+            'Publishing this Solana coin costs 0 SOL. It appears as Ready to Buy, and the normal Buy Coin flow handles activation.'
           );
         }
 
         flow.textContent =
-          'Sign the free PumpLite launch message in Phantom. This is not a transaction and cannot spend SOL.';
+          'Sign the free PumpLite coin listing message in Phantom. This is not a transaction and cannot spend SOL.';
 
         inline.textContent =
           'Creator cost: 0 SOL. Phantom will request a message signature only.';
@@ -3749,10 +3749,10 @@ $('initial-buy-form').addEventListener('submit', e => {
           .close();
 
         inline.textContent =
-          'Free PumpLite launch created. Creator cost: 0 SOL. No Solana transaction was submitted.';
+          'Free PumpLite coin published. Creator cost: 0 SOL. No Solana transaction was submitted.';
 
         status(
-          'Free PumpLite launch signed and published. Creator cost: 0 SOL. Launch ' +
+          'Free PumpLite coin signed and published. Creator cost: 0 SOL. Coin listing ' +
           draft.id.slice(0, 12) +
           '... No transaction was submitted. Opening Markets.'
         );
@@ -3769,7 +3769,7 @@ $('initial-buy-form').addEventListener('submit', e => {
           status(
             'Launch ' +
             draft.id.slice(0, 12) +
-            '... is published and shown under Free Solana launches awaiting first buyer.'
+            '... is published under New Solana coins ready to buy.'
           );
         } catch {
           status(
