@@ -456,97 +456,34 @@ export function adapter(
         'ComputeBudget111111111111111111111111111111'
       );
 
-    const extra =
-      signed.instructions.length -
-      original.instructions.length;
-
-    if (
-      extra < 0 ||
-      extra > 2
-    ) {
-      throw Error(
-        'Wallet added unexpected instructions'
-      );
+    const extra = signed.instructions.length - original.instructions.length;
+    // Public instruction metadata only: never log signatures or serialized transactions.
+    const names = {1:'RequestHeapFrame',2:'SetComputeUnitLimit',3:'SetComputeUnitPrice',4:'SetLoadedAccountsDataSizeLimit'};
+    const details = signed.instructions.slice(0, Math.max(0, Math.min(extra, 8))).map(ix => {
+      const data = Buffer.from(ix.data);
+      if (!ix.programId.equals(computeBudget)) return 'non-Compute-Budget program';
+      const value = data.length === 5 ? data.readUInt32LE(1).toString() : data.length === 9 && data[0] === 3 ? data.readBigUInt64LE(1).toString() : 'invalid length';
+      return (names[data[0]] || 'unknown variant '+data[0])+'='+value+' (keys='+ix.keys.length+')';
+    }).join(', ');
+    const rejectBudget = reason => { throw Error(reason+'; wallet extras='+extra+': '+details); };
+    if (extra < 0 || extra > 4) rejectBudget('Wallet added unexpected instructions');
+    const seen = new Set();
+    for (let i = 0; i < extra; i++) {
+      const ix = signed.instructions[i];
+      if (!ix.programId.equals(computeBudget) || ix.keys.length !== 0) rejectBudget('Wallet added unsupported instruction');
+      const data = Buffer.from(ix.data);
+      const variant = data[0];
+      if (![1,2,3,4].includes(variant) || data.length !== (variant === 3 ? 9 : 5)) rejectBudget('Unsupported Compute Budget instruction');
+      if (seen.has(variant)) rejectBudget('Duplicate Compute Budget instruction');
+      seen.add(variant);
+      if (variant === 3) continue; // Exact u64 price; existing total-fee cap below remains enforced.
+      const value = data.readUInt32LE(1);
+      if (variant === 1 && (value < 32768 || value > 262144 || value % 1024 !== 0)) rejectBudget('Unsafe heap frame');
+      if (variant === 2 && (value < 1000 || value > 1400000)) rejectBudget('Unsafe compute limit');
+      if (variant === 4 && (value < 1 || value > 67108864)) rejectBudget('Unsafe loaded account data limit');
     }
+    if (extra) notify('Phantom Compute Budget: '+details);
 
-    let limitSeen = false;
-    let priceSeen = false;
-
-    for (
-      let i = 0;
-      i < extra;
-      i++
-    ) {
-      const ix =
-        signed.instructions[i];
-
-      if (
-        !ix.programId.equals(
-          computeBudget
-        ) ||
-        ix.keys.length !== 0
-      ) {
-        throw Error(
-          'Wallet added unsupported instruction'
-        );
-      }
-
-      const data =
-        Buffer.from(
-          ix.data
-        );
-
-      if (
-        data.length === 5 &&
-        data[0] === 2
-      ) {
-        if (limitSeen) {
-          throw Error(
-            'Duplicate compute limit'
-          );
-        }
-
-        limitSeen = true;
-
-        const limit =
-          data.readUInt32LE(1);
-
-        if (
-          limit < 1_000 ||
-          limit > 1_400_000
-        ) {
-          throw Error(
-            'Unsafe compute limit'
-          );
-        }
-      }
-      else if (
-        data.length === 9 &&
-        data[0] === 3
-      ) {
-        if (priceSeen) {
-          throw Error(
-            'Duplicate compute price'
-          );
-        }
-
-        priceSeen = true;
-      }
-      else {
-        throw Error(
-          'Unsupported Compute Budget instruction'
-        );
-      }
-    }
-
-    /*
-     * Phantom may add either or both recognized priority-fee
-     * instructions. Each one has already been independently
-     * validated above.
-     *
-     * Do not require both to exist: Phantom controls its current
-     * priority-fee normalization policy.
-     */
     for (
       let i = 0;
       i < original.instructions.length;
