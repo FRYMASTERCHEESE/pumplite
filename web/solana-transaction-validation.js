@@ -1,3 +1,4 @@
+import { LIGHTHOUSE, validateLighthouseData } from './solana-lighthouse.js';
 import { Buffer } from 'buffer';
 const COMPUTE = 'ComputeBudget111111111111111111111111111111';
 function fingerprint(ix) {
@@ -5,7 +6,13 @@ function fingerprint(ix) {
 }
 // Called on the canonical wire-decoded transaction BEFORE handing anything to Phantom.
 export function snapshotTransaction(tx) {
-  return Object.freeze({payer:tx.feePayer.toBase58(), blockhash:tx.recentBlockhash,
+  const accounts={};
+  for(const ix of tx.instructions) for(const k of ix.keys) {
+    const key=k.pubkey.toBase58(), old=accounts[key];
+    accounts[key]=Object.freeze({isSigner:!!(old?.isSigner||k.isSigner),isWritable:!!(old?.isWritable||k.isWritable)});
+  }
+  accounts[tx.feePayer.toBase58()]=Object.freeze({isSigner:true,isWritable:true});
+  return Object.freeze({accounts:Object.freeze(accounts),payer:tx.feePayer.toBase58(), blockhash:tx.recentBlockhash,
     instructions:Object.freeze(tx.instructions.map(fingerprint))});
 }
 export function publicInstructionSequence(tx) {
@@ -24,9 +31,22 @@ export function validateWalletTransaction(snapshot, signed) {
   if (!matches.length) throw Error('Wallet changed or split PumpLite business instructions');
   if (matches.length!==1) throw Error('Wallet duplicated PumpLite business instructions');
   const start=matches[0], outside=signed.instructions.filter((_,i) => i<start || i>=start+expected.length);
-  if (outside.length>4) throw Error('Wallet added unexpected instructions');
-  const seen=new Set();
+  if (outside.length>10) throw Error('Wallet added unexpected instructions');
+  const seen=new Set(), lighthouseSeen=new Set(); let lighthouseCount=0;
   for (const ix of outside) {
+    if(ix.programId.toBase58()===LIGHTHOUSE) {
+      if(++lighthouseCount>6)throw Error('Too many Lighthouse assertions'); // Observed four pre + two post.
+      if(ix.keys.length!==1)throw Error('Lighthouse requires exactly one target account');
+      const k=ix.keys[0], allowed=snapshot.accounts[k.pubkey.toBase58()];
+      if(!allowed)throw Error('Unrelated Lighthouse target');
+      if((k.isSigner&&!allowed.isSigner)||(k.isWritable&&!allowed.isWritable))throw Error('Excessive Lighthouse privileges');
+      validateLighthouseData(ix.data);
+      // Identical pre/post assertions are useful; repeated copies on the same side are not.
+      const side=signed.instructions.indexOf(ix)<start?'pre':'post';
+      const id=side+fingerprint(ix);
+      if(lighthouseSeen.has(id))throw Error('Duplicate Lighthouse instruction');
+      lighthouseSeen.add(id);continue;
+    }
     if (ix.programId.toBase58()!==COMPUTE || ix.keys.length!==0) throw Error('Wallet added non-Compute-Budget instruction outside original block');
     const data=Buffer.from(ix.data), variant=data[0];
     if (![1,2,3,4].includes(variant) || data.length!==(variant===3 ? 9 : 5)) throw Error('Unsupported Compute Budget instruction');
