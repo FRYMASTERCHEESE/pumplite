@@ -356,11 +356,15 @@ export function adapter(
       })
         .add(...instructions);
 
-    if (localSigners.length) {
-      tx.partialSign(
-        ...localSigners
-      );
-    }
+    /*
+     * IMPORTANT: do not apply browser-local signatures before
+     * Phantom. This transaction can require both the Phantom buyer
+     * and a disposable PumpLite mint signer.
+     *
+     * Phantom signs the wallet portion first. PumpLite adds the
+     * browser-local mint signature only after Phantom returns the
+     * verified transaction.
+     */
 
     /*
      * Normalize the authored transaction through Solana wire format
@@ -384,6 +388,13 @@ export function adapter(
       'Review and approve the PumpLite transaction in Phantom.'
     );
 
+    /*
+     * Phantom signs FIRST.
+     *
+     * For PumpLite coin activation the disposable mint signature
+     * is added later, after the wallet-returned message has been
+     * checked for unexpected changes.
+     */
     const signed =
       await selected
         .signTransaction(tx);
@@ -564,9 +575,9 @@ export function adapter(
     }
 
     /*
-     * If Phantom normalized the message, reapply only the
-     * disposable local mint signature. Phantom's wallet
-     * signature remains over this exact message.
+     * Phantom has signed first. Now apply only the disposable
+     * browser-local mint signature to the exact wallet-approved
+     * message. Phantom's wallet signature remains unchanged.
      */
     if (localSigners.length) {
       signed.partialSign(
