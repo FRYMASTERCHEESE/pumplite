@@ -2672,7 +2672,7 @@ function updateInitialBuySymbol() {
   if (intro) {
     intro.textContent =
       solana
-        ? 'Publishing costs 0 SOL. Phantom signs a message only. Your coin appears as Ready to Buy, and PumpLite handles activation when somebody presses Buy Coin.'
+        ? 'Publishing costs 0 SOL. Phantom signs a message only. Your coin appears as Ready to Buy. The first buyer will fund on-chain activation through the normal Buy Coin flow.'
         : 'Use 0 ETH to create only. Enter more than 0 ETH if you also want your connected wallet to buy the new token immediately after creation.';
   }
 }
@@ -3727,7 +3727,7 @@ $('initial-buy-form').addEventListener('submit', e => {
       ) {
         if (initialBuy !== 0n) {
           throw Error(
-            'Publishing this Solana coin costs 0 SOL. It appears as Ready to Buy, and the normal Buy Coin flow handles activation.'
+            'Publishing this Solana coin costs 0 SOL. It appears as Ready to Buy. The first buyer will fund on-chain activation through the normal Buy Coin flow.'
           );
         }
 

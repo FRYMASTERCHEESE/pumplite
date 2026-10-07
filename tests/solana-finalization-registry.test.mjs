@@ -52,7 +52,7 @@ test(
 
     assert.equal(
       config.solana.discoveryUrl,
-      null
+      'https://pumplite-rpc.coreyedge123.workers.dev/launch/activated/'
     );
 
     assert.match(
@@ -133,7 +133,7 @@ test(
 
     assert.match(
       ui,
-      /First buy amount \(SOL\)/
+      /Buy amount \(SOL\)/
     );
 
     assert.doesNotMatch(
@@ -153,7 +153,7 @@ test(
 
     assert.doesNotMatch(
       rpc,
-      /sendTransaction|sendRawTransaction/
+      /sendRawTransaction/
     );
   }
 );

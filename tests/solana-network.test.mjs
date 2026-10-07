@@ -36,7 +36,8 @@ const legacyConfig = {
   ...config.solana,
   protocol: undefined,
   programId: null,
-  transactionsEnabled: false
+  transactionsEnabled: false,
+  discoveryUrl: null
 };
 
 async function rpc(t, reply) {

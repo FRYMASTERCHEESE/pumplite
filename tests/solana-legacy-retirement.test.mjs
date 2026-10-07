@@ -1,4 +1,4 @@
-﻿import test from 'node:test';
+import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   readFile
@@ -89,7 +89,7 @@ test(
       );
     }
 
-    assert.doesNotMatch(
+    assert.match(
       worker,
       /^\s*"sendTransaction",?\s*$/m
     );

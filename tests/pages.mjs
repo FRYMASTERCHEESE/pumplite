@@ -973,7 +973,7 @@ try {
     assert.equal(await page.locator('#create').isDisabled(), false, 'Base create button stays actionable before wallet access; wallet access is requested only after click');
     assert.deepEqual(
       await page.locator('.home-page-tabs').locator('button,a').allTextContents(),
-      ['Home','Create Token','Markets & Trade','Help & Safety']
+      ['Home','Create Coin','Markets & Trade','Help & Safety']
     );
     assert.equal(
       await page.locator('.claim-header-link').getAttribute('href'),
@@ -1079,7 +1079,7 @@ try {
 
     assert.ok(
       claimHtml.includes('href="./?page=create"'),
-      'Claim page must link to Create Token'
+      'Claim page must link to Create Coin'
     );
 
     assert.ok(

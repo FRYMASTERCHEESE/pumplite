@@ -35,7 +35,7 @@ assert.deepEqual(
   config.solana.rpcFallbackUrls,
   ['https://solana-rpc.publicnode.com']
 );
-assert.equal(config.solana.discoveryUrl, null);
+assert.equal(config.solana.discoveryUrl, 'https://pumplite-rpc.coreyedge123.workers.dev/launch/activated/');
 if (config.base.transactionsEnabled) {
   assert.equal(transactionConfigEnabled(config, 'base'), true, 'Enabled Base writes require a valid factory');
 }

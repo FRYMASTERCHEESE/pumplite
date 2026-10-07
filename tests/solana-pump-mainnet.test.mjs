@@ -2,6 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
+const validation =
+  await readFile(
+    'web/solana-transaction-validation.js',
+    'utf8'
+  );
+
 import {
   deploymentConfigured,
   transactionConfigEnabled,
@@ -92,7 +98,7 @@ test(
       );
 
     assert.match(
-      source,
+      validation,
       /ComputeBudget111111111111111111111111111111/
     );
 
@@ -107,8 +113,8 @@ test(
     );
 
     assert.match(
-      source,
-      /Wallet changed a PumpLite instruction/
+      validation,
+      /Wallet changed or split PumpLite business instructions/
     );
 
     assert.doesNotMatch(

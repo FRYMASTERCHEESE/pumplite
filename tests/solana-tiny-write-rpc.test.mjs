@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 test(
-  'tiny adapter separates read RPC from signed Mainnet writes',
+  'tiny adapter keeps reviewed signed Mainnet writes on the PumpLite RPC path',
   async () => {
     const config =
       JSON.parse(
@@ -48,7 +48,7 @@ test(
       /writeConnection\s*\.\s*getGenesisHash\s*\(/,
       /writeConnection\s*\.\s*getLatestBlockhash\s*\(/,
       /writeConnection\s*\.\s*_rpcRequest\s*\(/,
-      /writeConnection\s*\.\s*sendRawTransaction\s*\(/,
+      /broadcastConnection\s*\.\s*sendRawTransaction\s*\(/,
       /writeConnection\s*\.\s*confirmTransaction\s*\(/
     ]) {
       assert.match(
@@ -79,7 +79,7 @@ test(
       /await\s+connection\s*\.\s*sendRawTransaction/
     );
 
-    assert.doesNotMatch(
+    assert.match(
       worker,
       /^\s*"sendTransaction",?\s*$/m
     );

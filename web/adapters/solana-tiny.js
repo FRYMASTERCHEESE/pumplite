@@ -611,19 +611,146 @@ export function adapter(
       signature
     );
 
-    const confirmation =
-      await writeConnection
-        .confirmTransaction(
-          {
-            signature,
-            ...signingLatest
-          },
-          'confirmed'
-        );
+    try {
+      const confirmation =
+        await writeConnection
+          .confirmTransaction(
+            {
+              signature,
+              ...signingLatest
+            },
+            'confirmed'
+          );
 
-    assertSolanaConfirmation(
-      confirmation
-    );
+      assertSolanaConfirmation(
+        confirmation
+      );
+    } catch (confirmationError) {
+      notify(
+        'Confirmation wait ended. Checking Solana directly before reporting failure.',
+        config.explorer +
+        '/tx/' +
+        signature
+      );
+
+      let observedStatus =
+        null;
+
+      for (
+        let round = 0;
+        round < 3;
+        round++
+      ) {
+        for (const rpcUrl of urls) {
+          try {
+            const statusConnection =
+              makeConnection(
+                rpcUrl
+              );
+
+            const statusGenesis =
+              await statusConnection
+                .getGenesisHash();
+
+            assertSolanaMainnet(
+              statusGenesis
+            );
+
+            const statusResponse =
+              await statusConnection
+                .getSignatureStatuses(
+                  [signature],
+                  {
+                    searchTransactionHistory:
+                      true
+                  }
+                );
+
+            const candidate =
+              statusResponse
+                ?.value?.[0] ??
+              null;
+
+            if (!candidate) {
+              continue;
+            }
+
+            observedStatus =
+              candidate;
+
+            if (
+              candidate.err !==
+              null
+            ) {
+              throw Error(
+                'Solana transaction failed on-chain: ' +
+                JSON.stringify(
+                  candidate.err
+                )
+              );
+            }
+
+            if (
+              candidate
+                .confirmationStatus ===
+                  'confirmed' ||
+              candidate
+                .confirmationStatus ===
+                  'finalized'
+            ) {
+              notify(
+                'Confirmed on Solana after final status check.',
+                config.explorer +
+                '/tx/' +
+                signature
+              );
+
+              return signature;
+            }
+          } catch (statusError) {
+            if (
+              statusError?.message
+                ?.startsWith(
+                  'Solana transaction failed on-chain:'
+                )
+            ) {
+              throw statusError;
+            }
+          }
+        }
+
+        if (round < 2) {
+          await new Promise(
+            resolve =>
+              setTimeout(
+                resolve,
+                1200
+              )
+          );
+        }
+      }
+
+      if (observedStatus) {
+        throw Error(
+          'Transaction is visible on Solana with status ' +
+          String(
+            observedStatus
+              .confirmationStatus ||
+            'processed'
+          ) +
+          '. Do not retry; inspect the linked transaction.'
+        );
+      }
+
+      throw Error(
+        'Confirmation window ended and final Solana status is still unknown. ' +
+        'Do not retry until the linked transaction is checked. Original error: ' +
+        (
+          confirmationError?.message ||
+          'confirmation wait ended'
+        )
+      );
+    }
 
     notify(
       'Confirmed on Solana.',

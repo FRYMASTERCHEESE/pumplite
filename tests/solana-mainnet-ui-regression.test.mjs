@@ -15,7 +15,7 @@ test(
 
     assert.ok(
       ui.includes(
-        'First buy amount (SOL)'
+        'Buy amount (SOL)'
       )
     );
 
@@ -186,7 +186,7 @@ test(
 
     const start =
       app.indexOf(
-        'Free PumpLite launch signed and published'
+        'Free PumpLite coin signed and published'
       );
 
     assert.ok(

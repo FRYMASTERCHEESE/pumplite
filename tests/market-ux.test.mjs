@@ -42,7 +42,7 @@ test(
 
     assert.match(
       html,
-      /Enter how many tokens you want to sell/
+      /Enter how many coins you want to sell/
     );
 
     const simpleBuyAmount =
@@ -330,7 +330,7 @@ test(
 
     assert.match(
       html,
-      /<option value="sell" selected>Sell tokens<\/option>/
+      /<option value="sell" selected>Sell coins<\/option>/
     );
 
     assert.match(
