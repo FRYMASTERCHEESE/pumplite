@@ -438,9 +438,9 @@ export function adapter(
 
     // Only public instruction metadata. No signatures, serialized transactions or secrets.
     const diagnostic = JSON.stringify({sameTransactionInstance:signed===tx,
-      originalCount:snapshot.instructions.length, returned:publicInstructionSequence(signed)});
+      originalCount:signingSnapshot.instructions.length, returned:publicInstructionSequence(signed)});
     try {
-      validateWalletTransaction(snapshot, signed);
+      validateWalletTransaction(signingSnapshot, signed);
     } catch (error) {
       throw Error(error.message+'; Phantom public instruction sequence: '+diagnostic);
     }
