@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="referrer" content="no-referrer">
 <meta name="theme-color" content="#090a0f">
-<meta name="description" content="PumpLite: a Solana and Base Mainnet coin launchpad with free Solana creator launches, wallet-signed trading and transparent bonding curves.">
+<meta name="description" content="PumpLite: launch and trade on Solana and Base Mainnet with live on-chain quotes, wallet approval and direct access to PLSOL.">
 <meta name="application-name" content="PumpLite">
 <meta name="robots" content="index,follow">
 <meta name="color-scheme" content="dark">
@@ -18,12 +18,12 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="PumpLite">
 <meta property="og:title" content="PumpLite · Solana + Base Mainnet launchpad">
-<meta property="og:description" content="Launch and trade coins on Solana and Base Mainnet with wallet-signed transactions and transparent on-chain bonding-curve data.">
+<meta property="og:description" content="Launch and trade on Solana and Base Mainnet. Buy PLSOL with live on-chain quotes and wallet approval.">
 <meta property="og:url" content="https://frymastercheese.github.io/pumplite/">
 <meta property="og:image" content="https://frymastercheese.github.io/pumplite/assets/plite-logo-200.png">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="PumpLite - Solana + Base Mainnet launchpad">
-<meta name="twitter:description" content="Launch and trade on Solana and Base Mainnet with transparent on-chain market data.">
+<meta name="twitter:description" content="Launch and trade on Solana and Base Mainnet with live on-chain quotes and wallet approval.">
 <meta name="twitter:image" content="https://frymastercheese.github.io/pumplite/assets/plite-logo-200.png">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://pumplite-rpc.coreyedge123.workers.dev https://solana-rpc.publicnode.com wss://solana-rpc.publicnode.com https://mainnet.base.org https://base-rpc.publicnode.com https://api.coinbase.com; object-src 'none'; base-uri 'none'; form-action 'none'">
 <title>PumpLite · Solana + Base Mainnet launchpad</title>
@@ -66,16 +66,13 @@
           <p class="live-pill"><span aria-hidden="true"></span> SOLANA + BASE MAINNET</p>
           <p class="eyebrow">PUMPLITE LAUNCHPAD</p>
           <h1>Discover. Launch.<br>Trade on-chain.</h1>
-          <p class="intro">Launch on Solana or Base Mainnet with wallet-signed trading, transparent bonding curves and real on-chain market data.</p>
+          <p class="intro">Launch and trade on Solana or Base Mainnet with live on-chain quotes and wallet approval.</p>
           <div class="hero-actions">
             <a class="primary compact-action hero-link" href="#solana/EUKhN8eP97NjRHzxwRT5pdgLg7BX5KRTBhJYa2hMu9ma">Buy PLSOL</a>
             <button id="hero-explore" class="primary compact-action" type="button">Explore coins</button>
             <button id="hero-create" class="outline compact-action" type="button">Create coin</button>
-
-          <p class="fine">
-            PLSOL: Connect Phantom → enter SOL → review &amp; approve.
-            Verify the official mint before buying.
-          </p>
+          </div>
+          <p class="fine">PLSOL: Connect Phantom → enter NZD or USD → review the SOL amount → approve. Verify the official mint before buying.</p>
         </div>
         <aside class="featured-token-card" aria-label="Featured PumpLite coin">
           <div class="featured-token-head">
@@ -482,12 +479,12 @@
         <section id="trade-quick-buy" class="trade-helper simple-buy-card" aria-labelledby="trade-quick-buy-title">
           <p class="eyebrow">SIMPLE BUY</p>
           <h3 id="trade-quick-buy-title">Buy coins simply</h3>
-          <p id="trade-quick-buy-copy" class="fine">Enter NZD or USD. PumpLite shows approximately how many coins you will receive, then refreshes the real on-chain quote before your wallet asks you to approve the Base ETH transaction.</p>
+          <p id="trade-quick-buy-copy" class="fine">Connect your wallet, enter NZD or USD, then review the live on-chain quote before approval.</p>
 
           <div class="simple-buy-entry">
             <div id="trade-spend-field">
-              <label for="trade-display-amount">I want to spend</label>
-              <input id="trade-display-amount" inputmode="decimal" placeholder="2.00" maxlength="32" autocomplete="off">
+              <label for="trade-display-amount">Amount to spend</label>
+              <input id="trade-display-amount" inputmode="decimal" enterkeyhint="done" placeholder="e.g. 2.00" maxlength="32" autocomplete="off" aria-describedby="trade-display-estimate simple-buy-note">
             </div>
 
             <div>
@@ -500,13 +497,13 @@
           </div>
 
           <div class="simple-buy-preview" aria-live="polite">
-            <small>You receive approximately</small>
+            <small>Estimated coins received</small>
             <strong id="simple-buy-output">- TOKEN</strong>
-            <span id="trade-display-estimate">Enter an amount above to see the live estimate.</span>
+            <span id="trade-display-estimate">Type an amount such as 2.00 to see the live estimate.</span>
           </div>
 
           <button id="trade-use-display" type="button" class="primary full simple-buy-button">Buy coins</button>
-          <p id="simple-buy-note" class="fine">The final purchase uses Base ETH. Your wallet remains the final approval step and shows the Base network fee before you sign. PumpLite uses 1% slippage protection for this simple-buy button.</p>
+          <p id="simple-buy-note" class="fine">Final payment is SOL or Base ETH. Your wallet shows the amount and network fee before approval. 1% slippage protection.</p>
         </section>
 
         <section class="simple-sell-card" aria-labelledby="simple-sell-title">
