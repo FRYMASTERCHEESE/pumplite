@@ -145,6 +145,7 @@ if (checkOnly) {
   for (const path of [
     'index.html',
     'plsol.html',
+    'creator-tokens.html',
     'claim.html',
     'verification.html',
     'status.html',

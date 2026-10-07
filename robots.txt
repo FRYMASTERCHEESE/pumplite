@@ -1,6 +1,7 @@
 User-agent: *
 Allow: /
 Allow: /plsol.html
+Allow: /creator-tokens.html
 Allow: /verification.html
 Allow: /status.html
 Allow: /token-list.json
