@@ -59,12 +59,12 @@ assert.equal(
 
 assert.equal(
   config.solana.transactionsEnabled,
-  false
+  true
 );
 
 assert.equal(
   config.solana.discoveryUrl,
-  null
+  'https://pumplite-rpc.coreyedge123.workers.dev/launch/activated/'
 );
 
 assert.equal(
@@ -88,7 +88,7 @@ for (const marker of [
   'buildTinyFirstBuyerActivationInstructions',
   'simulateTransaction',
   'sendRawTransaction',
-  'Wallet changed a PumpLite instruction'
+  'validateWalletTransaction'
 ]) {
   assert.ok(
     adapter.includes(marker),
@@ -115,7 +115,7 @@ assert.doesNotMatch(
 );
 
 console.log('PumpLite tiny Mainnet identity pinned ✅');
-console.log('Creator free-launch path remains transaction locked ✅');
+console.log('Creator free-launch remains message-only; reviewed first-buyer transactions enabled ✅');
 console.log('Browser-local first-buyer activation implementation present ✅');
 console.log('No wallet used ✅');
 console.log('No signature requested ✅');

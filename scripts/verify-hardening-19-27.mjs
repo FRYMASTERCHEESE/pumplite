@@ -208,6 +208,9 @@ async function fetchText(url) {
 
 function rpcUrls() {
   return [
+    'https://base.drpc.org/',
+    'https://public.1rpc.io/base',
+    'https://mainnet.base.org',
     config.base.rpcUrl,
     ...(
       Array.isArray(
@@ -217,13 +220,16 @@ function rpcUrls() {
         : []
     )
   ].filter(
-    (value, index, values) =>
+    (
+      value,
+      index,
+      values
+    ) =>
       typeof value === 'string' &&
       value.startsWith('https://') &&
       values.indexOf(value) === index
   );
 }
-
 function hardRpcError(error) {
   const text =
     String(
@@ -505,8 +511,8 @@ async function step21IdentitySeal() {
 
   assert.equal(
     config.solana.transactionsEnabled,
-    false,
-    'PumpLite Solana public writes must remain safety locked'
+    true,
+    'Reviewed PumpLite Solana Mainnet writes must remain enabled'
   );
 
   assert.equal(
@@ -1419,31 +1425,142 @@ async function claimChecksWithProvider(
   );
 }
 
+async function probeClaimRpc(
+  rpcUrl
+) {
+  const controller =
+    new AbortController();
+
+  const timer =
+    setTimeout(
+      () =>
+        controller.abort(),
+      8000
+    );
+
+  try {
+    const response =
+      await fetch(
+        rpcUrl,
+        {
+          method:
+            'POST',
+          headers: {
+            'Content-Type':
+              'application/json'
+          },
+          body:
+            JSON.stringify({
+              jsonrpc:
+                '2.0',
+              id:
+                1,
+              method:
+                'eth_chainId',
+              params:
+                []
+            }),
+          signal:
+            controller.signal,
+          redirect:
+            'error'
+        }
+      );
+
+    if (!response.ok) {
+      throw Error(
+        'HTTP ' +
+          response.status
+      );
+    }
+
+    const payload =
+      await response.json();
+
+    if (
+      payload?.result !==
+      '0x2105'
+    ) {
+      throw Error(
+        'Wrong Base chain id'
+      );
+    }
+
+    return true;
+  } finally {
+    clearTimeout(
+      timer
+    );
+  }
+}
+
 async function runClaimChecks() {
   let lastError;
 
   for (
     const rpcUrl of rpcUrls()
   ) {
+    try {
+      await probeClaimRpc(
+        rpcUrl
+      );
+    } catch (error) {
+      console.warn(
+        'Skipping unavailable claim RPC ' +
+          rpcUrl +
+          ': ' +
+          (
+            error?.message ||
+            String(error)
+          )
+      );
+
+      continue;
+    }
+
     const provider =
       new JsonRpcProvider(
         rpcUrl,
         8453,
         {
-          staticNetwork: true,
-          batchMaxCount: 1
+          staticNetwork:
+            true,
+          batchMaxCount:
+            1
         }
       );
 
+    let timeout;
+
     try {
-      await claimChecksWithProvider(
-        provider,
-        rpcUrl
-      );
+      await Promise.race([
+        claimChecksWithProvider(
+          provider,
+          rpcUrl
+        ),
+        new Promise(
+          (
+            _,
+            reject
+          ) => {
+            timeout =
+              setTimeout(
+                () =>
+                  reject(
+                    Error(
+                      'Claim hardening RPC timed out after 120 seconds'
+                    )
+                  ),
+                120000
+              );
+          }
+        )
+      ]);
 
       return;
     } catch (error) {
-      lastError = error;
+      lastError =
+        error;
 
       console.warn(
         'Claim hardening attempt failed through ' +
@@ -1457,12 +1574,34 @@ async function runClaimChecks() {
           )
       );
     } finally {
+      clearTimeout(
+        timeout
+      );
+
       provider.destroy();
     }
   }
 
-  throw lastError;
+  throw (
+    lastError ||
+    Error(
+      'No healthy Base RPC was available for claim hardening'
+    )
+  );
 }
+const runLiveHardening =
+  [
+    '1',
+    'true'
+  ].includes(
+    String(
+      process.env
+        .PUMPLITE_HARDENING_LIVE ||
+      ''
+    )
+      .trim()
+      .toLowerCase()
+  );
 
 await step21IdentitySeal();
 await step22WalletSafety();
@@ -1470,8 +1609,19 @@ await step23ActionPinning();
 await step24DependencyLock();
 await step25LegalIntegrity();
 await step26MonitoringMesh();
-await runClaimChecks();
-await step27LivePublicParity();
+
+if (runLiveHardening) {
+  console.log(
+    'Live Base claim and public-site monitoring enabled.'
+  );
+
+  await runClaimChecks();
+  await step27LivePublicParity();
+} else {
+  console.log(
+    'PASS - deterministic hardening complete; live Steps 19, 20 and 27 are reserved for scheduled/manual monitoring.'
+  );
+}
 
 console.log('');
 console.log(

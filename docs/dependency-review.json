@@ -1,64 +1,78 @@
 {
-  "reviewedAt": "2026-10-04",
-  "reviewBy": "2026-11-04",
-  "purpose": "Engineering exposure review; not independent audit approval or permission to deploy.",
-  "javascript": [
-    {
-      "id": "GHSA-528h-pc64-c93x",
-      "name": "stream-json",
-      "version": "1.9.1",
-      "severity": "moderate",
-      "reason": "Zero browser bytes enforced by build. Node jayson uses StreamValues/Verifier, not the affected path filters. No untrusted production Node service is shipped. Reassess before adding server-side RPC/metadata processing; do not force incompatible v3 into jayson."
-    }
-  ],
-  "rust": [
-    {
-      "id": "RUSTSEC-2021-0139",
-      "name": "ansi_term",
-      "version": "0.12.1",
-      "informational": "unmaintained",
-      "scope": "Outside the pumplite normal/build dependency graph; isolated VM/tooling dependency.",
-      "reason": "Unmaintained upstream package. Preserve compatible pinned Solana/Agave graph and monitor upstream migration."
-    },
-    {
-      "id": "RUSTSEC-2025-0141",
-      "name": "bincode",
-      "version": "1.3.3",
-      "informational": "unmaintained",
-      "scope": "Program dependency via Solana/Anchor; not safe to replace serialization APIs independently.",
-      "reason": "Unmaintained upstream package. Preserve compatible pinned Solana/Agave graph and monitor upstream migration."
-    },
-    {
-      "id": "RUSTSEC-2024-0388",
-      "name": "derivative",
-      "version": "2.2.0",
-      "informational": "unmaintained",
-      "scope": "Outside the pumplite normal/build dependency graph; isolated VM/tooling dependency.",
-      "reason": "Unmaintained upstream package. Preserve compatible pinned Solana/Agave graph and monitor upstream migration."
-    },
-    {
-      "id": "RUSTSEC-2025-0161",
-      "name": "libsecp256k1",
-      "version": "0.6.0",
-      "informational": "unmaintained",
-      "scope": "Outside the pumplite normal/build dependency graph; isolated VM/tooling dependency.",
-      "reason": "Unmaintained upstream package. Preserve compatible pinned Solana/Agave graph and monitor upstream migration."
-    },
-    {
-      "id": "RUSTSEC-2024-0436",
-      "name": "paste",
-      "version": "1.0.15",
-      "informational": "unmaintained",
-      "scope": "Outside the pumplite normal/build dependency graph; isolated VM/tooling dependency.",
-      "reason": "Unmaintained upstream package. Preserve compatible pinned Solana/Agave graph and monitor upstream migration."
-    },
-    {
-      "id": "RUSTSEC-2026-0097",
-      "name": "rand",
-      "version": "0.7.3",
-      "informational": "unsound",
-      "scope": "Outside the pumplite normal/build dependency graph; isolated VM/tooling dependency.",
-      "reason": "Conditional logger reentrancy finding in test dependencies; no custom logger invoking rand::rng is installed."
-    }
-  ]
+    "reviewedAt":  "2026-10-07",
+    "reviewBy":  "2026-11-07",
+    "purpose":  "Engineering exposure review; not independent audit approval or permission to deploy.",
+    "javascript":  [
+                       {
+                           "id":  "GHSA-528h-pc64-c93x",
+                           "name":  "stream-json",
+                           "version":  "1.9.1",
+                           "severity":  "moderate",
+                           "reason":  "Zero browser bytes enforced by build. Node jayson uses StreamValues/Verifier, not the affected path filters. No untrusted production Node service is shipped. Reassess before adding server-side RPC/metadata processing; do not force incompatible v3 into jayson."
+                       },
+                       {
+                           "id":  "GHSA-hqr4-qq8f-hg3x",
+                           "name":  "stream-json",
+                           "version":  "1.9.1",
+                           "severity":  "moderate",
+                           "reason":  "JSONC comment-scanner quadratic processing affects the JSONC parser/verifier. PumpLite does not use the stream-json JSONC parser/verifier in browser production code, and stream-json remains transitive Node tooling only. Reassess before adding untrusted JSONC processing or changing the transitive dependency graph."
+                       },
+                       {
+                           "id":  "GHSA-mjw6-4jj6-33hc",
+                           "name":  "stream-json",
+                           "version":  "1.9.1",
+                           "severity":  "moderate",
+                           "reason":  "Assembler prototype replacement affects applications materializing attacker-controlled input through stream-json Assembler. PumpLite does not ship stream-json in browser production code and does not use this transitive Node tooling path as a public untrusted JSON service. Reassess before adding such a path or changing the transitive dependency graph."
+                       }
+                   ],
+    "rust":  [
+                 {
+                     "id":  "RUSTSEC-2021-0139",
+                     "name":  "ansi_term",
+                     "version":  "0.12.1",
+                     "informational":  "unmaintained",
+                     "scope":  "Outside the pumplite normal/build dependency graph; isolated VM/tooling dependency.",
+                     "reason":  "Unmaintained upstream package. Preserve compatible pinned Solana/Agave graph and monitor upstream migration."
+                 },
+                 {
+                     "id":  "RUSTSEC-2025-0141",
+                     "name":  "bincode",
+                     "version":  "1.3.3",
+                     "informational":  "unmaintained",
+                     "scope":  "Program dependency via Solana/Anchor; not safe to replace serialization APIs independently.",
+                     "reason":  "Unmaintained upstream package. Preserve compatible pinned Solana/Agave graph and monitor upstream migration."
+                 },
+                 {
+                     "id":  "RUSTSEC-2024-0388",
+                     "name":  "derivative",
+                     "version":  "2.2.0",
+                     "informational":  "unmaintained",
+                     "scope":  "Outside the pumplite normal/build dependency graph; isolated VM/tooling dependency.",
+                     "reason":  "Unmaintained upstream package. Preserve compatible pinned Solana/Agave graph and monitor upstream migration."
+                 },
+                 {
+                     "id":  "RUSTSEC-2025-0161",
+                     "name":  "libsecp256k1",
+                     "version":  "0.6.0",
+                     "informational":  "unmaintained",
+                     "scope":  "Outside the pumplite normal/build dependency graph; isolated VM/tooling dependency.",
+                     "reason":  "Unmaintained upstream package. Preserve compatible pinned Solana/Agave graph and monitor upstream migration."
+                 },
+                 {
+                     "id":  "RUSTSEC-2024-0436",
+                     "name":  "paste",
+                     "version":  "1.0.15",
+                     "informational":  "unmaintained",
+                     "scope":  "Outside the pumplite normal/build dependency graph; isolated VM/tooling dependency.",
+                     "reason":  "Unmaintained upstream package. Preserve compatible pinned Solana/Agave graph and monitor upstream migration."
+                 },
+                 {
+                     "id":  "RUSTSEC-2026-0097",
+                     "name":  "rand",
+                     "version":  "0.7.3",
+                     "informational":  "unsound",
+                     "scope":  "Outside the pumplite normal/build dependency graph; isolated VM/tooling dependency.",
+                     "reason":  "Conditional logger reentrancy finding in test dependencies; no custom logger invoking rand::rng is installed."
+                 }
+             ]
 }

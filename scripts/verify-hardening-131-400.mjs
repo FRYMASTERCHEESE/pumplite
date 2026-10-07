@@ -239,11 +239,11 @@ okGate(204, "First 50 maximum claims", Number(config.base?.holderClaim?.maxClaim
 okGate(205, "metadata uploads enabled", config.metadataUploads?.enabled === true);
 okGate(206, "Solana network name", config.solana?.name === 'Solana Mainnet');
 okGate(207, "reviewed PumpLite tiny Mainnet identity", config.solana?.protocol === 'tiny' && config.solana?.programId === '3CHqrdJzwWQj1QikCzpjBhC8iQ3paaMtD1x9kwoW1rku' && config.solana?.clientVersion === 5 && config.solana?.ammProgramId === undefined && config.solana?.mayhemProgramId === undefined);
-okGate(208, "reviewed PumpLite Mainnet transaction safety lock", config.solana?.transactionsEnabled === true);
+okGate(208, "reviewed PumpLite Mainnet transactions enabled", config.solana?.transactionsEnabled === true);
 okGate(209, "Solana treasury identity", config.solana?.treasury === 'BNpFPPuy2h12dryy4dayemjA4YS17ccVaF82jBDuiwct');
 okGate(210, "Solana Mainnet genesis hash", config.solana?.genesisHash === '5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d');
 okGate(211, "Solana explorer identity", config.solana?.explorer === 'https://solscan.io');
-okGate(212, "Solana discovery remains unset", config.solana?.discoveryUrl === null);
+okGate(212, "Solana activated discovery endpoint pinned", config.solana?.discoveryUrl === 'https://pumplite-rpc.coreyedge123.workers.dev/launch/activated/');
 okGate(213, "deployment schema", deployment.schemaVersion === 1);
 okGate(214, "deployment network", deployment.network === 'Base Mainnet');
 okGate(215, "deployment chain id", deployment.chainId === 8453);
@@ -319,7 +319,7 @@ incGate(284, "bounded fetch no transaction retry message", rpcFetch, "no transac
 incGate(285, "metadata Bearer authorization", metadataUpload, "Bearer ");
 incGate(286, "metadata image size limit", metadataUpload, "512*1024");
 incGate(287, "metadata JSON size limit", metadataUpload, "4096");
-incGate(288, "metadata upload route construction", metadataUpload, "BASE+'/metadata/'+kind");
+incGate(288, "metadata upload route construction", metadataUpload, "BASE + '/metadata/' + kind");
 incGate(289, "metadata authorization required", metadataUpload, "Upload authorization required");
 incGate(290, "metadata social allowlist", metadataFields, "LINK_FIELDS = ['website','twitter','telegram','discord']");
 incGate(291, "metadata direct HTTPS link rule", metadataFields, "Use a direct HTTPS project link without a query or port");

@@ -564,7 +564,7 @@ includes(mobile, [
   'https://metamask.app.link/dapp/'
 ], 'Mobile handoff');
 includes(metadataAuth, ['/metadata/challenge', '/metadata/issue'], 'Metadata auth');
-includes(metadataUpload, ["['image','json']", 'Upload authorization required', '512*1024', '4096', "BASE+'/metadata/'+kind"], 'Metadata upload bounds');
+includes(metadataUpload, ["['image','json']", 'Upload authorization required', '512*1024', '4096', "BASE + '/metadata/' + kind"], 'Metadata upload bounds');
 includes(baseRpc, ['rpcFallbackUrls', 'baseReadTransport', "url.protocol !== 'https:'"], 'Base read RPC');
 includes(rpcFetch, ['AbortController', "redirect: 'error'", "credentials: 'omit'", 'maxBytes'], 'Bounded fetch');
 pass(128, 'frontend wallet metadata and RPC safety mesh');

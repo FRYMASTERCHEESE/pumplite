@@ -161,7 +161,7 @@ requireIncludes(await read('web/metadata-auth-client.js'), [
 ], 'Metadata authorization client');
 requireIncludes(await read('web/metadata-upload.js'), [
   "['image','json']",
-  "BASE+'/metadata/'+kind",
+  "BASE + '/metadata/' + kind",
   'Upload authorization required'
 ], 'Metadata upload client');
 pass(37, 'metadata authorization and upload routing');

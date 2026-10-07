@@ -55,6 +55,7 @@ jobs:
 
       - name: Verify production hardening Steps 19-27
         env:
-          PUMPLITE_HARDENING_LOG_BLOCK_SPAN: "10000"
+          PUMPLITE_HARDENING_LOG_BLOCK_SPAN: "50000"
           PUMPLITE_HARDENING_FETCH_ATTEMPTS: "4"
+          PUMPLITE_HARDENING_LIVE: ${{ github.event_name != 'push' }}
         run: pnpm verify:hardening-19-27
