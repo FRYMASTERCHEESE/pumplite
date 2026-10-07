@@ -144,6 +144,7 @@ if (checkOnly) {
   await mkdir(dist, { recursive: true });
   for (const path of [
     'index.html',
+    'plsol.html',
     'claim.html',
     'verification.html',
     'status.html',
@@ -153,6 +154,7 @@ if (checkOnly) {
     'risk.html',
     'config.json',
     'status.js',
+    'plsol.js',
     'manifest.webmanifest',
     'robots.txt',
     'sitemap.xml',
