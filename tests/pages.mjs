@@ -973,7 +973,7 @@ try {
     assert.equal(await page.locator('#create').isDisabled(), false, 'Base create button stays actionable before wallet access; wallet access is requested only after click');
     assert.deepEqual(
       await page.locator('.home-page-tabs').locator('button,a').allTextContents(),
-      ['Home','Create Coin','Markets & Trade','Help & Safety']
+      ['Home','Create Coin','Markets & Trade','My Coins','Help & Safety']
     );
     assert.equal(
       await page.locator('.claim-header-link').getAttribute('href'),
