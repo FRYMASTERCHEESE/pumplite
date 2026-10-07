@@ -10,6 +10,12 @@ const localIndex =
 const localClaim =
   await readFile('claim.html', 'utf8');
 
+const localStatus =
+  await readFile('status.html', 'utf8');
+
+const localV3Deploy =
+  await readFile('v3-deploy.html', 'utf8');
+
 const localConfig =
   JSON.parse(
     await readFile('config.json', 'utf8')
@@ -62,6 +68,53 @@ const expectedApp =
 
 const expectedClaim =
   assetSource(localClaim, 'claim.js');
+
+function bootSource(
+  html,
+  path
+) {
+  const marker =
+    './' + path + '?boot=';
+
+  const markerIndex =
+    html.indexOf(marker);
+
+  assert.ok(
+    markerIndex >= 0,
+    'Local ' + path + ' boot asset reference missing'
+  );
+
+  const start =
+    markerIndex + 2;
+
+  const end =
+    html.indexOf(
+      '"',
+      start
+    );
+
+  assert.ok(
+    end > start,
+    'Local ' + path + ' boot asset reference is malformed'
+  );
+
+  return html.slice(
+    start,
+    end
+  );
+}
+
+const expectedStatus =
+  bootSource(
+    localStatus,
+    'status.js'
+  );
+
+const expectedV3Deploy =
+  bootSource(
+    localV3Deploy,
+    'assets/v3-deploy.js'
+  );
 
 function sleep(ms) {
   return new Promise(resolve =>
@@ -168,13 +221,13 @@ async function verifyOnce() {
     fetchText('verification.html'),
     fetchText('status.html'),
     fetchText('v3-deploy.html'),
-    fetchText('status.js'),
+    fetchText(expectedStatus),
     fetchJson('manifest.webmanifest'),
     fetchText('robots.txt'),
     fetchText('sitemap.xml'),
     fetchJson('token-list.json'),
     fetchText('.well-known/security.txt'),
-    fetchText('assets/v3-deploy.js')
+    fetchText(expectedV3Deploy)
   ]);
 
   assert.ok(
@@ -189,7 +242,7 @@ async function verifyOnce() {
       'PLITE verification &amp; discovery'
     ) &&
     statusPage.includes(
-      'src="./status.js?boot=20261003pump3"'
+      'src="./' + expectedStatus + '"'
     ),
     'Live status page or status script reference is stale'
   );
@@ -199,7 +252,7 @@ async function verifyOnce() {
       'Deploy PumpLite V3'
     ) &&
     v3DeployPage.includes(
-      'src="./assets/v3-deploy.js?boot=20261003pump3"'
+      'src="./' + expectedV3Deploy + '"'
     ) &&
     v3DeployPage.includes(
       'REAL BASE MAINNET'
@@ -287,7 +340,7 @@ async function verifyOnce() {
   );
 
   for (const required of [
-    'BASE MAINNET LIVE',
+    'SOLANA + BASE MAINNET',
     'id="mobile-phantom"',
     'id="mobile-coinbase"',
     'id="mobile-open"',
@@ -364,7 +417,7 @@ async function verifyOnce() {
 
   assert.equal(
     liveConfig.solana.transactionsEnabled,
-    false
+    true
   );
 
   assert.equal(
@@ -394,7 +447,7 @@ async function verifyOnce() {
 
   assert.equal(
     liveConfig.solana.discoveryUrl,
-    null
+    'https://pumplite-rpc.coreyedge123.workers.dev/launch/activated/'
   );
 
   assert.deepEqual(
@@ -457,7 +510,7 @@ async function verifyOnce() {
   console.log('App asset:', expectedApp);
   console.log('Claim asset:', expectedClaim);
   console.log(
-    'Base V2 live; PumpLite tiny Solana Mainnet integration is safety locked pending final activation.'
+    'Base V2 live; PumpLite tiny Solana Mainnet integration is enabled with production discovery and wallet-gated writes.'
   );
   console.log(
     'No wallet used. No signature requested. No transaction submitted.'
