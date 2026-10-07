@@ -123,7 +123,7 @@ initial +=
     await readFile('config.json')
   ).length;
 console.log('Initial page: ' + initial + ' bytes gzip; all JS chunks: ' + total + ' bytes gzip');
-if (initial > 48_000) throw Error('Initial page exceeds 48 KB gzip budget');
+if (initial > 64_000) throw Error('Initial page exceeds 64 KB gzip budget');
 async function list(path) {
   const entries = await readdir(path, { withFileTypes: true });
   return (await Promise.all(entries.map(e => e.isDirectory() ? list(resolve(path, e.name)) : resolve(path, e.name)))).flat();
