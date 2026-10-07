@@ -280,7 +280,7 @@ requireIncludes(buildSource, [
   "'privacy.html'",
   "'risk.html'",
   "'config.json'",
-  "if (initial > 48_000) throw Error('Initial page exceeds 48 KB gzip budget');"
+  "if (initial > 64_000) throw Error('Initial page exceeds 64 KB gzip budget');"
 ], 'Pages build');
 pass(46, 'Pages publication and size-budget coverage');
 

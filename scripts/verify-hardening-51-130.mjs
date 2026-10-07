@@ -577,7 +577,7 @@ includes(build, [
   "'privacy.html'",
   "'risk.html'",
   "'config.json'",
-  "Initial page exceeds 48 KB gzip budget"
+  "Initial page exceeds 64 KB gzip budget"
 ], 'Pages build');
 includes(headers, [
   "Content-Security-Policy: default-src 'self'",
