@@ -215,10 +215,7 @@ function controls() {
     state.busy ||
     (
       state.chain === 'solana'
-        ? (
-            !ready() ||
-            !state.wallet
-          )
+        ? !writable()
         : !transactionConfigEnabled(
             state.config,
             state.chain
@@ -239,11 +236,11 @@ function controls() {
       )
         ? 'PumpLite Solana Mainnet transactions are currently disabled.'
         : state.wallet
-          ? 'Phantom connected. Create coin will publish a free 0 SOL PumpLite coin listing.'
-          : 'Connect Phantom first, then publish your free PumpLite Solana coin.';
+          ? 'Phantom connected. Create coin will write the mint and metadata to Solana Mainnet immediately.'
+          : 'Connect Phantom first, then create your PumpLite Solana coin on-chain.';
 
     $('creation-review').textContent =
-      'Publishing a PumpLite Solana coin costs 0 SOL. Phantom signs a message only, so the creator pays no rent or network fee. The coin appears as Ready to Buy and becomes on-chain when someone buys it.';
+      'PumpLite creation fee is 0 SOL. Phantom reviews one Solana Mainnet creation transaction; one-time Solana network/account costs apply. The mint and metadata are created immediately, no buyer is required, and there is no later PumpLite bill.';
   }
 
   $('get-quote').disabled =
@@ -2593,9 +2590,9 @@ function updateInitialBuySymbol() {
 
   if (solana) {
     title.append(
-      'Publish ',
+      'Create ',
       token,
-      ' for 0 SOL?'
+      ' on Solana?'
     );
   } else {
     title.append(
@@ -2616,7 +2613,7 @@ function updateInitialBuySymbol() {
   if (eyebrow) {
     eyebrow.textContent =
       solana
-        ? 'FREE SOLANA COIN'
+        ? 'IMMEDIATE ON-CHAIN CREATE'
         : 'OPTIONAL FIRST BUY';
   }
 
@@ -2660,7 +2657,7 @@ function updateInitialBuySymbol() {
   if (label) {
     label.textContent =
       solana
-        ? 'Creator cost'
+        ? 'Solana network/account cost'
         : 'Optional first buy amount in ETH';
   }
 
@@ -2672,7 +2669,7 @@ function updateInitialBuySymbol() {
   if (intro) {
     intro.textContent =
       solana
-        ? 'Publishing costs 0 SOL. Phantom signs a message only. Your coin appears as Ready to Buy. The first buyer will fund on-chain activation through the normal Buy Coin flow.'
+        ? 'PumpLite charges a 0 SOL creation fee. Phantom will review one Solana Mainnet transaction for the one-time network/account costs. The mint and metadata go on-chain immediately, even with zero buyers. There is no subscription or later PumpLite bill.'
         : 'Use 0 ETH to create only. Enter more than 0 ETH if you also want your connected wallet to buy the new token immediately after creation.';
   }
 }
@@ -2783,10 +2780,10 @@ async function updateInitialBuyEstimate() {
 
     $('initial-buy-submit')
       .textContent =
-      'Create for 0 SOL';
+      'Create on Solana';
 
     output.textContent =
-      '0 SOL · creator pays $0. Phantom will request a message signature only; no transaction is submitted.';
+      'PumpLite fee: 0 SOL · one-time Solana network/account costs apply · no subscription or later PumpLite bill.';
 
     return;
   }
@@ -3593,13 +3590,7 @@ $('create-form').addEventListener('submit', e => {
         }
       }
 
-      if (
-        state.chain === 'solana'
-      ) {
-        requireDeployment();
-      } else {
-        requireWrite();
-      }
+      requireWrite();
 
       updateInitialBuySymbol();
       $('initial-buy-eth').value = '0';
@@ -3609,7 +3600,9 @@ $('create-form').addEventListener('submit', e => {
       void updateInitialBuyEstimate();
 
       inline.textContent =
-        'Wallet ready. PumpLite Solana creation is fixed at 0 SOL. No creator transaction will be submitted.';
+        state.chain === 'solana'
+          ? 'Wallet ready. PumpLite creation fee is 0 SOL. Phantom will review one Solana Mainnet transaction; one-time network/account costs apply.'
+          : 'Wallet ready. Review the Base creation transaction before approving it.';
 
       $('initial-buy-dialog').showModal();
     } catch (error) {
@@ -3625,46 +3618,7 @@ $('create-form').addEventListener('submit', e => {
   });
 });
 
-function saveFreeSolanaDraft(
-  draft
-) {
-  const key =
-    'pumplite.solana.freeLaunchDrafts.v1';
 
-  let drafts = [];
-
-  try {
-    const current =
-      JSON.parse(
-        localStorage.getItem(key) ||
-        '[]'
-      );
-
-    if (Array.isArray(current)) {
-      drafts =
-        current.filter(
-          item =>
-            item?.id !==
-            draft.id
-        );
-    }
-  } catch {
-    drafts = [];
-  }
-
-  drafts.unshift(draft);
-
-  drafts =
-    drafts.slice(0, 25);
-
-  localStorage.setItem(
-    key,
-    JSON.stringify(drafts)
-  );
-
-  window.__pumpliteLastFreeDraft =
-    draft;
-}
 
 $('initial-buy-form').addEventListener('submit', e => {
   e.preventDefault();
@@ -3691,13 +3645,7 @@ $('initial-buy-form').addEventListener('submit', e => {
         }
       }
 
-      if (
-        state.chain === 'solana'
-      ) {
-        requireDeployment();
-      } else {
-        requireWrite();
-      }
+      requireWrite();
 
       const data = creationData();
 
@@ -3723,70 +3671,23 @@ $('initial-buy-form').addEventListener('submit', e => {
       const adapter = await getAdapter();
 
       if (
-        state.chain === 'solana'
+        state.chain === 'solana' &&
+        initialBuy !== 0n
       ) {
-        if (initialBuy !== 0n) {
-          throw Error(
-            'Publishing this Solana coin costs 0 SOL. It appears as Ready to Buy. The first buyer will fund on-chain activation through the normal Buy Coin flow.'
-          );
-        }
-
-        flow.textContent =
-          'Sign the free PumpLite coin listing message in Phantom. This is not a transaction and cannot spend SOL.';
-
-        inline.textContent =
-          'Creator cost: 0 SOL. Phantom will request a message signature only.';
-
-        const draft =
-          await adapter
-            .createFreeDraft(data);
-
-        saveFreeSolanaDraft(
-          draft
+        throw Error(
+          'Solana creation is create-only. The coin is written on-chain immediately; buy it later from its market page.'
         );
-
-        $('initial-buy-dialog')
-          .close();
-
-        inline.textContent =
-          'Free PumpLite coin published. Creator cost: 0 SOL. No Solana transaction was submitted.';
-
-        status(
-          'Free PumpLite coin signed and published. Creator cost: 0 SOL. Coin listing ' +
-          draft.id.slice(0, 12) +
-          '... No transaction was submitted. Opening Markets.'
-        );
-
-        showHomePage(
-          'markets'
-        );
-
-        try {
-          await discover(
-            false
-          );
-
-          status(
-            'Launch ' +
-            draft.id.slice(0, 12) +
-            '... is published under New Solana coins ready to buy.'
-          );
-        } catch {
-          status(
-            'Launch ' +
-            draft.id.slice(0, 12) +
-            '... is safely published. Tap Refresh live if the pending card has not appeared yet.'
-          );
-        }
-
-        return;
       }
 
       flow.textContent =
-        'Step 1: review token creation in your wallet. This dialog will stay here until the result is known.';
+        state.chain === 'solana'
+          ? 'Review the Solana Mainnet creation transaction in Phantom. PumpLite charges no creation fee; one-time Solana network/account costs apply.'
+          : 'Step 1: review token creation in your wallet. This dialog will stay here until the result is known.';
 
       inline.textContent =
-        'Review token creation in your wallet. PumpLite creation fee is 0%; Base gas still applies.';
+        state.chain === 'solana'
+          ? 'Creating the mint and metadata on Solana Mainnet now. No buyer is required and there is no later PumpLite bill.'
+          : 'Review token creation in your wallet. PumpLite creation fee is 0%; Base gas still applies.';
 
       createdId = await adapter.create(data);
 
@@ -3842,14 +3743,18 @@ $('initial-buy-form').addEventListener('submit', e => {
       }
 
       inline.textContent =
-        initialBuy > 0n
-          ? 'Token created and optional first buy confirmed.'
-          : 'Token created. No optional first buy was requested.';
+        state.chain === 'solana'
+          ? 'Coin created on Solana Mainnet. No buyer was required.'
+          : initialBuy > 0n
+            ? 'Token created and optional first buy confirmed.'
+            : 'Token created. No optional first buy was requested.';
 
       flow.textContent =
-        initialBuy > 0n
-          ? 'Finished: token created and first buy confirmed.'
-          : 'Finished: token created only.';
+        state.chain === 'solana'
+          ? 'Finished: mint and metadata are on-chain. PumpLite charged no creation fee.'
+          : initialBuy > 0n
+            ? 'Finished: token created and first buy confirmed.'
+            : 'Finished: token created only.';
 
       $('initial-buy-dialog').close();
 

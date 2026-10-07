@@ -176,7 +176,7 @@ test(
 );
 
 test(
-  'free Solana creation opens Markets after publishing',
+  'new Solana creation routes straight to its on-chain mint',
   async () => {
     const app =
       await readFile(
@@ -184,37 +184,29 @@ test(
         'utf8'
       );
 
-    const start =
-      app.indexOf(
-        'Free PumpLite coin signed and published'
-      );
-
     assert.ok(
-      start >= 0
-    );
-
-    const flow =
-      app.slice(
-        start,
-        start + 2200
-      );
-
-    assert.ok(
-      flow.includes(
-        'showHomePage('
+      app.includes(
+        'createdId = await adapter.create(data);'
       )
     );
 
     assert.ok(
-      flow.includes(
-        "'markets'"
+      app.includes(
+        'Coin created on Solana Mainnet. No buyer was required.'
       )
     );
 
     assert.ok(
-      flow.includes(
-        'await discover('
+      app.includes(
+        'location.hash = routeHash;'
       )
+    );
+
+    assert.equal(
+      app.includes(
+        'createFreeDraft(data)'
+      ),
+      false
     );
   }
 );

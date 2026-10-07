@@ -3,61 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 test(
-  'Solana creator path is message-only and cannot submit a transaction',
-  async () => {
-    const adapter =
-      await readFile(
-        'web/adapters/solana-tiny.js',
-        'utf8'
-      );
-
-    const start =
-      adapter.indexOf(
-        'async createFreeDraft'
-      );
-
-    const end =
-      adapter.indexOf(
-        '\n    async reserveFirstBuyer',
-        start
-      );
-
-    assert.ok(
-      start >= 0 &&
-      end > start,
-      'Free launch method missing'
-    );
-
-    const free =
-      adapter.slice(
-        start,
-        end
-      );
-
-    assert.match(
-      free,
-      /signMessage/
-    );
-
-    for (const forbidden of [
-      'signTransaction',
-      'sendRawTransaction',
-      'send(',
-      'SystemProgram.createAccount',
-      'partialSign'
-    ]) {
-      assert.equal(
-        free.includes(forbidden),
-        false,
-        'Free creator method must not contain transaction capability: ' +
-          forbidden
-      );
-    }
-  }
-);
-
-test(
-  'Solana UI exits through free draft before paid create',
+  'Solana UI creates on-chain immediately with zero PumpLite creation fee',
   async () => {
     const app =
       await readFile(
@@ -67,31 +13,123 @@ test(
 
     assert.match(
       app,
+      /createdId = await adapter\.create\(data\);/
+    );
+
+    assert.match(
+      app,
+      /PumpLite creation fee is 0 SOL/
+    );
+
+    assert.match(
+      app,
+      /one-time Solana network\/account costs apply/i
+    );
+
+    assert.match(
+      app,
+      /No buyer is required/i
+    );
+
+    assert.doesNotMatch(
+      app,
       /createFreeDraft\(data\)/
     );
 
-    assert.match(
-      app,
-      /Creator cost: 0 SOL/
-    );
-
-    assert.match(
-      app,
-      /No Solana transaction was submitted/
-    );
-
-    assert.match(
+    assert.doesNotMatch(
       app,
       /first buyer will fund on-chain activation/i
     );
+  }
+);
 
-    const branch =
-      app.indexOf(
-        "state.chain === 'solana'"
+test(
+  'direct Solana create builds and submits the real mint transaction',
+  async () => {
+    const adapter =
+      await readFile(
+        'web/adapters/solana-tiny.js',
+        'utf8'
+      );
+
+    const start =
+      adapter.indexOf(
+        'async create({'
+      );
+
+    const end =
+      adapter.indexOf(
+        '\n    async trade(',
+        start
       );
 
     assert.ok(
-      branch >= 0
+      start >= 0 &&
+      end > start,
+      'Immediate Solana create method missing'
+    );
+
+    const create =
+      adapter.slice(
+        start,
+        end
+      );
+
+    assert.match(
+      create,
+      /getMinimumBalanceForRentExemption/
+    );
+
+    assert.match(
+      create,
+      /buildTinyCreateInstructions/
+    );
+
+    assert.match(
+      create,
+      /await send\(/
+    );
+
+    assert.match(
+      create,
+      /built\.mintKeypair/
+    );
+  }
+);
+
+test(
+  'public creation copy does not claim Solana network costs are zero',
+  async () => {
+    const app =
+      await readFile(
+        'web/app.js',
+        'utf8'
+      );
+
+    const html =
+      await readFile(
+        'index.html',
+        'utf8'
+      );
+
+    assert.doesNotMatch(
+      app,
+      /pays no rent or network fee/i
+    );
+
+    assert.doesNotMatch(
+      html,
+      /pays no rent or network fee/i
+    );
+
+    assert.match(
+      html,
+      /one-time Solana network and account costs/i
+    );
+
+    assert.match(
+      html,
+      /No subscription, later PumpLite bill, sponsor, or buyer activation is required/i
     );
   }
 );
