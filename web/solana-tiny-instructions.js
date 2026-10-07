@@ -374,6 +374,8 @@ export function buildTinyFirstBuyerActivationInstructions({
 }
 
 export function tinyTradeInstructions({
+  mode = 'legacy',
+  vault = null,
   owner,
   mint,
   market,
@@ -426,8 +428,15 @@ export function tinyTradeInstructions({
     );
   }
 
-  const tag =
-    side === 'buy' ? 0 : 1;
+  if (!['legacy','sealed'].includes(mode)) throw Error('Unknown PumpLite trading mode');
+  if (mode === 'sealed' && (
+    programId.toBase58() !== '3CHqrdJzwWQj1QikCzpjBhC8iQ3paaMtD1x9kwoW1rku' ||
+    mint.toBase58() !== 'EUKhN8eP97NjRHzxwRT5pdgLg7BX5KRTBhJYa2hMu9ma' ||
+    !vault || !tinyAta(mint, market).equals(vault) ||
+    vault.toBase58() !== 'HZdhfrrg9d1iXiWnmkcUHjCJncqto6wc7ZtVDoZsY6GB'
+  )) throw Error('Invalid sealed PumpLite identity/vault');
+  if (mode === 'legacy' && vault) throw Error('Legacy path cannot use a sealed vault');
+  const tag = mode === 'sealed' ? (side === 'buy' ? 3 : 4) : (side === 'buy' ? 0 : 1);
 
   const data = Buffer.concat([
     Buffer.from([tag]),
@@ -454,7 +463,8 @@ export function tinyTradeInstructions({
         key(traderTokens, true),
         key(treasury, true),
         key(SystemProgram.programId),
-        key(TINY_TOKEN_PROGRAM)
+        key(TINY_TOKEN_PROGRAM),
+        ...(mode === 'sealed' ? [key(vault, true)] : [])
       ]
     })
   );

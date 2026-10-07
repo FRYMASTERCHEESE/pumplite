@@ -1,3 +1,4 @@
+import { readTinyMarketState } from '../solana-tiny-state.js';
 import { snapshotTransaction, publicInstructionSequence, validateWalletTransaction } from '../solana-transaction-validation.js';
 import { rentSupport, requireRentConsent } from '../solana-rent.js';
 import {
@@ -861,7 +862,8 @@ export function adapter(
           [
             mint,
             metadata,
-            marketAddress
+            marketAddress,
+            tinyAta(mint, marketAddress)
           ],
           'confirmed'
         );
@@ -869,125 +871,18 @@ export function adapter(
     const [
       mintAccount,
       metadataAccount,
-      marketAccount
+      marketAccount,
+      vaultAccount
     ] = result.value;
 
-    if (
-      !mintAccount ||
-      !mintAccount.owner.equals(
-        TINY_TOKEN_PROGRAM
-      )
-    ) {
-      throw Error(
-        'Invalid PumpLite Solana mint'
-      );
+    let rentFloor = 0n;
+    if (mintAccount?.data.length === 82 && Buffer.from(mintAccount.data).readUInt32LE(0) === 0) {
+      const rent = await connection.getMinimumBalanceForRentExemption(0, 'confirmed');
+      if (!Number.isSafeInteger(rent) || rent <= 0) throw Error('Invalid Solana rent floor');
+      rentFloor = BigInt(rent);
     }
-
-    const mintData =
-      Buffer.from(
-        mintAccount.data
-      );
-
-    if (
-      mintData.length !==
-      TINY_MINT_SIZE ||
-      mintData[44] !== 6 ||
-      mintData[45] !== 1
-    ) {
-      throw Error(
-        'Unsupported PumpLite Solana mint'
-      );
-    }
-
-    if (
-      !mintData
-        .subarray(0, 4)
-        .equals(
-          Buffer.from(
-            [1, 0, 0, 0]
-          )
-        )
-    ) {
-      throw Error(
-        'PumpLite market is not mint authority'
-      );
-    }
-
-    if (
-      !new PublicKey(
-        mintData.subarray(
-          4,
-          36
-        )
-      )
-        .equals(
-          marketAddress
-        )
-    ) {
-      throw Error(
-        'Unexpected PumpLite mint authority'
-      );
-    }
-
-    if (
-      !mintData
-        .subarray(46, 50)
-        .equals(
-          Buffer.from(
-            [0, 0, 0, 0]
-          )
-        )
-    ) {
-      throw Error(
-        'PumpLite mint has a freeze authority'
-      );
-    }
-
-    const circulating =
-      mintData
-        .readBigUInt64LE(36);
-
-    if (
-      circulating >
-      SOL_SUPPLY
-    ) {
-      throw Error(
-        'PumpLite token exceeds maximum supply'
-      );
-    }
-
-    const tokenReserve =
-      SOL_SUPPLY -
-      circulating;
-
-    if (tokenReserve <= 0n) {
-      throw Error(
-        'PumpLite token reserve is exhausted'
-      );
-    }
-
-    if (marketAccount) {
-      if (
-        !marketAccount.owner.equals(
-          SystemProgram.programId
-        ) ||
-        marketAccount.data.length !== 0
-      ) {
-        throw Error(
-          'Invalid PumpLite market SOL account'
-        );
-      }
-
-      if (
-        !Number.isSafeInteger(
-          marketAccount.lamports
-        )
-      ) {
-        throw Error(
-          'Market SOL balance exceeds safe RPC integer range'
-        );
-      }
-    }
+    const chainState = readTinyMarketState({programId:program(), mint, market:marketAddress, mintAccount, marketAccount, vaultAccount, rentFloor});
+    const {tokenReserve} = chainState;
 
     const identity =
       decodeMetadata(
@@ -997,6 +892,7 @@ export function adapter(
 
     return {
       protocol: 'tiny',
+      ...chainState,
       id: mint.toBase58(),
       token: mint.toBase58(),
       marketAddress:
@@ -1006,11 +902,7 @@ export function adapter(
       name: identity.name,
       symbol: identity.symbol,
       uri: identity.uri,
-      nativeReserve:
-        BigInt(
-          marketAccount?.lamports ||
-          0
-        ),
+      nativeReserve: chainState.nativeReserve,
       tokenReserve,
       volume: 0n,
       decimals: 6,
@@ -1018,9 +910,10 @@ export function adapter(
       unit: 'SOL',
       virtualNative:
         30_000_000_000n,
-      supply: SOL_SUPPLY,
+      maximumSupply: SOL_SUPPLY,
+      supply: chainState.mode === 'sealed' ? chainState.actualSupply : SOL_SUPPLY,
       source:
-        'PumpLite tiny Solana core · confirmed slot ' +
+        (chainState.mode==='sealed' ? 'Sealed transfers · mint authority None · confirmed slot ' : 'Legacy curve · market PDA mint authority · confirmed slot ') +
         result.context.slot,
       observedAt: Date.now()
     };
@@ -2413,14 +2306,13 @@ export function adapter(
         );
       }
 
-      const marketAddress =
-        tinyMarketAddress(
-          mint,
-          program()
-        );
+      if (verified.mode !== m.mode) throw Error('Market mode changed; reload before trading');
+      const marketAddress = tinyMarketAddress(mint, program());
 
       const instructions =
         tinyTradeInstructions({
+          mode: verified.mode,
+          vault: verified.vault ? new PublicKey(verified.vault) : null,
           owner,
           mint,
           market:
