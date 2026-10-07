@@ -12,7 +12,7 @@
     "programId": "3CHqrdJzwWQj1QikCzpjBhC8iQ3paaMtD1x9kwoW1rku",
     "treasury": "BNpFPPuy2h12dryy4dayemjA4YS17ccVaF82jBDuiwct",
     "explorer": "https://solscan.io",
-    "discoveryUrl": null,
+    "discoveryUrl": "https://pumplite-rpc.coreyedge123.workers.dev/launch/activated/",
     "transactionsEnabled": true,
     "clientVersion": 5
   },
