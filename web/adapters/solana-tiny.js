@@ -421,6 +421,29 @@ export function adapter(
 
     const preview = await writeConnection._rpcRequest('simulateTransaction', [tx.serialize({requireAllSignatures:false,verifySignatures:false}).toString('base64'), {encoding:'base64',sigVerify:false,replaceRecentBlockhash:true,commitment:'confirmed'}]);
     if(preview.error || !preview.result?.value || preview.result.value.err !== null) throw Error('Pre-sign simulation failed: '+JSON.stringify(preview.error || preview.result?.value?.err || 'missing response'));
+
+    // Refresh immediately before Phantom signs.
+    const signingLatest =
+      await writeConnection
+        .getLatestBlockhash(
+          'confirmed'
+        );
+
+    tx.recentBlockhash =
+      signingLatest.blockhash;
+
+    const signingOriginal =
+      Transaction.from(
+        tx.serialize({
+          requireAllSignatures: false,
+          verifySignatures: false
+        })
+      );
+
+    const signingSnapshot =
+      snapshotTransaction(
+        signingOriginal
+      );
     notify(
       'Review and approve the PumpLite transaction in Phantom.'
     );
@@ -568,7 +591,7 @@ export function adapter(
             preflightCommitment:
               'confirmed',
             maxRetries:
-              0
+              5
           }
         );
 
@@ -593,7 +616,7 @@ export function adapter(
         .confirmTransaction(
           {
             signature,
-            ...latest
+            ...signingLatest
           },
           'confirmed'
         );
