@@ -255,11 +255,18 @@ function controls() {
   if (
     state.chain === 'solana'
   ) {
-    $('initial-buy-eth').value =
-      '0';
+    const manualSolana =
+      $('solana-mayhem')?.value ===
+        'manual';
+
+    if (!manualSolana) {
+      $('initial-buy-eth').value =
+        '0';
+    }
 
     $('initial-buy-eth').disabled =
-      true;
+      state.busy ||
+      !manualSolana;
   }
   $('trade-use-display').disabled =
     state.busy ||
