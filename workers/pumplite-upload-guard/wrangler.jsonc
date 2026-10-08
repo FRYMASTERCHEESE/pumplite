@@ -24,10 +24,16 @@
     {
       "binding": "BASE_SIGNATURE_RPC",
       "service": "pumplite-base-signature-rpc"
+    },
+    {
+      "binding": "MAYHEM_PROCESSOR",
+      "service": "pumplite-mayhem-controller"
     }
   ],
   "vars": {
     "ALLOW_PUBLIC_BASE_RPC": "false",
-    "ISSUE_ENABLED": "true"
+    "ISSUE_ENABLED": "true",
+    "MAYHEM_ENABLED": "true",
+    "MAYHEM_BROADCAST_ENABLED": "true"
   }
 }

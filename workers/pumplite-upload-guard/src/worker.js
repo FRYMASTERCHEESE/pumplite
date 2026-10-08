@@ -1,3 +1,4 @@
+import { handleMayhemRequest } from './mayhem.js';
 import { DurableObject } from "cloudflare:workers";
 import { SCHEMA } from "./schema.js";
 import {
@@ -54,6 +55,7 @@ export default {
       );
 
     if (
+      !url.pathname.startsWith("/mayhem/") &&
       !launch &&
       (
         request.method !== "POST" ||
@@ -91,6 +93,16 @@ export class UploadGuard extends DurableObject {
     const url = new URL(request.url);
 
     if (
+      url.pathname.startsWith('/mayhem/')
+    ) {
+      return handleMayhemRequest(
+        this.ctx,
+        request,
+        this.env
+      );
+    }
+
+    if (
       isLaunchRoute(
         request.method,
         url.pathname
@@ -100,7 +112,8 @@ export class UploadGuard extends DurableObject {
         return await handleLaunchRequest(
           this.ctx,
           request,
-          Date.now()
+          Date.now(),
+          this.env
         );
       } catch (error) {
         const status =

@@ -1183,6 +1183,71 @@ export function adapter(
         .toString('base64');
     },
 
+    async signMayhemMessage(
+      message
+    ) {
+      if (
+        typeof message !== 'string' ||
+        enc.encode(message).length > 2048
+      ) {
+        throw Error(
+          'Mayhem authorization message is invalid'
+        );
+      }
+
+      const owner =
+        connectedWallet();
+
+      const attempt =
+        revision;
+
+      if (
+        typeof selected?.signMessage !==
+          'function'
+      ) {
+        throw Error(
+          'This Solana wallet does not support message signing'
+        );
+      }
+
+      notify(
+        'Review the Mayhem authorization message. This signature does not spend SOL.'
+      );
+
+      const result =
+        await selected.signMessage(
+          enc.encode(message),
+          'utf8'
+        );
+
+      if (
+        attempt !== revision ||
+        !selected?.publicKey?.equals(owner)
+      ) {
+        throw Error(
+          'Wallet changed while signing; reconnect'
+        );
+      }
+
+      const signature =
+        Buffer.from(
+          result?.signature || []
+        );
+
+      if (
+        signature.length !== 64
+      ) {
+        throw Error(
+          'Wallet returned an invalid Solana signature'
+        );
+      }
+
+      return signature.toString(
+        'base64'
+      );
+    },
+
+
     async list(offset = 0) {
       await network();
 
@@ -1595,7 +1660,8 @@ export function adapter(
     async createFreeDraft({
       name,
       symbol,
-      uri
+      uri,
+      mayhemMode = false
     }) {
       const owner =
         connectedWallet();
@@ -1720,6 +1786,32 @@ export function adapter(
             'base64'
           )
       };
+
+      if (mayhemMode) {
+        if (
+          mayhemMode !== 'manual'
+        ) {
+          throw Error(
+            'Unsupported Mayhem mode'
+          );
+        }
+
+        const {
+          signCreationChoice
+        } =
+          await import(
+            '../mayhem-ui.js'
+          );
+
+        draft.mayhem =
+          await signCreationChoice(
+            draft,
+            message =>
+              this.signMayhemMessage(
+                message
+              )
+          );
+      }
 
       const launchUrl =
         new URL(

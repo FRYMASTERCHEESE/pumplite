@@ -968,9 +968,8 @@ renderPendingLaunches({
       actions
     );
 
-    list.append(
-      card
-    );
+    if (mine) void import('./mayhem-ui.js').then(m => m.attachMintAuthorization(card, launch, wallet, adapter, run)).catch(() => {});
+    list.append(card);
 
     updatePreview();
   }

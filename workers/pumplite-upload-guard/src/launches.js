@@ -1,4 +1,10 @@
 import {
+  MAYHEM_SCHEMA,
+  verifyMayhemEnvelope,
+  recordMayhemChoice,
+  assertSameMayhemChoice
+} from './mayhem.js';
+import {
   decodeBase58,
   decodeBase64
 } from "./solana-identity.js";
@@ -151,7 +157,8 @@ derivePumpLiteMarketAddress(
   );
 }
 
-export const LAUNCH_SCHEMA = `
+export const LAUNCH_SCHEMA = `${MAYHEM_SCHEMA}
+
 CREATE TABLE IF NOT EXISTS solana_launches (
   id TEXT PRIMARY KEY,
   creator TEXT NOT NULL,
@@ -839,7 +846,8 @@ function publicLaunch(row) {
 function registerLaunch(
   ctx,
   launch,
-  now
+  now,
+  mayhem = null
 ) {
   return ctx.storage
     .transactionSync(
@@ -854,6 +862,12 @@ function registerLaunch(
           );
 
         if (existing) {
+          assertSameMayhemChoice(
+            sql,
+            launch.id,
+            mayhem
+          );
+
           const same =
             existing.creator ===
               launch.creator &&
@@ -964,6 +978,12 @@ function registerLaunch(
           launch.createdAt,
           launch.signature,
           now
+        );
+
+        recordMayhemChoice(
+          sql,
+          launch,
+          mayhem
         );
 
         return {
@@ -1685,7 +1705,8 @@ export async function
 handleLaunchRequest(
   ctx,
   request,
-  now = Date.now()
+  now = Date.now(),
+  env = {}
 ) {
   const url =
     new URL(
@@ -1787,19 +1808,47 @@ handleLaunchRequest(
     url.pathname ===
       "/launch/register"
   ) {
+    const body =
+      await readBody(
+        request
+      );
+
     const launch =
       await validateSignedLaunch(
-        await readBody(
-          request
-        ),
+        body,
         now
       );
+
+    let mayhem = null;
+
+    if (
+      body.mayhem !== undefined &&
+      body.mayhem !== null
+    ) {
+      if (
+        env.MAYHEM_ENABLED !== 'true' ||
+        !env.MAYHEM_CONTROLLER
+      ) {
+        fail(
+          'Mayhem is not enabled',
+          503
+        );
+      }
+
+      mayhem =
+        await verifyMayhemEnvelope(
+          'choice',
+          body.mayhem,
+          now
+        );
+    }
 
     const result =
       registerLaunch(
         ctx,
         launch,
-        now
+        now,
+        mayhem
       );
 
     if (result.conflict) {

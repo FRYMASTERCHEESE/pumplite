@@ -71,8 +71,7 @@ function controls() {
   $('base-v2-create-options').hidden = !baseModern;
   $('base-v3-mode-options').hidden = !baseV3;
 
-  $('solana-pump-options').hidden = true;
-  $('solana-mayhem').disabled = true;
+  if (state.chain === 'solana' || $('solana-mayhem')) void import('./mayhem-ui.js').then(m => m.syncMayhem(state, getAdapter, action));
   $('v2-initial-mayhem-row').hidden = baseV3;
   $('base-contract-version-label').textContent =
     baseV3 ? 'V3' : 'V2';
@@ -1631,6 +1630,7 @@ async function refreshLiveData() {
   renderDiscovery();
 }
 function renderMarket(m) {
+  void renderSolanaFiat();
   verificationPanel(state.chain,state.config[state.chain],m,state.registry);
   $('market-metadata').textContent = m.uri ? 'Creator metadata URI (not fetched or verified): ' + m.uri : 'No creator metadata URI supplied.';
   $('market-name').textContent = m.name; $('market-symbol').textContent = m.symbol + ' / ' + m.unit;
@@ -2469,8 +2469,7 @@ function creationData() {
       );
     }
 
-    data.mayhemMode =
-      $('solana-mayhem').checked;
+    data.mayhemMode = $('solana-mayhem')?.value === 'manual' ? 'manual' : false;
 
     return data;
   }
@@ -2691,6 +2690,7 @@ function formatInitialBuyFiat(value, currency) {
 }
 
 async function loadInitialBuyRates(native) {
+  if (native === 'SOL') return (await import('./solana-fiat.js')).loadSolRates();
   if (
     initialBuyRates &&
     initialBuyRatesNative === native &&
@@ -2903,6 +2903,8 @@ function simpleBuySupported() {
 }
 
 function syncTradeHelperMode() {
+
+  void renderSolanaFiat();
   const symbol =
     state.market?.symbol ||
     'tokens';
@@ -2926,7 +2928,7 @@ function syncTradeHelperMode() {
 
   $('trade-quick-buy-copy').textContent =
     state.chain === 'solana'
-      ? 'Enter NZD or USD. PumpLite converts it to SOL and refreshes the live quote before Phantom approval.'
+      ? 'Buy with SOL, NZD or USD.'
       : 'Enter NZD or USD. PumpLite refreshes the live Base ETH quote before wallet approval.';
 
   $('simple-buy-note').textContent =
@@ -2993,6 +2995,7 @@ function formatTradeDisplay(
   value,
   currency
 ) {
+  if(currency==='SOL'&&state.chain==='solana')return value+' SOL';
   return formatInitialBuyFiat(
     value,
     currency
@@ -3052,6 +3055,7 @@ async function tradeDisplayNativeAmount() {
     );
   }
 
+  if(state.chain==='solana'&&source==='SOL'){parseUnits(text,9);return text;}
   if (
     !['NZD', 'USD']
       .includes(source)
@@ -3422,7 +3426,7 @@ $('trade-use-display')
             displayAmount <= 0
           ) {
             throw Error(
-              'Enter a valid NZD or USD amount greater than 0'
+              'Enter a valid amount greater than 0'
             );
           }
 
@@ -3895,6 +3899,7 @@ $('get-quote').addEventListener('click', () => action(async () => {
     $('solana-rent-details').textContent='Additional market rent deposit: '+formatUnits(q.rentTopUp,9,9)+' SOL. Expected proceeds after this deposit: '+formatUnits(q.output-q.rentTopUp,9,9)+' SOL; minimum after deposit: '+formatUnits(min-q.rentTopUp,9,9)+' SOL, before network fees. The exact deposit is rechecked before signing; market movement may change how much is needed. Preview again if it increases.';
     if(q.rentTopUp>=min){invalidateQuote();throw Error('Rent support would consume the minimum sale proceeds. Try a smaller partial sale.');}
   }
+  void renderSolanaFiat();
   $('quote-age').textContent = 'Quoted at ' + new Date().toLocaleTimeString() + '. Valid for review for 30 seconds; chain slippage protection still applies.';
 
   if (side === 'sell') {
@@ -4244,4 +4249,10 @@ try {
   );
 
   controls();
+}
+
+
+function renderSolanaFiat(){
+ if(state.chain!=='solana'){$('solana-fiat-panel')?.setAttribute('hidden','');return;}
+ return import('./solana-fiat-ui.js').then(m=>m.render(()=>state)).catch(()=>{});
 }
