@@ -12,7 +12,21 @@ try {
     const page = await browser.newPage({ viewport: { width, height: 900 } });
     const errors = [], external = [];
     page.on('pageerror', e => errors.push(e.message));
-    page.on('request', req => { if (!req.url().startsWith(preview)) external.push(req.url()); });
+    const publicReads = new Map([
+      ['https://pumplite-rpc.coreyedge123.workers.dev/mayhem/capabilities', {version:1, enabled:false, mode:'manual', processorConfigured:false, broadcastEnabled:false}],
+      ['https://api.coinbase.com/v2/exchange-rates?currency=SOL', {data:{currency:'SOL', rates:{USD:'150', NZD:'250'}}}]
+    ]);
+    await page.route('**/*', async route => {
+      const request = route.request();
+      if (request.url().startsWith(preview)) return route.continue();
+      if (publicReads.has(request.url())) {
+        assert.equal(request.method(), 'GET');
+        assert.equal(request.postData(), null);
+        return route.fulfill({json:publicReads.get(request.url())});
+      }
+      external.push(request.url());
+      return route.abort();
+    });
     const response = await page.goto(preview, { waitUntil: 'networkidle' });
     assert.equal(response.headers()['x-frame-options'], 'DENY');
     assert.match(response.headers()['content-security-policy'], /frame-ancestors 'none'/);
@@ -39,7 +53,7 @@ try {
     await page.screenshot({ path: 'build/screenshots/home-' + width + '.png', fullPage: true });
     assert.deepEqual(errors, []);
     assert.deepEqual(external, []);
-    console.log('PASS browser ' + width + 'px: Base live, Pump Mainnet configured, wallet-gated Solana writes, no overflow, no external requests, no page errors');
+    console.log('PASS browser ' + width + 'px: Base live, Pump Mainnet configured, wallet-gated Solana writes, no overflow, only explicitly mocked read-only endpoints, no page errors');
     await page.close();
   }
 } finally { await browser.close(); }
