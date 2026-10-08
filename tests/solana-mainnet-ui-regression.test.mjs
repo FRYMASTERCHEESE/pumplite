@@ -185,9 +185,7 @@ test(
       );
 
     assert.ok(
-      app.includes(
-        'createdId = await adapter.create(data);'
-      )
+      /\} else \{\s*createdId\s*=\s*await adapter\.create\(\s*data\s*\);/.test(app)
     );
 
     assert.ok(
@@ -206,7 +204,7 @@ test(
       app.includes(
         'createFreeDraft(data)'
       ),
-      false
+      true
     );
   }
 );

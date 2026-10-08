@@ -236,10 +236,10 @@ function controls() {
       )
         ? 'PumpLite Solana Mainnet transactions are currently disabled.'
         : state.wallet
-          ? 'Phantom connected. Create coin will write the mint and metadata to Solana Mainnet immediately.'
+          ? ($('solana-mayhem')?.value === 'manual' ? 'Phantom connected. Manual creation registers the launch and requires an activation buy.' : 'Phantom connected. Create coin will write the mint and metadata to Solana Mainnet immediately.')
           : 'Connect Phantom first, then create your PumpLite Solana coin on-chain.';
 
-    $('creation-review').textContent =
+    $('creation-review').textContent = $('solana-mayhem')?.value === 'manual' ? 'Manual Mayhem: sign the launch and mint authorization, then approve the real activation buy in Phantom. Network/account costs apply.' :
       'PumpLite creation fee is 0 SOL. Phantom reviews one Solana Mainnet creation transaction; one-time Solana network/account costs apply. The mint and metadata are created immediately, no buyer is required, and there is no later PumpLite bill.';
   }
 
@@ -3961,7 +3961,7 @@ $('initial-buy-form').addEventListener('submit', e => {
 
       inline.textContent =
         state.chain === 'solana'
-          ? 'Coin created on Solana Mainnet. No buyer was required.'
+          ? (manualSolana ? 'Manual Mayhem coin activated and verified on Solana Mainnet.' : 'Coin created on Solana Mainnet. No buyer was required.')
           : initialBuy > 0n
             ? 'Token created and optional first buy confirmed.'
             : 'Token created. No optional first buy was requested.';

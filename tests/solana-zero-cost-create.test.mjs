@@ -13,7 +13,7 @@ test(
 
     assert.match(
       app,
-      /createdId = await adapter\.create\(data\);/
+      /\} else \{\s*createdId\s*=\s*await adapter\.create\(\s*data\s*\);/
     );
 
     assert.match(
@@ -31,9 +31,9 @@ test(
       /No buyer is required/i
     );
 
-    assert.doesNotMatch(
+    assert.match(
       app,
-      /createFreeDraft\(data\)/
+      /if \(manualSolana\) \{[\s\S]*?createFreeDraft\(data\)/
     );
 
     assert.doesNotMatch(
