@@ -14,6 +14,11 @@ pinocchio = { version = "=0.11.2", features = ["cpi"] }
 pinocchio-system = "=0.6.1"
 pinocchio-token = "=0.6.0"
 
+# create_program_address is available through Solana syscalls on-chain.
+# Host-side unit tests need curve25519 enabled for the same Address API.
+[dev-dependencies]
+solana-address = { version = "2.0", features = ["curve25519"] }
+
 [profile.release]
 opt-level = "z"
 lto = "fat"
