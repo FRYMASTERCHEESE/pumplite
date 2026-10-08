@@ -759,6 +759,10 @@ try {
       url === 'https://solana-rpc.publicnode.com/' ||
       url === 'https://solana-rpc.publicnode.com';
 
+    const reviewedPublicRead = url =>
+      url === 'https://pumplite-rpc.coreyedge123.workers.dev/mayhem/capabilities' ||
+      url === 'https://api.coinbase.com/v2/exchange-rates?currency=SOL';
+
     await context.route('**/*', async route => {
       const request =
         route.request();
@@ -772,6 +776,15 @@ try {
         )
       ) {
         return route.continue();
+      }
+
+      if (reviewedPublicRead(url)) {
+        assert.equal(request.method(), 'GET', 'Only read-only capability/fiat requests are allowed');
+        assert.equal(request.postData(), null);
+        // Synthetic responses only; never contact production services in this test.
+        return route.fulfill({ json: url.endsWith('/mayhem/capabilities')
+          ? { version: 1, enabled: false, mode: 'manual', processorConfigured: false, broadcastEnabled: false }
+          : { data: { currency: 'SOL', rates: { USD: '150', NZD: '250' } } } });
       }
 
       if (
@@ -1298,13 +1311,14 @@ try {
           url !==
             origin + '/pumplite' &&
           !url.startsWith(base) &&
-          !reviewedSolanaRpc(url)
+          !reviewedSolanaRpc(url) &&
+          !reviewedPublicRead(url)
       );
 
     assert.deepEqual(
       unexpectedRequests,
       [],
-      'Only PumpLite assets and reviewed read-only Solana RPC endpoints may be requested'
+      'Only PumpLite assets and explicitly mocked read-only RPC/capability/fiat endpoints may be requested'
     );
     // Every wallet-sensitive page must fail closed when embedded.
     const embeddedChecks = [
