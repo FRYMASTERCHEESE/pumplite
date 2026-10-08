@@ -3674,28 +3674,161 @@ $('initial-buy-form').addEventListener('submit', e => {
 
       const adapter = await getAdapter();
 
+      const manualSolana =
+        state.chain === 'solana' &&
+        data.mayhemMode === 'manual';
+
+      /*
+       * Manual Mayhem must be chosen before the launch exists.
+       * It therefore uses PumpLite's signed launch registry and
+       * reserved first-buyer activation path.
+       *
+       * A positive first buy is required because that activation
+       * creates the actual PumpLite market and gives Mayhem a
+       * canonical on-chain market to trade against.
+       */
+      if (
+        manualSolana &&
+        initialBuy === 0n
+      ) {
+        throw Error(
+          'Manual Mayhem requires a first activation buy greater than 0 SOL. Enter a small SOL amount, then review the real amount and fees in Phantom.'
+        );
+      }
+
       if (
         state.chain === 'solana' &&
+        !manualSolana &&
         initialBuy !== 0n
       ) {
         throw Error(
-          'Solana creation is create-only. The coin is written on-chain immediately; buy it later from its market page.'
+          'Normal Solana creation is create-only. Buy it later from its market page.'
         );
       }
 
       flow.textContent =
-        state.chain === 'solana'
-          ? 'Review the Solana Mainnet creation transaction in Phantom. PumpLite charges no creation fee; one-time Solana network/account costs apply.'
-          : 'Step 1: review token creation in your wallet. This dialog will stay here until the result is known.';
+        manualSolana
+          ? 'Manual Mayhem selected. First sign the immutable launch and Mayhem messages; message signatures spend no SOL. Phantom will then show the one real activation transaction.'
+          : state.chain === 'solana'
+            ? 'Review the Solana Mainnet creation transaction in Phantom. PumpLite charges no creation fee; one-time Solana network/account costs apply.'
+            : 'Step 1: review token creation in your wallet. This dialog will stay here until the result is known.';
 
       inline.textContent =
-        state.chain === 'solana'
-          ? 'Creating the mint and metadata on Solana Mainnet now. No buyer is required and there is no later PumpLite bill.'
-          : 'Review token creation in your wallet. PumpLite creation fee is 0%; Base gas still applies.';
+        manualSolana
+          ? 'Preparing the immutable Manual Mayhem launch. No transaction is sent until Phantom shows the final activation transaction.'
+          : state.chain === 'solana'
+            ? 'Creating the mint and metadata on Solana Mainnet now. No buyer is required and there is no later PumpLite bill.'
+            : 'Review token creation in your wallet. PumpLite creation fee is 0%; Base gas still applies.';
 
-      createdId = await adapter.create(data);
+      if (manualSolana) {
+        const draft =
+          await adapter
+            .createFreeDraft(
+              data
+            );
 
-      if (initialBuy > 0n) {
+        flow.textContent =
+          'Manual Mayhem choice recorded at creation. Preparing the creator first-buyer reservation.';
+
+        const reservation =
+          await adapter
+            .reserveFirstBuyer({
+              launchId:
+                draft.id
+            });
+
+        if (
+          reservation.launchId !==
+          draft.id
+        ) {
+          throw Error(
+            'Manual Mayhem reservation changed unexpectedly'
+          );
+        }
+
+        const {
+          authorizeReservedMint
+        } =
+          await import(
+            './mayhem-ui.js'
+          );
+
+        flow.textContent =
+          'Reservation ready. Sign the Manual Mayhem mint authorization message. This message signature spends no SOL.';
+
+        await authorizeReservedMint(
+          draft.id,
+          state.wallet,
+          message =>
+            adapter
+              .signMayhemMessage(
+                message
+              )
+        );
+
+        const quote =
+          adapter
+            .quoteFirstBuyerActivation(
+              initialBuy
+            );
+
+        const minimum =
+          minimumOutput(
+            quote.output,
+            100
+          );
+
+        flow.textContent =
+          'Manual Mayhem is immutably authorized. Review the real Solana activation + first-buy transaction in Phantom.';
+
+        const submitted =
+          await adapter
+            .activateReservedFirstBuyer({
+              launchId:
+                draft.id,
+              buyAmount:
+                initialBuy,
+              buyMinimum:
+                minimum
+            });
+
+        flow.textContent =
+          'Activation confirmed on Solana. Verifying it before enabling Manual Mayhem.';
+
+        const finalized =
+          await adapter
+            .retryFinalizeFirstBuyer({
+              launchId:
+                draft.id
+            });
+
+        if (
+          finalized.mint !==
+            submitted.mint ||
+          finalized.market !==
+            submitted.market
+        ) {
+          throw Error(
+            'Finalized Manual Mayhem activation changed unexpectedly'
+          );
+        }
+
+        createdId =
+          submitted.mint;
+
+        flow.textContent =
+          'Manual Mayhem token created and canonical activation verified.';
+      } else {
+        createdId =
+          await adapter.create(
+            data
+          );
+      }
+
+      if (
+        initialBuy > 0n &&
+        !manualSolana
+      ) {
         flow.textContent =
           'Token created. Preparing your optional first buy with the same wallet…';
 

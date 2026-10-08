@@ -39,6 +39,7 @@ import {
   TINY_TOKEN_PROGRAM,
   TINY_METADATA_PROGRAM,
   TINY_MINT_SIZE,
+  TINY_SUPPLY,
   generateCompatibleMint,
   tinyAta,
   tinyMarketAddress,
@@ -1657,6 +1658,47 @@ export function adapter(
       return { output, fee, rentTopUp, proceedsAfterRent: output-rentTopUp };
     },
 
+    quoteFirstBuyerActivation(
+      input
+    ) {
+      if (
+        typeof input !== 'bigint' ||
+        input <= 0n
+      ) {
+        throw Error(
+          'Invalid first buyer amount'
+        );
+      }
+
+      const fee =
+        input / 400n;
+
+      const net =
+        input - fee;
+
+      const denominator =
+        30_000_000_000n +
+        net;
+
+      const output =
+        TINY_SUPPLY *
+        net /
+        denominator;
+
+      if (
+        output <= 0n
+      ) {
+        throw Error(
+          'First buyer amount is too small'
+        );
+      }
+
+      return {
+        output,
+        fee
+      };
+    },
+
     async createFreeDraft({
       name,
       symbol,
@@ -2329,8 +2371,15 @@ export function adapter(
     async create({
       name,
       symbol,
-      uri
+      uri,
+      mayhemMode = false
     }) {
+      if (mayhemMode) {
+        throw Error(
+          'Manual Mayhem must use the signed activation flow'
+        );
+      }
+
       const owner =
         await wallet();
 

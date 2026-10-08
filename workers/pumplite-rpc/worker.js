@@ -1240,6 +1240,23 @@ export default {
       );
     }
 
+    /*
+     * Manual Mayhem is implemented by the private upload-guard
+     * Durable Object. The public RPC Worker only proxies the
+     * reviewed /mayhem/* API after enforcing PumpLite's origin.
+     */
+    if (
+      url.pathname.startsWith(
+        "/mayhem/"
+      )
+    ) {
+      return launchProxy(
+        request,
+        env,
+        origin
+      );
+    }
+
     if (
       request.method === "POST" &&
       url.pathname ===
