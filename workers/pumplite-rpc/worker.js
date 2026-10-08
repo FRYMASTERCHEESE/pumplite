@@ -1240,12 +1240,13 @@ export default {
       );
     }
 
-    // CORS preflight.
+    // Preserve route-specific headers after exact-origin enforcement.
     if (request.method === "OPTIONS") {
-      return new Response(null, {
-        status: 204,
-        headers: corsHeaders(origin)
-      });
+      const headers = corsHeaders(origin);
+      if (["/metadata/image", "/metadata/json", "/metadata/challenge", "/metadata/issue"].includes(url.pathname)) {
+        headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization";
+      }
+      return new Response(null, { status: 204, headers });
     }
 
     /*
