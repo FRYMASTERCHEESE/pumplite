@@ -180,15 +180,86 @@
           </fieldset>
         </div>
         <div id="solana-pump-options" hidden>
-          <fieldset>
+          <fieldset class="mayhem-launch-fieldset">
             <legend>PumpLite Solana options</legend>
-            <label>
-              <input id="solana-mayhem" type="checkbox">
-              Enable Pump Mayhem mode
-            </label>
-            <p class="fine">Mayhem is selected permanently when the Pump coin is created. Pump protocol and creator trading fees are separate from PumpLite's Base fee.</p>
+
+            <section
+              id="solana-mayhem-card"
+              class="mayhem-launch-card"
+              aria-labelledby="solana-mayhem-heading"
+            >
+              <div class="mayhem-launch-top">
+                <div>
+                  <p class="mayhem-kicker">MAYHEM MODE</p>
+                  <h3 id="solana-mayhem-heading">Agent Trigger Mode</h3>
+                </div>
+
+                <span class="mayhem-24h-badge">24H</span>
+              </div>
+
+              <p class="mayhem-launch-intro">
+                Choose whether the Mayhem Agent can trade this coin during its first 24 hours.
+              </p>
+
+              <input
+                id="solana-mayhem"
+                type="hidden"
+                value="off"
+              >
+
+              <div
+                class="mayhem-mode-switch"
+                role="group"
+                aria-label="Agent Trigger Mode"
+              >
+                <button
+                  id="solana-mayhem-off"
+                  class="mayhem-mode-option is-active"
+                  type="button"
+                  data-mode="off"
+                  aria-pressed="true"
+                >
+                  Off
+                </button>
+
+                <button
+                  id="solana-mayhem-manual"
+                  class="mayhem-mode-option"
+                  type="button"
+                  data-mode="manual"
+                  aria-pressed="false"
+                  disabled
+                >
+                  Manual
+                </button>
+              </div>
+
+              <div
+                id="solana-mayhem-detail"
+                class="mayhem-mode-detail"
+              >
+                <div class="mayhem-detail-heading">
+                  <strong id="solana-mayhem-detail-title">Off</strong>
+                  <span id="solana-mayhem-detail-state">No agent trades</span>
+                </div>
+
+                <p id="solana-mayhem-detail-copy">
+                  The Mayhem Agent will not trade this coin.
+                </p>
+
+                <ul id="solana-mayhem-detail-points">
+                  <li>Normal PumpLite trading only.</li>
+                </ul>
+              </div>
+
+              <p class="fine mayhem-permanent">
+                Your Mayhem choice is permanent when the coin is created.
+                Mayhem Agent activity is always labeled separately from organic users.
+              </p>
+            </section>
           </fieldset>
         </div>
+
         <form id="create-form">
           <fieldset><legend><span>01</span> Give it an identity</legend>
           <label for="name">Coin name</label><input id="name" placeholder="A name for your idea" required maxlength="32" autocomplete="off">

@@ -424,3 +424,196 @@ footer{border-color:#20232d}
 .v3-deploy-actions button,.v3-deploy-actions a{width:auto;margin:0}
 .v3-deploy-page code{overflow-wrap:anywhere;word-break:break-word}
 @media(max-width:850px){.v3-deploy-grid,.v3-limit-grid{grid-template-columns:1fr}}
+
+/* PumpLite Manual Mayhem - Agent Trigger Mode */
+.mayhem-launch-fieldset{
+  margin-top:18px
+}
+.mayhem-launch-card{
+  margin-top:14px;
+  padding:20px;
+  border:1px solid #3a3e4c;
+  border-radius:14px;
+  background:#11131a
+}
+.mayhem-launch-top,
+.mayhem-agent-top{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:16px
+}
+.mayhem-launch-top h3,
+.mayhem-agent-top h3{
+  margin:3px 0 0;
+  font-size:19px
+}
+.mayhem-kicker{
+  margin:0;
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:1.7px;
+  color:#9da3b5
+}
+.mayhem-24h-badge{
+  border:1px solid #484d5c;
+  border-radius:999px;
+  padding:6px 10px;
+  font-size:11px;
+  font-weight:800;
+  color:#f3f4f8;
+  background:#1b1e28
+}
+.mayhem-launch-intro,
+.mayhem-agent-description{
+  color:#c0c5d2;
+  line-height:1.55;
+  margin:13px 0
+}
+.mayhem-mode-switch{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  padding:5px;
+  margin:16px 0;
+  border:1px solid #303440;
+  border-radius:12px;
+  background:#0b0d12
+}
+.mayhem-mode-option{
+  width:100%;
+  min-height:44px;
+  border:0;
+  border-radius:9px;
+  background:transparent;
+  color:#9fa5b4;
+  font-weight:750
+}
+.mayhem-mode-option:hover:not(:disabled){
+  background:#191c25;
+  color:#fff
+}
+.mayhem-mode-option.is-active{
+  background:#f3f4f6;
+  color:#101116;
+  box-shadow:0 2px 10px #0006
+}
+.mayhem-mode-option:disabled{
+  opacity:.42
+}
+.mayhem-mode-detail{
+  padding:16px;
+  border:1px solid #303440;
+  border-radius:12px;
+  background:#171922
+}
+.mayhem-detail-heading{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  align-items:center
+}
+.mayhem-detail-heading strong{
+  font-size:17px
+}
+.mayhem-detail-heading span{
+  font-size:11px;
+  color:#a8afbe
+}
+.mayhem-mode-detail p{
+  margin:9px 0;
+  color:#d7dae2;
+  line-height:1.5
+}
+.mayhem-mode-detail ul{
+  margin:10px 0 0;
+  padding-left:19px;
+  color:#aeb4c2;
+  font-size:12px;
+  line-height:1.7
+}
+.mayhem-permanent{
+  margin:13px 0 0
+}
+.mayhem-agent-panel{
+  margin-top:20px;
+  padding:22px;
+  border:1px solid #353a47;
+  border-radius:14px;
+  background:#11131a
+}
+.mayhem-agent-status{
+  display:inline-flex;
+  align-items:center;
+  border-radius:999px;
+  padding:6px 10px;
+  font-size:11px;
+  font-weight:750;
+  background:#20232d;
+  border:1px solid #424755
+}
+.mayhem-agent-status.active{
+  color:#bff5c8
+}
+.mayhem-agent-status.paused{
+  color:#ffd98d
+}
+.mayhem-agent-status.ended{
+  color:#adb2be
+}
+.mayhem-agent-disclosure{
+  margin:0 0 16px
+}
+.mayhem-trigger-button{
+  width:100%;
+  min-height:52px;
+  margin:8px 0 18px;
+  border:0;
+  border-radius:11px;
+  background:#f3f4f6;
+  color:#0d0f13;
+  font-size:15px;
+  font-weight:800
+}
+.mayhem-trigger-button:hover:not(:disabled){
+  filter:brightness(.92)
+}
+.mayhem-metrics{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:8px;
+  margin-top:10px
+}
+.mayhem-metric{
+  padding:12px;
+  border:1px solid #303440;
+  border-radius:10px;
+  background:#171922;
+  overflow-wrap:anywhere
+}
+.mayhem-metric small{
+  display:block;
+  margin-bottom:6px;
+  color:#9299a8;
+  font-size:10px
+}
+.mayhem-metric strong{
+  font-size:12px
+}
+.mayhem-activity{
+  margin-top:16px;
+  border-top:1px solid #303440;
+  padding-top:12px
+}
+.mayhem-activity h4{
+  margin:0 0 8px
+}
+@media(max-width:740px){
+  .mayhem-launch-card,
+  .mayhem-agent-panel{
+    padding:16px
+  }
+  .mayhem-metrics{
+    grid-template-columns:1fr
+  }
+}
