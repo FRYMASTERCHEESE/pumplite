@@ -2571,6 +2571,11 @@ function updateInitialBuySymbol() {
     state.chain ===
     'solana';
 
+  const manualSolana =
+    solana &&
+    $('solana-mayhem')?.value ===
+      'manual';
+
   const title =
     $('initial-buy-title');
 
@@ -2628,12 +2633,14 @@ function updateInitialBuySymbol() {
 
   if (amountBox) {
     amountBox.hidden =
-      solana;
+      solana &&
+      !manualSolana;
   }
 
   if (fiatRow) {
     fiatRow.hidden =
-      solana;
+      solana &&
+      !manualSolana;
   }
 
   const unit =
@@ -2655,9 +2662,11 @@ function updateInitialBuySymbol() {
 
   if (label) {
     label.textContent =
-      solana
-        ? 'Solana network/account cost'
-        : 'Optional first buy amount in ETH';
+      manualSolana
+        ? 'First activation buy amount in SOL'
+        : solana
+          ? 'Solana network/account cost'
+          : 'Optional first buy amount in ETH';
   }
 
   const intro =
@@ -2667,9 +2676,11 @@ function updateInitialBuySymbol() {
 
   if (intro) {
     intro.textContent =
-      solana
-        ? 'PumpLite charges a 0 SOL creation fee. Phantom will review one Solana Mainnet transaction for the one-time network/account costs. The mint and metadata go on-chain immediately, even with zero buyers. There is no subscription or later PumpLite bill.'
-        : 'Use 0 ETH to create only. Enter more than 0 ETH if you also want your connected wallet to buy the new token immediately after creation.';
+      manualSolana
+        ? 'Manual Mayhem needs a first activation buy so the PumpLite market exists on-chain. Enter the SOL amount you want your connected wallet to buy during activation. PumpLite still charges a 0 SOL creation fee; Solana network/account costs also apply.'
+        : solana
+          ? 'PumpLite charges a 0 SOL creation fee. Phantom will review one Solana Mainnet transaction for the one-time network/account costs. The mint and metadata go on-chain immediately, even with zero buyers. There is no subscription or later PumpLite bill.'
+          : 'Use 0 ETH to create only. Enter more than 0 ETH if you also want your connected wallet to buy the new token immediately after creation.';
   }
 }
 
@@ -2772,18 +2783,81 @@ async function updateInitialBuyEstimate() {
   if (
     state.chain === 'solana'
   ) {
-    $('initial-buy-eth').value =
-      '0';
+    const manualSolana =
+      $('solana-mayhem')?.value ===
+        'manual';
+
+    if (!manualSolana) {
+      $('initial-buy-eth').value =
+        '0';
+
+      $('initial-buy-eth').disabled =
+        true;
+
+      $('initial-buy-submit')
+        .textContent =
+        'Create on Solana';
+
+      output.textContent =
+        'PumpLite fee: 0 SOL · one-time Solana network/account costs apply · no subscription or later PumpLite bill.';
+
+      return;
+    }
 
     $('initial-buy-eth').disabled =
-      true;
+      false;
 
     $('initial-buy-submit')
       .textContent =
-      'Create on Solana';
+      'Create Manual Mayhem coin';
 
-    output.textContent =
-      'PumpLite fee: 0 SOL · one-time Solana network/account costs apply · no subscription or later PumpLite bill.';
+    if (
+      !Number.isFinite(amount) ||
+      amount <= 0
+    ) {
+      output.textContent =
+        'Enter a first activation buy greater than 0 SOL. For the first test, 0.0001 SOL is enough.';
+
+      return;
+    }
+
+    try {
+      const rates =
+        await loadInitialBuyRates(
+          'SOL'
+        );
+
+      if (
+        sequence !==
+        initialBuyEstimateSequence
+      ) {
+        return;
+      }
+
+      const rate =
+        Number(
+          rates[currency]
+        );
+
+      output.textContent =
+        amount +
+        ' SOL first activation buy' +
+        (
+          Number.isFinite(rate) &&
+          rate > 0
+            ? ' · approximately ' +
+              formatInitialBuyFiat(
+                amount * rate,
+                currency
+              )
+            : ''
+        ) +
+        ' · Solana network/account costs also apply.';
+    } catch {
+      output.textContent =
+        amount +
+        ' SOL first activation buy · Solana network/account costs also apply.';
+    }
 
     return;
   }
