@@ -109,8 +109,9 @@ export class MayhemStore {
       this.save(s);
       if(a.status!=='accepted')return a;
       if(s.status==='ended'){a.status='cancelled';s.pending=null;this.saveAction(a);this.save(s);return a;}
-      const side=secureInteger(0,1)===0?'buy':'sell';
-      const amount=side==='buy'?BigInt(secureInteger(MAYHEM.minBuy,MAYHEM.maxBuy)):BigInt(s.inventory)*BigInt(secureInteger(MAYHEM.minSellBps,MAYHEM.maxSellBps))/10000n;
+      const inventory=BigInt(s.inventory);
+      const side=inventory===0n?'buy':secureInteger(0,1)===0?'buy':'sell';
+      const amount=side==='buy'?BigInt(secureInteger(MAYHEM.minBuy,MAYHEM.maxBuy)):inventory*BigInt(secureInteger(MAYHEM.minSellBps,MAYHEM.maxSellBps))/10000n;
       a.side=side;a.amount=amount.toString();a.decidedAt=now;a.status='decided';
       this.saveAction(a);return a;
     });
