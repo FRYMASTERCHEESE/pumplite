@@ -1,0 +1,31 @@
+[package]
+name = "pumplite-trigger-v1"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[workspace]
+
+[dependencies]
+pinocchio = { version = "=0.11.2", features = ["cpi"] }
+pinocchio-system = "=0.6.1"
+pinocchio-token = "=0.6.0"
+
+[profile.release]
+opt-level = "z"
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = "symbols"
+overflow-checks = true
+
+[features]
+default = []
+custom-heap = []
+custom-panic = []
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("solana"))'] }
