@@ -1551,17 +1551,55 @@ export default {
           return false;
         };
 
-      if (
-        !contains(
+      const normalPumpLiteTransaction =
+        contains(
           decode58(
             PROGRAM_ID
           )
-        ) ||
-        !contains(
+        ) &&
+        contains(
           decode58(
             TREASURY
           )
-        )
+        );
+
+      /*
+       * Immediate mint creation happens before the PumpLite
+       * program is invoked. Its reviewed transaction contains:
+       *
+       * - PumpLite creator/treasury wallet
+       * - System Program
+       * - SPL Token Program
+       * - Metaplex Token Metadata Program
+       *
+       * The transaction is already fully signed before this
+       * relay sees it, so the treasury signer must have approved it.
+       */
+      const reviewedMintCreation =
+        contains(
+          decode58(
+            TREASURY
+          )
+        ) &&
+        contains(
+          decode58(
+            SYSTEM_PROGRAM
+          )
+        ) &&
+        contains(
+          decode58(
+            TOKEN_PROGRAM
+          )
+        ) &&
+        contains(
+          decode58(
+            METADATA_PROGRAM
+          )
+        );
+
+      if (
+        !normalPumpLiteTransaction &&
+        !reviewedMintCreation
       ) {
         return jsonResponse(
           {
