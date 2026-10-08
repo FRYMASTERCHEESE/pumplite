@@ -1240,6 +1240,14 @@ export default {
       );
     }
 
+    // CORS preflight.
+    if (request.method === "OPTIONS") {
+      return new Response(null, {
+        status: 204,
+        headers: corsHeaders(origin)
+      });
+    }
+
     /*
      * Manual Mayhem is implemented by the private upload-guard
      * Durable Object. The public RPC Worker only proxies the
@@ -1316,13 +1324,6 @@ export default {
 
     if (url.pathname === '/metadata/challenge' || url.pathname === '/metadata/issue') {
       return metadataAuthRoute(request, env, url.pathname, corsHeaders(origin));
-    }
-    // CORS preflight.
-    if (request.method === "OPTIONS") {
-      return new Response(null, {
-        status: 204,
-        headers: corsHeaders(origin)
-      });
     }
 
     // Only POST /rpc is supported.

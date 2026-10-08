@@ -1,3 +1,4 @@
+import { launchStage } from './launch-retry.js';
 import {
   MAYHEM,
   mayhemMessage,
@@ -290,7 +291,7 @@ async function api(
     );
 
   const response =
-    await boundedFetch(
+    await launchStage(path === 'authorize' ? 'Mint authorization failed' : 'Mayhem service unavailable', () => boundedFetch(
       ENDPOINT +
         '/mayhem/' +
         path,
@@ -311,9 +312,11 @@ async function api(
         maxBytes:
           262144
       }
-    );
+    ));
 
-  return response.json();
+  const payload = await response.json();
+  if (!response.ok || payload.error) throw Error(payload.error || 'Mayhem service rejected the request');
+  return payload;
 }
 
 export async function
@@ -865,7 +868,6 @@ authorizeReservedMint(
   if (
     !cap.enabled ||
     launch.creator !== creator ||
-    launch.authorized ||
     launch.status === 'ended' ||
     !launch.reservation ||
     launch.reservation.expiresAt <=
@@ -876,6 +878,10 @@ authorizeReservedMint(
     );
   }
 
+  if (launch.authorized) {
+    if (launch.mint !== launch.reservation.mint || launch.controller !== cap.controller) throw Error('Immutable Mayhem mint/controller mismatch');
+    return launch;
+  }
   const record = {
     ...launch.choice.record,
     nonce:
@@ -972,4 +978,10 @@ attachMintAuthorization(
   );
 
   card.append(button);
+}
+export async function assertMayhemReservationRecoverable(launchId) {
+  const launch = await api(launchId);
+  if (launch.mode === 'manual' && launch.reservation) {
+    throw Error('This Manual launch already has a reserved mint. Resume in its original open browser tab; the mint signing key is intentionally not stored. Do not replace this reservation.');
+  }
 }

@@ -1,3 +1,4 @@
+import { publicLaunchRetryCache } from '../launch-retry.js';
 import { readTinyMarketState } from '../solana-tiny-state.js';
 import { snapshotTransaction, publicInstructionSequence, validateWalletTransaction } from '../solana-transaction-validation.js';
 import { rentSupport, requireRentConsent } from '../solana-rent.js';
@@ -251,6 +252,8 @@ export function adapter(
    * Ephemeral first-buyer mint signers live only in this browser
    * adapter instance and are destroyed on disconnect/reload.
    */
+  let retryStorage; try { retryStorage = globalThis.sessionStorage; } catch {}
+  const launchDrafts = publicLaunchRetryCache(retryStorage);
   const localFirstBuyer =
     new Map();
 
@@ -369,7 +372,8 @@ export function adapter(
 
   async function send(
     instructions,
-    localSigners = []
+    localSigners = [],
+    beforeBroadcast = () => {}
   ) {
     const owner =
       await wallet();
@@ -582,6 +586,8 @@ export function adapter(
       '/tx/' +
       expectedSignature
     );
+
+    beforeBroadcast(expectedSignature);
 
     const signature =
       await broadcastConnection
@@ -1488,25 +1494,10 @@ export function adapter(
       const owner =
         await wallet();
 
-      const tokenAddress =
-        tinyAta(
-          new PublicKey(m.token),
-          owner
-        );
-
-      const [
-        native,
-        info
-      ] =
-        await Promise.all([
-          connection.getBalance(
-            owner
-          ),
-          connection.getAccountInfo(
-            tokenAddress
-          )
-        ]);
-
+      const [native, accounts] = await Promise.all([
+        connection.getBalance(owner),
+        connection.getTokenAccountsByOwner(owner, {mint: new PublicKey(m.token)}, 'confirmed')
+      ]);
       if (
         !Number.isSafeInteger(
           native
@@ -1519,7 +1510,7 @@ export function adapter(
 
       let tokens = 0n;
 
-      if (info) {
+      for (const {account: info} of accounts.value) {
         const data =
           Buffer.from(
             info.data
@@ -1549,7 +1540,7 @@ export function adapter(
           );
         }
 
-        tokens =
+        tokens +=
           data.readBigUInt64LE(64);
       }
 
@@ -1717,6 +1708,8 @@ export function adapter(
         );
       }
 
+      const retryKey = JSON.stringify([program().toBase58(), owner.toBase58(), name, symbol, uri, mayhemMode]);
+      const draft = await launchDrafts.get(retryKey, async () => {
       const nonceBytes =
         new Uint8Array(16);
 
@@ -1855,6 +1848,10 @@ export function adapter(
           );
       }
 
+      return draft;
+      });
+      const { id } = draft;
+      if (draft.creator !== owner.toBase58() || draft.name !== name || draft.symbol !== symbol || draft.uri !== uri) throw Error('Saved launch identity mismatch');
       const launchUrl =
         new URL(
           config.rpcUrl
@@ -1948,6 +1945,9 @@ export function adapter(
         );
 
       if (!local) {
+        const { assertMayhemReservationRecoverable } = await import('../mayhem-ui.js');
+        await assertMayhemReservationRecoverable(launchId);
+
         local =
           generateCompatibleMint(
             program()
@@ -1959,6 +1959,7 @@ export function adapter(
         );
       }
 
+      if (local.reservation?.buyer === owner.toBase58() && local.reservation.expiresAt > Date.now() + 15000) return {...local.reservation};
       const nonceBytes =
         new Uint8Array(16);
 
@@ -2197,6 +2198,10 @@ export function adapter(
         );
       }
 
+      if (local.submitted) {
+        await this.retryFinalizeFirstBuyer({launchId});
+        return {launchId, ...local.submitted};
+      }
       const reservation =
         local.reservation;
 
@@ -2345,7 +2350,8 @@ export function adapter(
           built.instructions,
           [
             local.mintKeypair
-          ]
+          ],
+          signature => { local.submitted = {signature, mint: local.mint.toBase58(), market: local.market.toBase58(), buyer: buyer.toBase58()}; }
         );
 
       local.submitted = {

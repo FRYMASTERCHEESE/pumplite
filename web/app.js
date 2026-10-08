@@ -1,3 +1,4 @@
+import { launchStage } from './launch-retry.js';
 import { metadataExtras, LINK_FIELDS } from './metadata-fields.js';
 import { tokenTrust } from './verification.js';
 import { loadReviewedRegistry, badges, verificationPanel } from './verification-ui.js';
@@ -988,7 +989,7 @@ function marketCapWei(m) {
 
   return (
     price *
-    m.supply /
+    (m.protocol === 'tiny' ? m.circulating : m.supply) /
     (10n ** BigInt(m.decimals))
   );
 }
@@ -1116,7 +1117,7 @@ function row(m) {
   const entries = [
     ['Price', marketPriceText(m)],
     ['Curve cap', marketCapText(m)],
-    ['Curve volume', compactAmount(m.volume, m.nativeDecimals, 6) + ' ' + m.unit],
+    ['Curve volume', m.protocol === 'tiny' ? 'Not available yet' : compactAmount(m.volume, m.nativeDecimals, 6) + ' ' + m.unit],
     ['Curve backing', compactAmount(m.nativeReserve, m.nativeDecimals, 6) + ' ' + m.unit],
     ['Distributed', distributedPercent(m).toFixed(2) + '%']
   ];
@@ -1137,7 +1138,7 @@ function row(m) {
     'On-chain market ' +
     m.id.slice(0, 6) +
     '...' +
-    m.id.slice(-4);
+    m.id.slice(-4) + (m.protocol === 'tiny' ? ' · ' + formatUnits(m.actualSupply, m.decimals, 2) + ' minted / ' + formatUnits(m.maximumSupply, m.decimals, 0) + ' maximum' : '');
 
   link.append(head, chips, metrics, footer);
   return link;
@@ -1215,6 +1216,8 @@ function renderPlatformStats() {
     ) +
     ' ' +
     nativeUnit;
+
+  if (state.chain === 'solana') $('platform-loaded-volume').textContent = 'Not available yet';
 
   const complete =
     Number.isFinite(
@@ -1643,10 +1646,10 @@ function renderMarket(m) {
   $('market-name').textContent = m.name; $('market-symbol').textContent = m.symbol + ' / ' + m.unit;
   $('market-source').textContent = m.source + ' · fetched ' + new Date(m.observedAt).toLocaleTimeString() + ' · refresh on demand';
   $('curve-price').textContent = marketPriceText(m) + ' / ' + m.symbol;
-  $('market-cap').textContent = marketCapText(m);
+  $('market-cap').textContent = marketCapText(m) + (m.protocol === 'tiny' ? ' · implied curve value of supply outside vault; not cash liquidity' : '');
   $('native-reserve').textContent = formatUnits(m.nativeReserve, m.nativeDecimals) + ' ' + m.unit;
   $('token-reserve').textContent = formatUnits(m.tokenReserve, m.decimals, 2) + ' ' + m.symbol;
-  $('volume').textContent = formatUnits(m.volume, m.nativeDecimals) + ' ' + m.unit;
+  $('volume').textContent = m.protocol === 'tiny' ? 'Not available yet (indexed history required)' : formatUnits(m.volume, m.nativeDecimals) + ' ' + m.unit;
   $('volume-24h').textContent = 'Loading…';
   $('trades-24h').textContent = 'Loading…';
   $('market-24h-status').textContent =
@@ -1668,7 +1671,7 @@ function renderMarket(m) {
     ) / 100;
   $('distribution').value = distributed;
   $('distribution-label').textContent =
-    distributed.toFixed(2) + '% distributed from the current token supply.';
+    m.protocol === 'tiny' ? formatUnits(m.actualSupply, m.decimals, 6) + ' currently minted · ' + formatUnits(m.circulating, m.decimals, 6) + ' outside market vault · ' + formatUnits(m.maximumSupply, m.decimals, 0) + ' maximum curve supply. ' + (m.mode === 'legacy' ? 'Remaining curve allocation is not minted yet.' : 'Remaining tokens are held in the market vault.') : distributed.toFixed(2) + '% distributed from the current token supply.';
 
   const isPlite =
     state.chain === 'base' &&
@@ -1959,6 +1962,12 @@ async function loadMarket(id) {
     const balances = await state.adapter.balances(m);
     $('balance').textContent = 'Wallet: ' + formatUnits(balances.native, m.nativeDecimals) + ' ' + m.unit +
       ' · ' + formatUnits(balances.tokens, m.decimals) + ' ' + m.symbol + ' (network costs additional)';
+    if (m.protocol === 'tiny') {
+      const percent = total => total > 0n ? (Number(balances.tokens * 1000000n / total) / 10000).toFixed(4) + '%' : 'Not available yet';
+      $('balance').textContent += ' · ' + percent(m.actualSupply) + ' of currently minted supply · ' + percent(m.maximumSupply) + ' of maximum curve supply';
+      const price = marketPriceWei(m);
+      if (price !== null) $('balance').textContent += ' · implied curve value ' + formatUnits(price * balances.tokens / (10n ** BigInt(m.decimals)), m.nativeDecimals, 9) + ' SOL (not a liquidation quote)';
+    }
   }
 
   void loadMarketChart(m);
@@ -2676,6 +2685,11 @@ function updateInitialBuySymbol() {
           : 'Optional first buy amount in ETH';
   }
 
+  const feeCopy = dialog.querySelector('.create-fee-note small');
+  if (feeCopy) feeCopy.textContent = manualSolana
+    ? 'Manual Mayhem registers an immutable signed launch, reserves its mint, then requires a Phantom-approved activation buy. Message signatures cost no SOL; the real transaction has network/account costs.'
+    : solana ? 'Normal Solana creation writes the mint and metadata immediately. No buyer activation is required. Network/account costs apply.'
+    : 'Base creation and any optional first buy require wallet approval and Base network gas.';
   const intro =
     dialog.querySelector(
       'p.muted'
@@ -3802,21 +3816,12 @@ $('initial-buy-form').addEventListener('submit', e => {
             : 'Review token creation in your wallet. PumpLite creation fee is 0%; Base gas still applies.';
 
       if (manualSolana) {
-        const draft =
-          await adapter
-            .createFreeDraft(
-              data
-            );
+        const draft = await launchStage('Launch registration failed', () => adapter.createFreeDraft(data));
 
         flow.textContent =
           'Manual Mayhem choice recorded at creation. Preparing the creator first-buyer reservation.';
 
-        const reservation =
-          await adapter
-            .reserveFirstBuyer({
-              launchId:
-                draft.id
-            });
+        const reservation = await launchStage('Reservation request failed', () => adapter.reserveFirstBuyer({launchId:draft.id}));
 
         if (
           reservation.launchId !==
@@ -3863,25 +3868,19 @@ $('initial-buy-form').addEventListener('submit', e => {
           'Manual Mayhem is immutably authorized. Review the real Solana activation + first-buy transaction in Phantom.';
 
         const submitted =
-          await adapter
-            .activateReservedFirstBuyer({
+          await launchStage('Activation not confirmed; do not resend blindly', () => adapter.activateReservedFirstBuyer({
               launchId:
                 draft.id,
               buyAmount:
                 initialBuy,
               buyMinimum:
                 minimum
-            });
+            }));
 
         flow.textContent =
           'Activation confirmed on Solana. Verifying it before enabling Manual Mayhem.';
 
-        const finalized =
-          await adapter
-            .retryFinalizeFirstBuyer({
-              launchId:
-                draft.id
-            });
+        const finalized = await launchStage('Finalization pending', () => adapter.retryFinalizeFirstBuyer({launchId:draft.id}));
 
         if (
           finalized.mint !==
@@ -4026,7 +4025,7 @@ $('initial-buy-form').addEventListener('submit', e => {
       flow.textContent =
         'Creation did not complete: ' +
         message +
-        '. Nothing was created. This dialog stays open so you can retry or close it.';
+        '. A registered launch or submitted transaction may already exist. Retry continues the same signed launch; do not create a replacement. This dialog stays open.';
 
       inline.textContent =
         'Action stopped: ' + message;
