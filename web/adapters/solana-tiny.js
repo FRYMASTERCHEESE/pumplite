@@ -267,6 +267,41 @@ export function adapter(
   const localFirstBuyer =
     new Map();
 
+  function activationProofKey(launchId) {
+    return 'pumplite.solana.activation.v1.' + config.programId + '.' + launchId;
+  }
+
+  function saveSubmittedActivation(launchId, submitted) {
+    try {
+      retryStorage?.setItem(
+        activationProofKey(launchId),
+        JSON.stringify(submitted)
+      );
+    } catch {}
+  }
+
+  function loadSubmittedActivation(launchId) {
+    try {
+      const value = JSON.parse(
+        retryStorage?.getItem(
+          activationProofKey(launchId)
+        ) || 'null'
+      );
+
+      if (
+        value &&
+        typeof value.signature === 'string' &&
+        typeof value.mint === 'string' &&
+        typeof value.market === 'string' &&
+        typeof value.buyer === 'string'
+      ) {
+        return value;
+      }
+    } catch {}
+
+    return null;
+  }
+
   let revision = 0;
   let unwatch = () => {};
 
@@ -1461,43 +1496,218 @@ export function adapter(
       const buyer =
         await wallet();
 
-      const local =
+      const buyerText =
+        buyer.toBase58();
+
+      let local =
         localFirstBuyer.get(
           launchId
         );
 
+      let submitted =
+        local?.submitted ||
+        loadSubmittedActivation(
+          launchId
+        );
+
       if (
-        !local?.submitted ||
-        local.submitted.buyer !==
-          buyer.toBase58()
+        submitted &&
+        submitted.buyer ===
+          buyerText
+      ) {
+        const activation =
+          await finalizeLaunchRegistry(
+            launchId,
+            submitted.signature,
+            {
+              mint:
+                submitted.mint,
+              market:
+                submitted.market,
+              buyer:
+                submitted.buyer
+            }
+          );
+
+        local =
+          local || {};
+        local.submitted =
+          submitted;
+        local.finalized =
+          activation;
+        localFirstBuyer.set(
+          launchId,
+          local
+        );
+        saveSubmittedActivation(
+          launchId,
+          submitted
+        );
+
+        return activation;
+      }
+
+      /*
+       * A confirmed activation is public chain data. If the browser-local
+       * callback state was lost after confirmation, recover the immutable
+       * Manual Mayhem reservation mint, discover its confirmed transaction,
+       * and send only that signature through the existing fail-closed server
+       * finalizer. This path never creates, signs or broadcasts a transaction.
+       */
+      const launchUrl =
+        new URL(
+          config.rpcUrl
+        );
+      launchUrl.pathname =
+        '/launch/' +
+        launchId +
+        '.json';
+      launchUrl.search = '';
+      launchUrl.hash = '';
+
+      const launchResponse =
+        await boundedFetch(
+          launchUrl,
+          {},
+          { maxBytes: 8192 }
+        );
+      const launchPayload =
+        await launchResponse.json();
+      const launch =
+        launchPayload?.launch;
+
+      if (
+        !launchResponse.ok ||
+        launchPayload?.schemaVersion !== 1 ||
+        launchPayload?.programId !== program().toBase58() ||
+        launch?.id !== launchId ||
+        launch?.creator !== buyerText
       ) {
         throw Error(
-          "No submitted PumpLite activation is available in this browser"
+          'Existing PumpLite launch recovery is unavailable for this wallet'
         );
       }
 
-      const activation =
-        await finalizeLaunchRegistry(
-          launchId,
-          local.submitted
-            .signature,
-          {
-            mint:
-              local.submitted
-                .mint,
-            market:
-              local.submitted
-                .market,
-            buyer:
-              local.submitted
-                .buyer
-          }
+      const mayhemUrl =
+        new URL(
+          config.rpcUrl
         );
+      mayhemUrl.pathname =
+        '/mayhem/' +
+        launchId;
+      mayhemUrl.search = '';
+      mayhemUrl.hash = '';
 
-      local.finalized =
-        activation;
+      const mayhemResponse =
+        await boundedFetch(
+          mayhemUrl,
+          {},
+          { maxBytes: 262144 }
+        );
+      const mayhem =
+        await mayhemResponse.json();
 
-      return activation;
+      if (
+        !mayhemResponse.ok ||
+        mayhem?.mode !== 'manual' ||
+        mayhem?.creator !== buyerText ||
+        typeof mayhem?.reservation?.mint !== 'string'
+      ) {
+        throw Error(
+          'Manual Mayhem activation proof is not recoverable from the registry yet'
+        );
+      }
+
+      let mint;
+      try {
+        mint =
+          new PublicKey(
+            mayhem.reservation.mint
+          );
+      } catch {
+        throw Error(
+          'Manual Mayhem registry returned an invalid reserved mint'
+        );
+      }
+
+      const market =
+        tinyMarketAddress(
+          mint,
+          program()
+        ).toBase58();
+
+      await network();
+
+      const candidates =
+        await connection
+          .getSignaturesForAddress(
+            mint,
+            { limit: 12 },
+            'confirmed'
+          );
+
+      let lastError;
+
+      for (const candidate of candidates) {
+        if (
+          candidate?.err !== null ||
+          typeof candidate?.signature !== 'string'
+        ) {
+          continue;
+        }
+
+        const proof = {
+          signature:
+            candidate.signature,
+          mint:
+            mint.toBase58(),
+          market,
+          buyer:
+            buyerText
+        };
+
+        try {
+          const activation =
+            await finalizeLaunchRegistry(
+              launchId,
+              proof.signature,
+              {
+                mint:
+                  proof.mint,
+                market:
+                  proof.market,
+                buyer:
+                  proof.buyer
+              }
+            );
+
+          local =
+            local || {};
+          local.submitted =
+            proof;
+          local.finalized =
+            activation;
+          localFirstBuyer.set(
+            launchId,
+            local
+          );
+          saveSubmittedActivation(
+            launchId,
+            proof
+          );
+
+          return activation;
+        } catch (error) {
+          lastError = error;
+        }
+      }
+
+      throw Error(
+        'Confirmed activation was found but registry verification is still pending' +
+        (lastError?.message
+          ? ': ' + lastError.message
+          : '')
+      );
     },
 
     market,
@@ -2385,7 +2595,18 @@ export function adapter(
           [
             local.mintKeypair
           ],
-          signature => { local.submitted = {signature, mint: local.mint.toBase58(), market: local.market.toBase58(), buyer: buyer.toBase58()}; }
+          signature => {
+            local.submitted = {
+              signature,
+              mint: local.mint.toBase58(),
+              market: local.market.toBase58(),
+              buyer: buyer.toBase58()
+            };
+            saveSubmittedActivation(
+              launchId,
+              local.submitted
+            );
+          }
         );
 
       local.submitted = {
@@ -2397,6 +2618,10 @@ export function adapter(
         buyer:
           buyer.toBase58()
       };
+      saveSubmittedActivation(
+        launchId,
+        local.submitted
+      );
 
       return {
         launchId,

@@ -902,12 +902,34 @@ renderPendingLaunches({
       () => {
         run(
           async () => {
-            const finalized =
-              await adapter
-                .retryFinalizeFirstBuyer({
-                  launchId:
-                    launch.id
-                });
+            let finalized;
+
+            try {
+              finalized =
+                await adapter
+                  .retryFinalizeFirstBuyer({
+                    launchId:
+                      launch.id
+                  });
+            } catch (error) {
+              const message =
+                error?.message ||
+                "Registry verification is still pending.";
+
+              sync.hidden =
+                false;
+
+              result.textContent =
+                "Registry sync is still pending: " +
+                message +
+                ". DO NOT submit another activation. Use Retry registry sync again.";
+
+              status(
+                "On-chain activation remains confirmed. Registry sync has not completed yet."
+              );
+
+              return;
+            }
 
             amount.disabled =
               true;

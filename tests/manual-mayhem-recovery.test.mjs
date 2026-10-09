@@ -52,6 +52,11 @@ test('adapter retains transaction signature before broadcast and retries finaliz
  assert.match(s,/if \(local.submitted\) \{\s*await this.retryFinalizeFirstBuyer/);assert.ok(s.includes('local.reservation?.buyer === owner.toBase58()'));
  assert.ok(s.includes('getTokenAccountsByOwner(owner, {mint: new PublicKey(m.token)}'));assert.ok(s.includes('tokens +='));
 });
+test('registry sync can recover a confirmed Manual Mayhem activation after browser callback state is lost',async()=>{
+ const adapter=await readFile('web/adapters/solana-tiny.js','utf8');const ui=await readFile('web/solana-launch-ui.js','utf8');
+ assert.match(adapter,/getSignaturesForAddress/);assert.match(adapter,/saveSubmittedActivation/);assert.match(adapter,/\/mayhem\/.*launchId/);
+ assert.match(adapter,/This path never creates, signs or broadcasts a transaction/);assert.match(ui,/Registry sync is still pending:/);assert.match(ui,/DO NOT submit another activation/);
+});
 test('Solana stats distinguish minted/max and unavailable volume; Base conditional retained',async()=>{
  const s=await readFile('web/app.js','utf8');assert.match(s,/currently minted.*maximum curve supply/);assert.ok(s.includes('Not available yet (indexed history required)'));assert.match(s,/implied curve value/);
  assert.match(s,/state.busy \|\|\s*!manualSolana/);assert.match(s,/Manual Mayhem registers an immutable signed launch/);assert.doesNotMatch(s,/Nothing was created/);
