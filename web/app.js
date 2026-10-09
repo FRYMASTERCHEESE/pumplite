@@ -376,7 +376,7 @@ const CHART_RANGES = Object.freeze({
   ALL: null
 });
 
-function chartPriceText(value, symbol, unit = state.market?.unit || 'ETH') {
+function chartPriceText(value, symbol, unit = state.market?.unit || 'ETH', showPair = true) {
   if (!Number.isFinite(value) || value <= 0) return '-';
 
   const text =
@@ -386,7 +386,7 @@ function chartPriceText(value, symbol, unit = state.market?.unit || 'ETH') {
         ? value.toPrecision(7)
         : value.toExponential(5);
 
-  return text + ' ' + unit + '/' + symbol;
+  return showPair ? text + ' ' + unit + '/' + symbol : text;
 }
 
 function setChartRangeButtons() {
@@ -793,8 +793,9 @@ function renderMarketChartRange(market) {
   const change = summary.changePct;
   const direction = summary.direction;
 
+  // The neighboring price-chart-pair node already supplies SOL/MAYM or ETH/token.
   $('price-chart-current').textContent =
-    chartPriceText(summary.latestPrice, market.symbol);
+    chartPriceText(summary.latestPrice, market.symbol, market.unit, false);
 
   $('price-chart-high').textContent =
     chartPriceText(summary.highPrice, market.symbol);
@@ -1148,12 +1149,23 @@ async function loadMarketTokenSummary(m) {
       if (typeof adapter.holderStats !== 'function') throw Error('Holder scan unavailable');
       const stats = await adapter.holderStats(m);
       if (request !== marketSummaryRequest || state.market?.id !== m.id) return;
-      $('market-hero-holders').textContent = Number(stats.holders).toLocaleString();
+      const holders = Number(stats.holders);
+      const positiveAccounts = Number(stats.positiveAccounts);
+      if (
+        !Number.isSafeInteger(holders) ||
+        holders < 0 ||
+        !Number.isSafeInteger(positiveAccounts) ||
+        positiveAccounts < holders
+      ) throw Error('Invalid live Solana holder count');
+      $('market-hero-holders').textContent = holders.toLocaleString();
       $('market-hero-holders-note').textContent =
-        Number(stats.positiveAccounts).toLocaleString() +
+        positiveAccounts.toLocaleString() +
         ' positive-balance token account' +
-        (stats.positiveAccounts === 1 ? '' : 's') +
+        (positiveAccounts === 1 ? '' : 's') +
         ' · direct Solana read';
+      // Keep Token Details consistent with this same confirmed RPC scan.
+      const detailHolderCount = document.getElementById('token-detail-holders');
+      if (detailHolderCount) detailHolderCount.textContent = String(holders);
     } catch {
       if (request === marketSummaryRequest && state.market?.id === m.id) {
         $('market-hero-holders').textContent = 'Unavailable';
