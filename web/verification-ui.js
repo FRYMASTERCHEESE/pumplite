@@ -31,24 +31,36 @@ export function badges(chain, config, market, registry) {
   return box;
 }
 
+// The Base factory/EAS review scheme is not a Solana provenance check.
+// Describe validated on-chain market data without granting a Verified badge.
+export function verificationStateText(chain, market, trust) {
+  if (chain === 'solana' && market?.protocol === 'tiny') {
+    return 'Solana Mainnet market loaded from on-chain PumpLite market data. Independent identity/provenance review not established.';
+  }
+  return trust.verified
+    ? 'Verified by PumpLite ✅ - identity/provenance reviewed'
+    : trust.declined
+      ? 'Verification declined - no Verified badge'
+      : trust.created
+        ? 'Pending identity/provenance review'
+        : 'Factory provenance not established.';
+}
+
 export function verificationPanel(chain, config, market, registry) {
   const trust = tokenTrust(chain, config, market, registry);
   const details = document.getElementById('verification-details');
   document.getElementById('market-badges').replaceChildren(badges(chain, config, market, registry));
   document.getElementById('verification-state').textContent =
-    trust.verified
-      ? 'Verified by PumpLite \u2705 - identity/provenance reviewed'
-      : trust.declined
-        ? 'Verification declined - no Verified badge'
-        : trust.created
-          ? 'Pending identity/provenance review'
-          : 'Factory provenance not established.';
+    verificationStateText(chain, market, trust);
 
   details.replaceChildren();
   const values = {
     Market: market.id,
     Token: market.token,
     Creator: market.creator,
+    ...(chain === 'solana' && market?.protocol === 'tiny'
+      ? { 'Market source': 'Confirmed Solana Mainnet on-chain account data; no independent review asserted' }
+      : {}),
     ...(trust.created ? { Factory: market.provenance.factory, 'Checked at': 'Base block ' + market.provenance.block } : {}),
     ...(trust.review ? {
       'Review status': trust.review.status,
@@ -56,7 +68,9 @@ export function verificationPanel(chain, config, market, registry) {
       'Reviewed at': trust.review.reviewedAt,
       Note: trust.review.note || 'Identity/provenance review only.'
     } : {
-      'Review status': trust.created ? 'pending' : 'not available'
+      'Review status': chain === 'solana' && market?.protocol === 'tiny'
+        ? 'Not independently reviewed'
+        : trust.created ? 'pending' : 'not available'
     })
   };
   for (const [key, value] of Object.entries(values)) {
