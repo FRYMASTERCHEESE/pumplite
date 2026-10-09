@@ -376,7 +376,7 @@ const CHART_RANGES = Object.freeze({
   ALL: null
 });
 
-function chartPriceText(value, symbol) {
+function chartPriceText(value, symbol, unit = state.market?.unit || 'ETH') {
   if (!Number.isFinite(value) || value <= 0) return '-';
 
   const text =
@@ -386,7 +386,7 @@ function chartPriceText(value, symbol) {
         ? value.toPrecision(7)
         : value.toExponential(5);
 
-  return text + ' ETH/' + symbol;
+  return text + ' ' + unit + '/' + symbol;
 }
 
 function setChartRangeButtons() {
@@ -750,7 +750,9 @@ function renderMarketChartRange(market) {
   const summary = renderPriceChart(
     $('price-chart'),
     visible,
-    market.symbol
+    market.symbol,
+    market.nativeDecimals,
+    market.unit
   );
 
   if (!summary.count) {
