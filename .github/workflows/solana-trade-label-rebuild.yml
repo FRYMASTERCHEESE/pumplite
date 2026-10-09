@@ -1,0 +1,36 @@
+name: Rebuild Solana trade unit Pages assets
+on:
+  push:
+    branches:
+      - fix/solana-trade-price-unit-20261010
+permissions:
+  contents: write
+jobs:
+  rebuild-pages:
+    if: "!contains(github.event.head_commit.message, 'Rebuild Solana trade label assets')"
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: true
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 10.11.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm build:pages
+      - run: pnpm check:pages
+      - name: Commit deterministic Pages assets
+        run: |
+          git add -A -- assets
+          if git diff --cached --quiet; then
+            echo "Pages assets match source"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Rebuild Solana trade label assets"
+          git push origin HEAD:fix/solana-trade-price-unit-20261010
