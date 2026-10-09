@@ -3,20 +3,34 @@
   var panel = document.getElementById('phantom-diagnostics');
   var line = document.getElementById('phantom-tap');
   var chain = document.getElementById('chain');
-  if (!panel || !line || !chain) return;
+  var connect = document.getElementById('connect');
+  var connectionAttempt = false;
+  var connectionTimer = null;
+  if (!panel || !line || !chain || !connect) return;
   function visible() { panel.hidden = chain.value !== 'solana'; }
   function report(text) { if (chain.value === 'solana') line.textContent = text; }
+  function beginConnectionAttempt() {
+    connectionAttempt = true;
+    if (connectionTimer) clearTimeout(connectionTimer);
+    connectionTimer = setTimeout(function () {
+      connectionAttempt = false;
+      connectionTimer = null;
+    }, 65000);
+  }
   visible();
   chain.addEventListener('change', visible);
   window.addEventListener('hashchange', visible);
   line.textContent = 'Tap monitor loaded. No wallet request sent.';
-  document.getElementById('connect').addEventListener('click', function () {
+  connect.addEventListener('click', function () {
+    beginConnectionAttempt();
     report('Tap received. Main app: ' + (document.documentElement.dataset.walletAppReady || 'not ready') + '. See connection stage below.');
   }, true);
   window.addEventListener('error', function (event) {
-    report('Page error before/during connection: ' + (event.message || 'A page script failed to load. Reload.'));
+    if (!connectionAttempt) return;
+    report('Wallet connection error: ' + (event.message || 'A wallet support script failed during connection. Reload and retry.'));
   }, true);
   window.addEventListener('unhandledrejection', function (event) {
-    report('Unhandled page error: ' + (event.reason && event.reason.message || 'Unknown error. Reload.'));
+    if (!connectionAttempt) return;
+    report('Wallet connection error: ' + (event.reason && event.reason.message || 'Unknown wallet error. Reload and retry.'));
   });
 }());
