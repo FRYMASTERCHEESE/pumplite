@@ -1149,8 +1149,9 @@ async function loadMarketTokenSummary(m) {
       if (typeof adapter.holderStats !== 'function') throw Error('Holder scan unavailable');
       const stats = await adapter.holderStats(m);
       if (request !== marketSummaryRequest || state.market?.id !== m.id) return;
-      const holders = Number(stats.holders);
-      const positiveAccounts = Number(stats.positiveAccounts);
+      // Reject missing or malformed counts; Number(null) would fake zero.
+      const holders = stats?.holders;
+      const positiveAccounts = stats?.positiveAccounts;
       if (
         !Number.isSafeInteger(holders) ||
         holders < 0 ||
