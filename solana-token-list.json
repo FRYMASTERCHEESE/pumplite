@@ -1,0 +1,31 @@
+{
+  "name": "PumpLite Official Solana Token List",
+  "timestamp": "2026-10-09T10:10:00Z",
+  "version": {
+    "major": 1,
+    "minor": 0,
+    "patch": 0
+  },
+  "keywords": [
+    "pumplite",
+    "plsol",
+    "solana"
+  ],
+  "tokens": [
+    {
+      "chainId": 101,
+      "address": "EUKhN8eP97NjRHzxwRT5pdgLg7BX5KRTBhJYa2hMu9ma",
+      "name": "PumpLite Solana",
+      "symbol": "PLSOL",
+      "decimals": 6,
+      "logoURI": "https://frymastercheese.github.io/pumplite/assets/plite-logo-200.png",
+      "extensions": {
+        "website": "https://frymastercheese.github.io/pumplite/plsol.html",
+        "trade": "https://frymastercheese.github.io/pumplite/#solana/EUKhN8eP97NjRHzxwRT5pdgLg7BX5KRTBhJYa2hMu9ma",
+        "solscan": "https://solscan.io/token/EUKhN8eP97NjRHzxwRT5pdgLg7BX5KRTBhJYa2hMu9ma",
+        "status": "https://frymastercheese.github.io/pumplite/status.html",
+        "twitter": "https://x.com/ChillKiwiSol"
+      }
+    }
+  ]
+}
