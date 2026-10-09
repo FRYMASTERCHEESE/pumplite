@@ -511,7 +511,9 @@ renderPendingLaunches({
       make(
         "p",
         "fine",
-        "Ready to buy."
+        mine
+          ? "Ready to buy. If you already approved an activation, use Retry registry sync before buying again."
+          : "Ready to buy."
       );
 
     const amountLabel =
@@ -599,8 +601,11 @@ renderPendingLaunches({
     sync.type =
       "button";
 
+    // Creator recovery is safe to expose after a refresh: the adapter only
+    // scans confirmed chain history and calls the fail-closed registry finalizer.
+    // It never signs or broadcasts another activation transaction.
     sync.hidden =
-      true;
+      !mine;
 
     function reservationReady() {
       const value =

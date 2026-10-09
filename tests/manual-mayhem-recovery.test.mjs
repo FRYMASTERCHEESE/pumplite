@@ -55,7 +55,7 @@ test('adapter retains transaction signature before broadcast and retries finaliz
 test('registry sync can recover a confirmed Manual Mayhem activation after browser callback state is lost',async()=>{
  const adapter=await readFile('web/adapters/solana-tiny.js','utf8');const ui=await readFile('web/solana-launch-ui.js','utf8');
  assert.match(adapter,/getSignaturesForAddress/);assert.match(adapter,/saveSubmittedActivation/);assert.match(adapter,/mayhemUrl\.pathname\s*=\s*'\/mayhem\/'\s*\+\s*launchId/s);
- assert.match(adapter,/This path never creates, signs or broadcasts a transaction/);assert.match(ui,/Registry sync is still pending:/);assert.match(ui,/DO NOT submit another activation/);
+ assert.match(adapter,/This path never creates, signs or broadcasts a transaction/);assert.match(ui,/Registry sync is still pending:/);assert.match(ui,/DO NOT submit another activation/);assert.match(ui,/sync\.hidden\s*=\s*!mine/);
 });
 test('Solana stats distinguish minted/max and unavailable volume; Base conditional retained',async()=>{
  const s=await readFile('web/app.js','utf8');assert.match(s,/currently minted.*maximum curve supply/);assert.ok(s.includes('Not available yet (indexed history required)'));assert.match(s,/implied curve value/);

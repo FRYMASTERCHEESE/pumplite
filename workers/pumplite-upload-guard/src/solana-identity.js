@@ -2,7 +2,10 @@ const B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 const AUDIENCE = "https://frymastercheese.github.io";
 
 export function decodeBase58(value) {
-  if (typeof value !== "string" || value.length < 32 || value.length > 44) return null;
+  // Public keys are at most 44 Base58 characters, while Solana
+  // transaction signatures are typically 87-88. Keep decoding bounded and
+  // require each caller to verify its expected decoded byte length.
+  if (typeof value !== "string" || value.length < 32 || value.length > 90) return null;
 
   let n = 0n;
   for (const ch of value) {

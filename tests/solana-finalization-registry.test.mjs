@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   readFile
 } from 'node:fs/promises';
+import { decodeBase58 } from '../workers/pumplite-upload-guard/src/solana-identity.js';
 
 test(
   'PumpLite activation registry is independently verified and fail-closed',
@@ -155,5 +156,16 @@ test(
       rpc,
       /sendRawTransaction/
     );
+  }
+);
+
+test(
+  'finalizer Base58 decoder accepts 64-byte transaction signatures and 32-byte public keys',
+  () => {
+    const signature = '45BnbRhTP3nhA3jSwAir5kHMTWfYNgjQ438cPRnWEWpYjGf4GpAbVW51fNUR4EsvG7PkJ76BhL9yZYugh1Dyxc3G';
+    const mint = 'FEofu2h5RY4yyuoZJKT4VhwWqJ78ScEy6WjoFCyQ1Xqe';
+    assert.equal(decodeBase58(signature)?.length, 64);
+    assert.equal(decodeBase58(mint)?.length, 32);
+    assert.equal(decodeBase58('1'.repeat(91)), null);
   }
 );
