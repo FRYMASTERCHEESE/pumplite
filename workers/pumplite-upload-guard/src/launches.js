@@ -1,3 +1,4 @@
+import { assertMayhemReservationReplacement } from './mayhem.js';
 import {
   MAYHEM_SCHEMA,
   verifyMayhemEnvelope,
@@ -1073,17 +1074,6 @@ function reserveLaunch(
         const sql =
           ctx.storage.sql;
 
-        /*
-         * Expired reservations no longer have any claim on their
-         * public mint/market values. Remove them before enforcing
-         * UNIQUE constraints.
-         */
-        sql.exec(
-          `DELETE FROM solana_launch_reservations
-           WHERE expires_at <= ?`,
-          now
-        );
-
         const launch =
           loadLaunch(
             sql,
@@ -1137,7 +1127,9 @@ function reserveLaunch(
           };
         }
 
+        assertMayhemReservationReplacement(sql, reservation, existing, now);
         if (existing) {
+          sql.exec('INSERT INTO solana_reservation_history (launch_id,mint,record) VALUES (?,?,?)', reservation.launchId, existing.mint, JSON.stringify(existing));
           sql.exec(
             `DELETE FROM
                solana_launch_reservations
@@ -1179,10 +1171,8 @@ function reserveLaunch(
             reservation.signature
           );
         } catch {
-          return {
-            ok: false,
-            conflict: true
-          };
+          // Throw so the storage transaction rolls back archival/deletion too.
+          fail('Reservation conflict', 409);
         }
 
         return {

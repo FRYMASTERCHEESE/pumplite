@@ -143,8 +143,18 @@ function decodeMetadata(
   const uri =
     readString(data, state, 200);
 
+  // Metaplex creators follow seller fee. Missing/truncated tails stay unknown.
+  let mutable=null, offset=state.offset+2;
+  if(offset<data.length){
+    const option=data[offset++];
+    if(option===1 && offset+4<=data.length){const count=data.readUInt32LE(offset);offset+=4+count*34;}
+    else if(option!==0)offset=data.length;
+    if(offset+2<=data.length && data[offset]<=1 && data[offset+1]<=1)mutable=data[offset+1]===1;
+  }
   return {
+    mutable,
     updateAuthority,
+
     name,
     symbol,
     uri
@@ -906,6 +916,8 @@ export function adapter(
         marketAddress.toBase58(),
       creator:
         identity.updateAuthority,
+      metadataUpdateAuthority: identity.updateAuthority,
+      metadataMutable: identity.mutable,
       name: identity.name,
       symbol: identity.symbol,
       uri: identity.uri,
@@ -1944,19 +1956,20 @@ export function adapter(
           launchId
         );
 
-      if (!local) {
-        const { assertMayhemReservationRecoverable } = await import('../mayhem-ui.js');
-        await assertMayhemReservationRecoverable(launchId);
-
-        local =
-          generateCompatibleMint(
-            program()
-          );
-
-        localFirstBuyer.set(
-          launchId,
-          local
-        );
+      if (local?.submitted) throw Error('Activation may already be submitted; verify/finalize it instead of replacing the mint');
+      if (!local?.reservation || local.reservation.expiresAt<=Date.now()) {
+        const {assertMayhemReservationRecoverable}=await import('../mayhem-ui.js');
+        const recovery=await assertMayhemReservationRecoverable(launchId,local?.mint?.toBase58());
+        if(recovery.oldMint) {
+          await network();
+          const oldMint=await connection.getAccountInfo(new PublicKey(recovery.oldMint),'confirmed');
+          if(oldMint) throw Error('Reserved mint already exists on-chain; reconcile activation instead of replacing it');
+          notify('Expired unused reservation: preparing a fresh mint for the SAME launch. A fresh creator authorization is required.');
+        }
+        if(!local || recovery.replace){
+          local=generateCompatibleMint(program());
+          localFirstBuyer.set(launchId,local);
+        }
       }
 
       if (local.reservation?.buyer === owner.toBase58() && local.reservation.expiresAt > Date.now() + 15000) return {...local.reservation};

@@ -977,6 +977,7 @@ function marketPriceText(m) {
 }
 
 function marketCapWei(m) {
+  if(m.protocol==='tiny') return m.tokenReserve>0n ? (m.nativeReserve+m.virtualNative)*m.circulating/m.tokenReserve : null;
   const price = marketPriceWei(m);
 
   if (

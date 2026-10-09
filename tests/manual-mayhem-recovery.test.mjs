@@ -35,10 +35,10 @@ test('network and wallet failures identify the failed stage',async()=>{
  await assert.rejects(launchStage('Mint authorization failed',()=>{throw Object.assign(Error('Denied'),{code:4001})}),/Mint authorization failed: Phantom rejected/);
 });
 const cap={enabled:true,controller:'controller'};
-const launch={creator:'creator',authorized:true,mint:'mint',controller:'controller',mode:'manual',status:'paused',reservation:{mint:'mint',expiresAt:Date.now()+600000}};
+const launch={creator:'creator',authorized:true,mint:'mint',controller:'controller',mode:'manual',status:'paused',expiresAt:Date.now()+86400000,reservation:{mint:'mint',expiresAt:Date.now()+600000}};
 async function withApi(view,fn){const old=globalThis.fetch;globalThis.fetch=async url=>Response.json(String(url).endsWith('capabilities')?cap:view);try{return await fn()}finally{globalThis.fetch=old}}
 test('canonical existing mint authorization resumes without another signature',()=>withApi(launch,async()=>{const r=await authorizeReservedMint('a'.repeat(64),'creator',()=>{throw Error('must not sign again')});assert.equal(r.mint,'mint')}));
-test('mint or controller mismatch does not resume',()=>withApi({...launch,mint:'other'},async()=>{await assert.rejects(authorizeReservedMint('a'.repeat(64),'creator',()=>{}),/mismatch/)}));
+test('controller mismatch does not resume',()=>withApi({...launch,controller:'other'},async()=>{await assert.rejects(authorizeReservedMint('a'.repeat(64),'creator',()=>{}),/mismatch/)}));
 test('lost mint signer cannot be replaced for existing Manual reservation',()=>withApi(launch,()=>assert.rejects(assertMayhemReservationRecoverable('a'.repeat(64)),/original open browser tab/)));
 test('ordinary non-Mayhem launch remains compatible',()=>withApi({mode:'off'},()=>assertMayhemReservationRecoverable('a'.repeat(64))));
 test('pending objects and duplicate mints cannot pass activated discovery validator',()=>{

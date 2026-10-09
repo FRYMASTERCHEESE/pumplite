@@ -1,3 +1,5 @@
+import { updateTokenMayhem, renderTokenDetailCard } from './token-detail-card.js';
+import { reservationRecovery, authorizationMatches } from './mayhem-reservation-policy.js';
 import { launchStage } from './launch-retry.js';
 import {
   MAYHEM,
@@ -670,6 +672,7 @@ export async function syncMayhem(
   getAdapter,
   run
 ) {
+  if(state.market)renderTokenDetailCard(state.market);
   ensureCreationControls();
 
   const nodes =
@@ -781,6 +784,7 @@ export async function syncMayhem(
       return;
     }
 
+    updateTokenMayhem(state.market.token,launch);
     if (
       launch.mode !== 'manual'
     ) {
@@ -867,6 +871,7 @@ authorizeReservedMint(
 
   if (
     !cap.enabled ||
+    launch.canonicalActivation ||
     launch.creator !== creator ||
     launch.status === 'ended' ||
     !launch.reservation ||
@@ -878,10 +883,8 @@ authorizeReservedMint(
     );
   }
 
-  if (launch.authorized) {
-    if (launch.mint !== launch.reservation.mint || launch.controller !== cap.controller) throw Error('Immutable Mayhem mint/controller mismatch');
-    return launch;
-  }
+  if(authorizationMatches(launch,cap.controller)) return launch;
+  if(launch.authorized && launch.controller!==cap.controller) throw Error('Immutable Mayhem controller mismatch');
   const record = {
     ...launch.choice.record,
     nonce:
@@ -929,7 +932,7 @@ attachMintAuthorization(
 
   if (
     view.mode !== 'manual' ||
-    view.authorized ||
+    (view.authorized && view.mint===view.reservation?.mint) ||
     view.status === 'ended' ||
     !view.reservation
   ) {
@@ -979,9 +982,8 @@ attachMintAuthorization(
 
   card.append(button);
 }
-export async function assertMayhemReservationRecoverable(launchId) {
-  const launch = await api(launchId);
-  if (launch.mode === 'manual' && launch.reservation) {
-    throw Error('This Manual launch already has a reserved mint. Resume in its original open browser tab; the mint signing key is intentionally not stored. Do not replace this reservation.');
-  }
+export async function assertMayhemReservationRecoverable(launchId,localMint=null) {
+  const view=await api(launchId);
+  if(!view.canonicalActivation && view.status!=='ended' && view.expiresAt>Date.now() && view.reservation?.expiresAt>Date.now() && view.reservation.mint===localMint)return {replace:false};
+  return reservationRecovery(view);
 }

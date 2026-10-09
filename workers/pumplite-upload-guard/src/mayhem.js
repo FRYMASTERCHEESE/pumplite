@@ -2,6 +2,8 @@ import { MAYHEM, mayhemMessage } from '../../../web/mayhem-protocol.js';
 import { decodeBase58, decodeBase64 } from './solana-identity.js';
 export { MAYHEM };
 export const MAYHEM_SCHEMA = `
+CREATE TABLE IF NOT EXISTS solana_reservation_history (launch_id TEXT NOT NULL, mint TEXT NOT NULL UNIQUE, record TEXT NOT NULL, PRIMARY KEY(launch_id,mint));
+CREATE TABLE IF NOT EXISTS mayhem_authorization_history (launch_id TEXT NOT NULL, mint TEXT NOT NULL, envelope TEXT NOT NULL, PRIMARY KEY(launch_id,mint));
 CREATE TABLE IF NOT EXISTS mayhem_choices (launch_id TEXT PRIMARY KEY, envelope TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS mayhem_authorizations (launch_id TEXT PRIMARY KEY, mint TEXT NOT NULL UNIQUE, envelope TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS mayhem_states (launch_id TEXT PRIMARY KEY, state TEXT NOT NULL);
@@ -13,6 +15,27 @@ const row = (sql, text, ...args) => sql.exec(text,...args).toArray()[0];
 const fail = message => { throw Object.assign(Error(message),{status:409}); };
 const json = (value,status=200)=>new Response(JSON.stringify(value),{status,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}});
 const unsigned = value => typeof value === 'string' && /^(0|[1-9][0-9]{0,19})$/.test(value) && BigInt(value) <= 18446744073709551615n;
+// Executed in the same storage transaction as reservation replacement.
+export function assertMayhemReservationReplacement(sql, reservation, existing, now) {
+  const id=reservation.launchId;
+  if(row(sql,'SELECT launch_id FROM solana_launch_activations WHERE launch_id=?',id)) fail('Canonical activation is immutable');
+  if(row(sql,'SELECT mint FROM solana_reservation_history WHERE mint=?',reservation.mint)) fail('Expired mint cannot be reused');
+  if(existing && (existing.expires_at>now || existing.mint===reservation.mint)) fail('Active reservation or expired mint cannot be replaced/reused');
+  const choiceRow=row(sql,'SELECT envelope FROM mayhem_choices WHERE launch_id=?',id);
+  const choice=choiceRow && JSON.parse(choiceRow.envelope);
+  if(!choice || choice.record.mode!=='manual') return;
+  if(choice.record.expiresAt<=now || reservation.buyer!==choice.record.creator) fail('Mayhem recovery requires original creator within original window');
+  if(row(sql,'SELECT id FROM mayhem_requests WHERE launch_id=? LIMIT 1',id)) fail('Prior Mayhem activity prevents replacement');
+  const stored=row(sql,'SELECT state FROM mayhem_states WHERE launch_id=?',id);
+  if(stored) {
+    const state=JSON.parse(stored.state);
+    if(state.status!=='paused' || state.reason!=='Awaiting verified activation' || state.pending || state.lastRequest!==null || state.lastAgentTrade!==null || state.tradeCount!==0 || state.solIn!==0 || state.solOut!==0 || state.inventory!=='0') fail('Used Mayhem authorization is immutable');
+    // Old cleanup may have deleted the only canonical expiry evidence. Do not guess.
+    if(!existing) fail('Canonical reservation history unavailable; recovery requires review');
+    if(reservation.mint===state.mint) fail('Expired authorized mint cannot be reused');
+  }
+}
+
 export async function verifyMayhemEnvelope(kind, envelope, now) {
   if(!envelope || Object.keys(envelope).sort().join(',') !== 'record,signature') fail('Invalid signed envelope');
   const message = mayhemMessage(kind,envelope.record);
@@ -67,11 +90,27 @@ export class MayhemStore {
       const c=row(this.sql,'SELECT envelope FROM mayhem_choices WHERE launch_id=?',r.launchId);
       const choice=c && JSON.parse(c.envelope);
       const launch=row(this.sql,'SELECT * FROM solana_launches WHERE id=?',r.launchId);
+      const activation=row(this.sql,'SELECT launch_id FROM solana_launch_activations WHERE launch_id=?',r.launchId);
       const reservation=row(this.sql,'SELECT * FROM solana_launch_reservations WHERE launch_id=?',r.launchId);
-      if(!choice || !launch || launch.status!=='pending' || !reservation || reservation.expires_at<=now || reservation.mint!==r.mint || launch.creator!==r.creator || r.controller!==controller || r.controller===r.creator) fail('Mayhem requires a new canonical reserved launch and distinct controller');
+      if(activation || !choice || !launch || launch.status!=='pending' || !reservation || reservation.expires_at<=now || reservation.mint!==r.mint || reservation.buyer!==r.creator || launch.creator!==r.creator || r.controller!==controller || r.controller===r.creator) fail('Mayhem requires an unactivated canonical creator reservation');
       for(const k of ['launchId','creator','mode','createdAt','expiresAt']) if(choice.record[k]!==r[k]) fail('Mayhem authorization conflicts with creation choice');
       const old=row(this.sql,'SELECT envelope FROM mayhem_authorizations WHERE launch_id=?',r.launchId);
-      if(old) {if(old.envelope!==JSON.stringify(verified))fail('Mint authorization is immutable');return this.state(r.launchId);}
+      if(old) {
+        const previous=JSON.parse(old.envelope).record, state=this.state(r.launchId);
+        if(previous.mint===r.mint) {
+          if(previous.controller!==r.controller) fail('Controller is immutable');
+          return state;
+        }
+        // reserveLaunch only replaces expired reservations. The new canonical mint
+        // must also receive its own creator signature; no old signature is reused.
+        if(!row(this.sql,'SELECT mint FROM solana_reservation_history WHERE launch_id=? AND mint=?',r.launchId,previous.mint)) fail('Expired reservation evidence required');
+        if(previous.nonce===r.nonce || previous.controller!==r.controller || state.status!=='paused' || state.reason!=='Awaiting verified activation' || state.pending || state.tradeCount!==0 || state.solIn!==0 || state.solOut!==0 || state.inventory!=='0' || row(this.sql,'SELECT id FROM mayhem_requests WHERE launch_id=? LIMIT 1',r.launchId)) fail('Cannot replace activated, ended or used Mayhem authorization');
+        if(row(this.sql,'SELECT mint FROM mayhem_authorization_history WHERE launch_id=? AND mint=?',r.launchId,r.mint)) fail('An expired mint cannot be reused');
+        this.sql.exec('INSERT OR IGNORE INTO mayhem_authorization_history VALUES (?,?,?)',r.launchId,previous.mint,old.envelope);
+        this.sql.exec('UPDATE mayhem_authorizations SET mint=?, envelope=? WHERE launch_id=?',r.mint,JSON.stringify(verified),r.launchId);
+        this.save({...state,...r});
+        return this.state(r.launchId);
+      }
       this.sql.exec('INSERT INTO mayhem_authorizations VALUES (?,?,?)',r.launchId,r.mint,JSON.stringify(verified));
       const state={...r,status:'paused',reason:'Awaiting verified activation',tradeCount:0,solIn:0,solOut:0,inventory:'0',lastRequest:null,lastAgentTrade:null,pending:null};
       this.sql.exec('INSERT INTO mayhem_states VALUES (?,?)',r.launchId,JSON.stringify(state));
@@ -125,7 +164,7 @@ export class MayhemStore {
     const state=stored?this.refresh(id,now):{...choice.record,mint:null,status:now>=choice.record.expiresAt?'ended':'paused',reason:'Creator mint authorization required',pending:null};
     const reservation=row(this.sql,'SELECT mint,expires_at FROM solana_launch_reservations WHERE launch_id=?',id);
     const actions=this.sql.exec('SELECT action FROM mayhem_requests WHERE launch_id=? ORDER BY rowid DESC LIMIT 256',id).toArray().map(r=>JSON.parse(r.action));
-    return {...state,choice,authorized:Boolean(stored),reservation:reservation?{mint:reservation.mint,expiresAt:reservation.expires_at}:null,actions,metrics:{...mayhemMetrics(actions),agentVolume:stored?String(state.solIn+state.solOut):null,agentTrades:stored?state.tradeCount:null}};
+    return {...state,choice,canonicalActivation:Boolean(row(this.sql,'SELECT launch_id FROM solana_launch_activations WHERE launch_id=?',id)),hasActivity:actions.length>0,authorized:Boolean(stored),reservation:reservation?{mint:reservation.mint,expiresAt:reservation.expires_at}:null,actions,metrics:{...mayhemMetrics(actions),agentVolume:stored?String(state.solIn+state.solOut):null,agentTrades:stored?state.tradeCount:null}};
   }
   // Private trusted observer calls this only after validating finalized chain evidence.
   settle(id,evidence,now) {
