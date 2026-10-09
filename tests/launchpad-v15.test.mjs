@@ -24,7 +24,7 @@ test('PumpLite V15 exposes launchpad-style token identity, market stats and trut
     assert.match(html, new RegExp('id="' + id + '"'));
   }
 
-  assert.match(html, /<option value="market-cap">Market cap</option>/);
+  assert.match(html, /<option value="market-cap">Market cap<\/option>/);
   assert.match(html, /Curve progress/);
   assert.match(app, /loadTokenMedia/);
   assert.match(app, /loadMarketTokenSummary/);
