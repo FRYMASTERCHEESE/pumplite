@@ -208,3 +208,62 @@ test(
     );
   }
 );
+
+test(
+  'activated MAYM market is a distinct identity from a duplicate pending launch',
+  async () => {
+    const { matchingActivatedMarket } =
+      await import('../web/solana-launch-ui.js');
+
+    const creator =
+      'BNpFPPuy2h12dryy4dayemjA4YS17ccVaF82jBDuiwct';
+    const pending = {
+      id: '03bb9c350ff1f224a79dcbc7f134a64420fe049cd8f9dee8d96527ae2adcdd2f',
+      creator,
+      name: 'Mayhem Monday',
+      symbol: 'MAYM',
+      status: 'pending'
+    };
+    const activated = {
+      id: 'FEofu2h5RY4yyuoZJKT4VhwWqJ78ScEy6WjoFCyQ1Xqe',
+      creator,
+      name: 'Mayhem Monday',
+      symbol: 'MAYM'
+    };
+
+    assert.equal(
+      matchingActivatedMarket(pending, [activated])?.id,
+      activated.id
+    );
+    assert.equal(pending.status, 'pending');
+    assert.equal(
+      matchingActivatedMarket(
+        {...pending, creator: 'another-wallet'},
+        [activated]
+      ),
+      null
+    );
+    assert.equal(
+      matchingActivatedMarket(
+        {...pending, symbol: 'PLSOL'},
+        [activated]
+      ),
+      null
+    );
+    assert.equal(
+      matchingActivatedMarket(
+        pending,
+        [activated, {...activated, id: 'A'.repeat(44)}]
+      ),
+      null,
+      'ambiguous same-name markets must not be guessed'
+    );
+
+    const ui = await readFile('web/solana-launch-ui.js', 'utf8');
+    const app = await readFile('web/app.js', 'utf8');
+    assert.match(app, /activatedMarkets:\s*state\.markets/);
+    assert.match(ui, /SEPARATE PENDING LISTING/);
+    assert.match(ui, /Do not pay again to activate your existing coin/);
+    assert.match(ui, /matchingActivatedMarket\([\s\S]*?\)\s*:\s*null;/);
+  }
+);

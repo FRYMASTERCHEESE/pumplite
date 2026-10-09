@@ -1,3 +1,25 @@
+// The activated on-chain mint is a distinct registry identity from the
+// pending launch ID. A same-name match is only a navigation hint, never
+// evidence that this pending launch has been finalized.
+export function matchingActivatedMarket(launch, activatedMarkets) {
+  if (!Array.isArray(activatedMarkets) || !launch) return null;
+  const normalize = value => typeof value === "string"
+    ? value.trim().toLowerCase()
+    : "";
+  if (!normalize(launch.creator) || !normalize(launch.name) ||
+      !normalize(launch.symbol)) return null;
+  const matches = activatedMarkets.filter(m =>
+    typeof m?.id === "string" &&
+    m.id.length >= 32 &&
+    m.creator === launch.creator &&
+    normalize(m.name) === normalize(launch.name) &&
+    normalize(m.symbol) === normalize(launch.symbol)
+  );
+  // Ambiguity must never be resolved by guessing which mint belongs to a
+  // launch. Only show a direct activated-market link for a unique match.
+  return matches.length === 1 ? matches[0] : null;
+}
+
 const reservations =
   new Map();
 
@@ -346,6 +368,7 @@ export function
 renderPendingLaunches({
   anchor,
   launches,
+  activatedMarkets = [],
   adapter,
   wallet,
   treasury,
@@ -447,6 +470,74 @@ renderPendingLaunches({
       newestMineByIdentity.add(
         identity
       );
+    }
+
+    const activatedMatch =
+      mine
+        ? matchingActivatedMarket(
+            launch,
+            activatedMarkets
+          )
+        : null;
+
+    if (activatedMatch) {
+      // This is still a different PENDING launch. Do not offer another
+      // creator activation merely because the same creator/name/ticker
+      // already has a separately verified activated market.
+      const pendingCard =
+        make(
+          "article",
+          "token-market-card"
+        );
+
+      const activatedLink =
+        make(
+          "a",
+          "",
+          "Open activated " +
+            launch.symbol +
+            " market"
+        );
+
+      activatedLink.href =
+        "#solana/" +
+        encodeURIComponent(
+          activatedMatch.id
+        );
+
+      pendingCard.append(
+        make(
+          "b",
+          "",
+          launch.name +
+            " (" +
+            launch.symbol +
+            ") - SEPARATE PENDING LISTING"
+        ),
+        make(
+          "p",
+          "fine",
+          "Pending listing ID: " +
+            launch.id
+        ),
+        make(
+          "p",
+          "fine",
+          "An activated market with the same creator, name and ticker " +
+            "already exists at mint " +
+            activatedMatch.id +
+            ". This pending listing is a DIFFERENT launch ID; " +
+            "its activation has not been verified. " +
+            "Do not pay again to activate your existing coin."
+        ),
+        activatedLink
+      );
+
+      list.append(
+        pendingCard
+      );
+
+      continue;
     }
 
     const card =

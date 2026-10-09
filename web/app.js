@@ -1546,6 +1546,8 @@ async function renderPendingSolanaLaunches() {
       $('markets'),
     launches:
       state.pendingLaunches,
+    activatedMarkets:
+      state.markets,
     adapter:
       state.adapter,
     wallet:
