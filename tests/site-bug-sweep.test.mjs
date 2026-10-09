@@ -39,12 +39,17 @@ test('V3 organic distribution and trade charts exclude agent custody correctly',
 
   assert.match(
     source,
-    /!\[2, 3\]\.includes\(market\.contractVersion\)/
+    /\[2, 3\]\.includes\(market\.contractVersion\)/
   );
 
   assert.match(
     source,
-    /Trade chart is available for Base V2\/V3 markets/
+    /state\.chain === 'solana'/
+  );
+
+  assert.match(
+    source,
+    /typeof adapter\.tradeHistory === 'function'/
   );
 });
 
