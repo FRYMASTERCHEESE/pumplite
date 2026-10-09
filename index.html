@@ -123,7 +123,7 @@
         <p class="muted">Newest PumpLite markets read from the selected Mainnet network. Prices, reserves and volume come from the chain.</p>
         <div class="market-toolbar">
           <label class="market-search-label" for="market-filter">Search coins<input id="market-filter" placeholder="Name, ticker, coin or market" autocomplete="off"></label>
-          <label class="market-sort-label" for="market-sort">Sort<select id="market-sort"><option value="newest">Newest</option><option value="volume">Volume</option><option value="reserve">Reserve</option><option value="distributed">Distributed</option></select></label>
+          <label class="market-sort-label" for="market-sort">Sort<select id="market-sort"><option value="newest">New</option><option value="market-cap">Market cap</option><option value="volume">Volume</option><option value="reserve">Curve backing</option><option value="distributed">Curve progress</option></select></label>
         </div>
         <div class="market-filter-row">
           <label class="filter"><input type="checkbox" id="verified-only"> Verified only</label>
@@ -322,6 +322,34 @@
     <div id="market-badges" class="badges"></div>
     <p id="market-source" class="muted"></p>
       <p id="market-metadata" class="fine"></p>
+
+    <section id="market-token-summary" class="panel token-hero-card" aria-labelledby="market-summary-name">
+      <div class="token-hero-head">
+        <span id="market-token-avatar" class="token-avatar token-hero-avatar" aria-hidden="true">PL</span>
+        <div class="token-hero-identity">
+          <p class="eyebrow" id="market-summary-network">MAINNET</p>
+          <h2 id="market-summary-name">Loading token…</h2>
+          <div class="token-address-row">
+            <code id="market-summary-address">-</code>
+            <button id="copy-market-token" type="button" class="outline token-copy-button">Copy mint</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="token-hero-stats" aria-label="Live token summary">
+        <div><small>Price</small><strong id="market-hero-price">-</strong><span id="market-hero-price-fiat">-</span></div>
+        <div><small>Curve market cap</small><strong id="market-hero-cap">-</strong><span id="market-hero-cap-fiat">-</span></div>
+        <div><small>Holders</small><strong id="market-hero-holders">-</strong><span id="market-hero-holders-note">Loading direct chain data…</span></div>
+        <div><small>Curve backing</small><strong id="market-hero-backing">-</strong><span>Real native currency held by the PumpLite market</span></div>
+      </div>
+
+      <div class="token-hero-progress">
+        <div><strong>Bonding curve</strong><span id="market-hero-progress-label">-</span></div>
+        <progress id="market-hero-progress" max="100" value="0"></progress>
+      </div>
+      <p class="fine">PumpLite displays real curve state and confirmed on-chain activity. Fiat values are approximate conversions of the live native-network quote, not an external exchange listing.</p>
+    </section>
+
     <section id="verification-panel" class="panel verification-panel verification-panel-compact" aria-labelledby="verification-title">
       <p class="eyebrow">VERIFICATION</p>
       <h2 id="verification-title">Coin verification</h2>
