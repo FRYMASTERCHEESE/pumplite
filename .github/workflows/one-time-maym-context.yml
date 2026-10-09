@@ -1,0 +1,22 @@
+name: One-time MAYM context read
+on:
+  push:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    if: github.event.head_commit.message == 'Inspect MAYM registry context'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Read finalize context and Mayhem view
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo FINALIZE_CONTEXT
+          curl --fail-with-body -sS -H 'Origin: https://frymastercheese.github.io' \
+            https://pumplite-rpc.coreyedge123.workers.dev/launch/finalize-context/3827e9f07371f0a00abb1e88957b2818a9042b8674047d04c3b5c8dfa0b06f4e.json
+          echo
+          echo MAYHEM_VIEW
+          curl --fail-with-body -sS -H 'Origin: https://frymastercheese.github.io' \
+            https://pumplite-rpc.coreyedge123.workers.dev/mayhem/3827e9f07371f0a00abb1e88957b2818a9042b8674047d04c3b5c8dfa0b06f4e
+          echo
