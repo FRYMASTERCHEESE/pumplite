@@ -367,6 +367,7 @@ export function renderMayhemPanel(
   {
     wallet = null,
     enabled = false,
+    onAuthorize = null,
     onTrigger = null
   } = {}
 ) {
@@ -453,6 +454,67 @@ export function renderMayhemPanel(
     launch.mode === 'manual' &&
     wallet === launch.creator
   ) {
+    const needsAuthorization =
+      launch.canonicalActivation === true &&
+      launch.hasActivity === false &&
+      Boolean(
+        launch.reservation?.mint
+      ) &&
+      launch.mint !==
+        launch.reservation.mint &&
+      status !== 'ended';
+
+    if (
+      needsAuthorization &&
+      onAuthorize
+    ) {
+      host.append(
+        make(
+          'p',
+          'The activation is confirmed. Sign one message to bind Manual Mayhem to the activated mint. This does not spend SOL or submit another activation.',
+          'fine mayhem-agent-disclosure'
+        )
+      );
+
+      const authorize =
+        make(
+          'button',
+          'Authorize Manual Mayhem',
+          'outline'
+        );
+
+      authorize.type =
+        'button';
+
+      authorize.addEventListener(
+        'click',
+        async () => {
+          authorize.disabled =
+            true;
+
+          authorize.textContent =
+            'Waiting for wallet signature...';
+
+          try {
+            await onAuthorize();
+
+            authorize.textContent =
+              'Manual Mayhem authorized';
+          } catch {
+            authorize.disabled =
+              false;
+
+            authorize.textContent =
+              'Authorize Manual Mayhem';
+          }
+        }
+      );
+
+      host.append(
+        authorize
+      );
+    }
+
     const trigger =
       make(
         'button',
@@ -465,6 +527,7 @@ export function renderMayhemPanel(
 
     trigger.disabled =
       !enabled ||
+      needsAuthorization ||
       status === 'ended' ||
       Boolean(
         launch.pending
@@ -799,6 +862,33 @@ export async function syncMayhem(
         wallet:
           state.wallet,
         enabled,
+        onAuthorize:
+          () =>
+            run(
+              async () => {
+                const adapter =
+                  await getAdapter();
+
+                await authorizeReservedMint(
+                  launch.launchId,
+                  state.wallet,
+                  message =>
+                    adapter
+                      .signMayhemMessage(
+                        message
+                      )
+                );
+
+                renderedKey =
+                  null;
+
+                await syncMayhem(
+                  state,
+                  getAdapter,
+                  run
+                );
+              }
+            ),
         onTrigger:
           () =>
             run(
