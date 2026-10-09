@@ -71,6 +71,14 @@ test('registry sync can recover a confirmed Manual Mayhem activation after brows
  assert.match(adapter,/getSignaturesForAddress/);assert.match(adapter,/saveSubmittedActivation/);assert.match(adapter,/mayhemUrl\.pathname\s*=\s*'\/mayhem\/'\s*\+\s*launchId/s);
  assert.match(adapter,/This path never creates, signs or broadcasts a transaction/);assert.match(ui,/Registry sync is still pending:/);assert.match(ui,/DO NOT submit another activation/);assert.match(ui,/sync\.hidden\s*=\s*!mine/);
 });
+test('activated token page exposes fresh Manual Mayhem authorization before Trigger Agent Trade',async()=>{
+ const ui=await readFile('web/mayhem-ui.js','utf8');
+ assert.match(ui,/const needsAuthorization\s*=\s*launch\.canonicalActivation === true/);
+ assert.match(ui,/This does not spend SOL or submit another activation/);
+ assert.match(ui,/Authorize Manual Mayhem/);
+ assert.match(ui,/needsAuthorization \|\|\s*status === 'ended'/);
+ assert.match(ui,/await authorizeReservedMint\(\s*launch\.launchId/);
+});
 test('Solana stats distinguish minted/max and unavailable volume; Base conditional retained',async()=>{
  const s=await readFile('web/app.js','utf8');assert.match(s,/currently minted.*maximum curve supply/);assert.ok(s.includes('Not available yet (indexed history required)'));assert.match(s,/implied curve value/);
  assert.match(s,/state.busy \|\|\s*!manualSolana/);assert.match(s,/Manual Mayhem registers an immutable signed launch/);assert.doesNotMatch(s,/Nothing was created/);
