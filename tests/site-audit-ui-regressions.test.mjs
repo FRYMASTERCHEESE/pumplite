@@ -21,6 +21,7 @@ function fakeDocument() {
       const item={
         tag,children:[],dataset:{},textContent:'',
         append(...children){this.children.push(...children);},
+        replaceChildren(...children){this.children=children;},
         addEventListener(){},
         closest(){return {after(){}};}
       };
