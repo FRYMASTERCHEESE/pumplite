@@ -76,7 +76,9 @@ test('activated token page exposes fresh Manual Mayhem authorization before Trig
  assert.match(ui,/const needsAuthorization\s*=\s*launch\.canonicalActivation === true/);
  assert.match(ui,/This does not spend SOL or submit another activation/);
  assert.match(ui,/Authorize Manual Mayhem/);
- assert.match(ui,/needsAuthorization \|\|\s*status === 'ended'/);
+ assert.match(ui,/status === 'active'/);
+ assert.match(ui,/const canTrigger/);
+ assert.match(ui,/Manual Mayhem has ended/);
  assert.match(ui,/await authorizeReservedMint\(\s*launch\.launchId/);
 });
 test('Solana stats distinguish minted/max and unavailable volume; Base conditional retained',async()=>{
