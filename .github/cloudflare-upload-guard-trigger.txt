@@ -1,3 +1,0 @@
-Trigger Cloudflare Builds for pumplite-upload-guard
-UTC: 2026-10-09T10:41:00Z
-Purpose: deploy current main with preserved production vars/secrets.
