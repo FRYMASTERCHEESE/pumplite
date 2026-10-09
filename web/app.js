@@ -2838,7 +2838,7 @@ async function updateInitialBuyEstimate() {
       amount <= 0
     ) {
       output.textContent =
-        'Enter a first activation buy greater than 0 SOL. For the first test, 0.0001 SOL is enough.';
+        'Enter a first activation buy. 0.001 SOL is the recommended starting amount; PumpLite checks the live Solana rent floor again before Phantom can sign.';
 
       return;
     }
@@ -3693,7 +3693,10 @@ $('create-form').addEventListener('submit', e => {
       requireWrite();
 
       updateInitialBuySymbol();
-      $('initial-buy-eth').value = '0';
+      $('initial-buy-eth').value =
+        state.chain === 'solana' && $('solana-mayhem')?.value === 'manual'
+          ? '0.001'
+          : '0';
       $('initial-buy-currency').value = 'NZD';
       $('initial-buy-flow-status').textContent =
         'Nothing has been submitted yet.';
@@ -3788,7 +3791,7 @@ $('initial-buy-form').addEventListener('submit', e => {
         initialBuy === 0n
       ) {
         throw Error(
-          'Manual Mayhem requires a first activation buy greater than 0 SOL. Enter a small SOL amount, then review the real amount and fees in Phantom.'
+          'Manual Mayhem requires a first activation buy large enough to keep the new market rent-exempt. 0.001 SOL is recommended; PumpLite verifies the live minimum before Phantom can sign.'
         );
       }
 

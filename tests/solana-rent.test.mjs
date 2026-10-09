@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {rentSupport,requireRentConsent} from '../web/solana-rent.js';
+import {rentSupport,requireRentConsent,minimumActivationGross} from '../web/solana-rent.js';
 test('full sale dust requires exact rent support; partial sale and closed account do not',()=>{
  assert.equal(rentSupport(1995000n,1994999n,650240n),650239n);
  assert.equal(rentSupport(1995000n,997533n,650240n),0n);
@@ -13,4 +13,11 @@ test('rent consent is explicit, capped and must leave positive minimum proceeds'
  requireRentConsent(650239n,1900000n,{accepted:true,maximum:650239n});
  assert.throws(()=>requireRentConsent(650239n,650239n,{accepted:true,maximum:650239n}));
  requireRentConsent(0n,1n,undefined);
+});
+test('Manual Mayhem activation gross covers the market rent floor after the 0.25% fee',()=>{
+ assert.equal(minimumActivationGross(890880n),893113n);
+ const gross=minimumActivationGross(890880n), fee=gross/400n;
+ assert.ok(gross-fee>=890880n);
+ assert.ok((gross-1n)-((gross-1n)/400n)<890880n);
+ assert.throws(()=>minimumActivationGross(0n));
 });

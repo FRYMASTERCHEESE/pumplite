@@ -1,7 +1,7 @@
 import { publicLaunchRetryCache } from '../launch-retry.js';
 import { readTinyMarketState } from '../solana-tiny-state.js';
 import { snapshotTransaction, publicInstructionSequence, validateWalletTransaction } from '../solana-transaction-validation.js';
-import { rentSupport, requireRentConsent } from '../solana-rent.js';
+import { rentSupport, requireRentConsent, minimumActivationGross } from '../solana-rent.js';
 import {
   Connection,
   PublicKey,
@@ -2318,6 +2318,27 @@ export function adapter(
             TINY_MINT_SIZE,
             'confirmed'
           );
+
+      const marketRentLamports =
+        await writeConnection
+          .getMinimumBalanceForRentExemption(
+            0,
+            'confirmed'
+          );
+
+      if (!Number.isSafeInteger(marketRentLamports) || marketRentLamports <= 0) {
+        throw Error('Invalid Solana market rent floor');
+      }
+
+      const minimumActivation = minimumActivationGross(BigInt(marketRentLamports));
+      if (buyAmount < minimumActivation) {
+        const minimumSol = Number(minimumActivation) / 1_000_000_000;
+        throw Error(
+          'First activation buy is too small for the live Solana rent floor. Use at least ' +
+          minimumSol.toFixed(9).replace(/0+$/,'').replace(/\.$/,'') +
+          ' SOL, then review the transaction in Phantom.'
+        );
+      }
 
       const built =
         buildTinyFirstBuyerActivationInstructions({
