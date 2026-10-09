@@ -10,8 +10,8 @@ function node(name, attrs = {}) {
   return el;
 }
 
-function priceNumber(value) {
-  return Number(formatUnits(value, 18, 18));
+function priceNumber(value, decimals) {
+  return Number(formatUnits(value, decimals, decimals));
 }
 
 function priceLabel(value) {
@@ -34,7 +34,7 @@ function timeLabel(point) {
   return 'Block ' + Number(point.blockNumber).toLocaleString();
 }
 
-export function renderPriceChart(container, trades, symbol = 'TOKEN') {
+export function renderPriceChart(container, trades, symbol = 'TOKEN', nativeDecimals = 18, unit = 'ETH') {
   container.replaceChildren();
 
   if (!Array.isArray(trades) || trades.length === 0) {
@@ -48,7 +48,7 @@ export function renderPriceChart(container, trades, symbol = 'TOKEN') {
   const points = trades
     .map((trade, index) => ({
       index,
-      price: priceNumber(trade.price),
+      price: priceNumber(trade.price, nativeDecimals),
       side: trade.isBuy ? 'buy' : 'sell',
       blockNumber: Number(trade.blockNumber),
       timestamp: Number(trade.timestamp || 0),
@@ -130,7 +130,7 @@ export function renderPriceChart(container, trades, symbol = 'TOKEN') {
     const title = node('title');
     title.textContent =
       priceLabel(points[0].price) +
-      ' ETH/' +
+      ' ' + unit + '/' +
       symbol +
       ' - ' +
       timeLabel(points[0]);
@@ -181,7 +181,7 @@ export function renderPriceChart(container, trades, symbol = 'TOKEN') {
       title.textContent =
         (point.side === 'buy' ? 'Buy - ' : 'Sell - ') +
         priceLabel(point.price) +
-        ' ETH/' +
+        ' ' + unit + '/' +
         symbol +
         ' - ' +
         timeLabel(point);
