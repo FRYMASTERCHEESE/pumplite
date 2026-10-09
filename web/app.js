@@ -8,6 +8,8 @@ import { metadataDocument } from './metadata.js';
 import { parseUnits, formatUnits, quote, quoteBaseV2, minimumOutput, validateMetadata } from './math.js';
 import { validatePublicConfig, deploymentConfigured, transactionConfigEnabled } from './release-config.js';
 import { renderPriceChart } from './price-chart.js';
+import { loadTokenMedia } from './token-media.js';
+import { renderTokenDetailCard } from './token-detail-card.js';
 if (window.top !== window.self) {
   document.body.replaceChildren(document.createTextNode('Open PumpLite directly in your browser. Embedded wallet interactions are disabled.'));
   throw Error('Embedded PumpLite is disabled');
@@ -457,7 +459,7 @@ function renderRecentTrades(market) {
 
   if (!recent.length) {
     clearRecentTrades(
-      'No completed buy/sell Trade events were found in the loaded Base history.'
+      'No completed PumpLite buy/sell trades were found in the loaded on-chain history.'
     );
     return;
   }
@@ -466,7 +468,7 @@ function renderRecentTrades(market) {
     const link = document.createElement('a');
     link.className = 'recent-trade-row';
     link.href =
-      state.config.base.explorer +
+      state.config[state.chain].explorer +
       '/tx/' +
       trade.transactionHash;
     link.target = '_blank';
@@ -483,7 +485,7 @@ function renderRecentTrades(market) {
             trade.input,
             market.nativeDecimals,
             6
-          ) + ' ETH'
+          ) + ' ' + market.unit
         : formatUnits(
             trade.input,
             market.decimals,
@@ -638,16 +640,27 @@ let marketStats24hRequest = 0;
 async function loadMarket24hStats(market) {
   const request = ++marketStats24hRequest;
 
-  if (state.chain !== 'base') {
-    $('volume-24h').textContent =
-      'Not indexed';
+  if (state.chain === 'solana') {
+    $('volume-24h').textContent = 'Loading…';
+    $('trades-24h').textContent = 'Loading…';
+    $('market-24h-status').textContent = 'Scanning recent confirmed PumpLite transactions on Solana Mainnet…';
 
-    $('trades-24h').textContent =
-      'Not indexed';
-
-    $('market-24h-status').textContent =
-      'Live PumpLite bonding-curve market on Solana Mainnet. Rolling 24h trade indexing is not enabled yet.';
-
+    try {
+      const adapter = await getAdapter();
+      if (typeof adapter.marketStats24h !== 'function') throw Error('Solana trade scan unavailable');
+      const stats = await adapter.marketStats24h(market);
+      if (request !== marketStats24hRequest || state.market?.id !== market.id) return;
+      $('volume-24h').textContent = compactAmount(stats.volume, market.nativeDecimals, 8) + ' SOL';
+      $('trades-24h').textContent = Number(stats.trades).toLocaleString();
+      $('market-24h-status').textContent = stats.coverageComplete
+        ? 'Rolling 24h PumpLite trade window covered by the confirmed Solana scan · ' + Number(stats.scannedSignatures).toLocaleString() + ' mint transaction(s) checked.'
+        : 'Bounded recent Solana scan · ' + Number(stats.scannedSignatures).toLocaleString() + ' mint transaction(s) checked. 24h totals may undercount if older transactions are outside this scan.';
+    } catch (error) {
+      if (request !== marketStats24hRequest || state.market?.id !== market.id) return;
+      $('volume-24h').textContent = 'Unavailable';
+      $('trades-24h').textContent = 'Unavailable';
+      $('market-24h-status').textContent = 'Solana trade history is temporarily unavailable: ' + (error?.message || 'read failed');
+    }
     return;
   }
 
@@ -730,7 +743,7 @@ function renderMarketChartRange(market) {
   setChartRangeButtons();
 
   $('price-chart-pair').textContent =
-    'ETH / ' + market.symbol;
+    market.unit + ' / ' + market.symbol;
 
   const visible = tradesForChartRange();
 
@@ -759,8 +772,8 @@ function renderMarketChartRange(market) {
 
       $('price-chart-status').textContent =
         spotPrice === null
-          ? 'No completed buy/sell Trade events were found in the recent Base history.'
-          : 'No completed buy/sell Trade events were found in the recent Base history. The value above is the current on-chain bonding-curve spot price, not an invented trade price.';
+          ? 'No completed PumpLite trades were found in the loaded on-chain history.'
+          : 'No completed PumpLite trades were found in the loaded on-chain history. The value above is the current on-chain bonding-curve spot price, not an invented trade price.';
     } else {
       $('price-chart-change').textContent =
         'No trades';
@@ -834,14 +847,15 @@ async function loadMarketChart(market) {
     setChartRangeButtons();
   }
 
-  if (
-    state.chain !== 'base' ||
-    ![2, 3].includes(market.contractVersion)
-  ) {
+  const adapter = await getAdapter();
+  const chartSupported =
+    state.chain === 'solana'
+      ? typeof adapter.tradeHistory === 'function'
+      : [2, 3].includes(market.contractVersion) && typeof adapter.tradeHistory === 'function';
+
+  if (!chartSupported) {
     clearMarketChart(
-      state.chain === 'solana'
-        ? 'PumpLite Solana trade history charting is not indexed yet. Current price and reserves still come from the live market.'
-        : 'Trade chart is available for Base V2/V3 markets.',
+      'Trade history is not available for this PumpLite market yet.',
       market.unit,
       market.symbol
     );
@@ -849,17 +863,17 @@ async function loadMarketChart(market) {
   }
 
   $('price-chart-status').textContent =
-    'Loading recent real Trade events from Base Mainnet...';
+    'Loading recent confirmed PumpLite trades from ' + state.config[state.chain].name + '...';
 
   clearRecentTrades(
-    'Loading recent real Trade events from Base Mainnet...'
+    'Loading recent confirmed PumpLite trades...'
   );
 
   try {
     const trades =
-      await (await getAdapter()).tradeHistory(
+      await adapter.tradeHistory(
         market,
-        120
+        state.chain === 'solana' ? 80 : 120
       );
 
     if (
@@ -1063,6 +1077,90 @@ function avatarTone(m) {
   return total % 5;
 }
 
+async function hydrateTokenAvatar(node, m) {
+  if (!node || !m) return;
+  const fallback = String(m.symbol || 'PL').slice(0, 2).toUpperCase();
+  node.replaceChildren();
+  node.textContent = fallback;
+
+  const media = await loadTokenMedia(m.uri);
+  if (!media?.image || state.market?.id && node.id === 'market-token-avatar' && state.market.id !== m.id) return;
+
+  const image = document.createElement('img');
+  image.src = media.image;
+  image.alt = m.name + ' token image';
+  image.loading = 'lazy';
+  image.referrerPolicy = 'no-referrer';
+  image.addEventListener('error', () => {
+    node.replaceChildren();
+    node.textContent = fallback;
+  }, { once: true });
+  node.replaceChildren(image);
+}
+
+let marketSummaryRequest = 0;
+async function loadMarketTokenSummary(m) {
+  const request = ++marketSummaryRequest;
+  const avatar = $('market-token-avatar');
+  avatar.textContent = String(m.symbol || 'PL').slice(0, 2).toUpperCase();
+  void hydrateTokenAvatar(avatar, m);
+
+  const price = marketPriceWei(m);
+  const cap = marketCapWei(m);
+
+  $('market-hero-price').textContent = marketPriceText(m) + ' / ' + m.symbol;
+  $('market-hero-cap').textContent = marketCapText(m);
+  $('market-hero-backing').textContent = compactAmount(m.nativeReserve, m.nativeDecimals, 8) + ' ' + m.unit;
+  $('market-hero-progress').value = Math.max(0, Math.min(100, distributedPercent(m)));
+  $('market-hero-progress-label').textContent = distributedPercent(m).toFixed(2) + '% distributed on the PumpLite curve';
+  $('market-summary-address').textContent = m.token;
+
+  $('market-hero-holders').textContent = state.chain === 'solana' ? 'Loading…' : 'Not indexed';
+  $('market-hero-holders-note').textContent = state.chain === 'solana' ? 'Direct positive-balance owner scan' : 'Reliable holder indexing is not enabled on this network.';
+
+  try {
+    const rates = await loadInitialBuyRates(m.unit);
+    if (request !== marketSummaryRequest || state.market?.id !== m.id) return;
+    const nativePrice = price === null ? NaN : Number(formatUnits(price, m.nativeDecimals, 12));
+    const nativeCap = cap === null ? NaN : Number(formatUnits(cap, m.nativeDecimals, 8));
+    const nzd = Number(rates.NZD);
+    const usd = Number(rates.USD);
+    $('market-hero-price-fiat').textContent =
+      Number.isFinite(nativePrice) && Number.isFinite(nzd) && Number.isFinite(usd)
+        ? '≈ ' + formatInitialBuyFiat(nativePrice * nzd, 'NZD') + ' / ' + formatInitialBuyFiat(nativePrice * usd, 'USD')
+        : 'Fiat estimate unavailable';
+    $('market-hero-cap-fiat').textContent =
+      Number.isFinite(nativeCap) && Number.isFinite(nzd) && Number.isFinite(usd)
+        ? '≈ ' + formatInitialBuyFiat(nativeCap * nzd, 'NZD') + ' / ' + formatInitialBuyFiat(nativeCap * usd, 'USD')
+        : 'Fiat estimate unavailable';
+  } catch {
+    if (request === marketSummaryRequest && state.market?.id === m.id) {
+      $('market-hero-price-fiat').textContent = 'Fiat estimate unavailable';
+      $('market-hero-cap-fiat').textContent = 'Fiat estimate unavailable';
+    }
+  }
+
+  if (state.chain === 'solana') {
+    try {
+      const adapter = await getAdapter();
+      if (typeof adapter.holderStats !== 'function') throw Error('Holder scan unavailable');
+      const stats = await adapter.holderStats(m);
+      if (request !== marketSummaryRequest || state.market?.id !== m.id) return;
+      $('market-hero-holders').textContent = Number(stats.holders).toLocaleString();
+      $('market-hero-holders-note').textContent =
+        Number(stats.positiveAccounts).toLocaleString() +
+        ' positive-balance token account' +
+        (stats.positiveAccounts === 1 ? '' : 's') +
+        ' · direct Solana read';
+    } catch {
+      if (request === marketSummaryRequest && state.market?.id === m.id) {
+        $('market-hero-holders').textContent = 'Unavailable';
+        $('market-hero-holders-note').textContent = 'Holder scan exceeded the live RPC limit or is temporarily unavailable.';
+      }
+    }
+  }
+}
+
 function row(m) {
   const link = document.createElement('a');
   link.className = 'market-row token-market-card';
@@ -1075,6 +1173,7 @@ function row(m) {
   avatar.className = 'token-avatar tone-' + avatarTone(m);
   avatar.setAttribute('aria-hidden', 'true');
   avatar.textContent = String(m.symbol || 'PL').slice(0, 2).toUpperCase();
+  void hydrateTokenAvatar(avatar, m);
 
   const identity = document.createElement('span');
   identity.className = 'token-card-identity';
@@ -1133,6 +1232,15 @@ function row(m) {
     metrics.append(item);
   }
 
+  const curveProgress = document.createElement('div');
+  curveProgress.className = 'token-card-progress';
+  const curveProgressLabel = document.createElement('span');
+  curveProgressLabel.textContent = 'Bonding curve ' + distributedPercent(m).toFixed(2) + '%';
+  const curveProgressBar = document.createElement('progress');
+  curveProgressBar.max = 100;
+  curveProgressBar.value = Math.max(0, Math.min(100, distributedPercent(m)));
+  curveProgress.append(curveProgressLabel, curveProgressBar);
+
   const footer = document.createElement('small');
   footer.className = 'token-card-source';
   footer.textContent =
@@ -1141,7 +1249,7 @@ function row(m) {
     '...' +
     m.id.slice(-4) + (m.protocol === 'tiny' ? ' · ' + formatUnits(m.actualSupply, m.decimals, 2) + ' minted / ' + formatUnits(m.maximumSupply, m.decimals, 0) + ' maximum' : '');
 
-  link.append(head, chips, metrics, footer);
+  link.append(head, chips, metrics, curveProgress, footer);
   return link;
 }
 async function refreshRegistry() {
@@ -1320,6 +1428,7 @@ function renderFeaturedPlite() {
 }
 
 function marketSortValue(m, mode) {
+  if (mode === 'market-cap') return marketCapWei(m) ?? 0n;
   if (mode === 'volume') return m.volume;
   if (mode === 'reserve') return m.nativeReserve;
   if (mode === 'distributed') {
@@ -1643,6 +1752,10 @@ async function refreshLiveData() {
 function renderMarket(m) {
   void renderSolanaFiat();
   verificationPanel(state.chain,state.config[state.chain],m,state.registry);
+  renderTokenDetailCard(m);
+  $('market-summary-name').textContent = m.name + ' (' + m.symbol + ')';
+  $('market-summary-network').textContent = state.config[state.chain].name;
+  void loadMarketTokenSummary(m);
   $('market-metadata').textContent = m.uri ? 'Creator metadata URI (not fetched or verified): ' + m.uri : 'No creator metadata URI supplied.';
   $('market-name').textContent = m.name; $('market-symbol').textContent = m.symbol + ' / ' + m.unit;
   $('market-source').textContent = m.source + ' · fetched ' + new Date(m.observedAt).toLocaleTimeString() + ' · refresh on demand';
