@@ -11,6 +11,8 @@ Both workers already contain their production names and bindings in `wrangler.js
 
 Use Cloudflare Workers Builds with the GitHub repository `FRYMASTERCHEESE/pumplite` and production branch `main`.
 
+Both production workers are connected to Cloudflare Builds using their existing Worker identities; deployments must update those Workers in place rather than create duplicates.
+
 Configure each existing Worker separately:
 
 | Worker | Root directory | Build command | Deploy command |
