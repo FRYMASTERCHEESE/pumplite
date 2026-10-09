@@ -517,53 +517,76 @@ export function renderMayhemPanel(
       );
     }
 
-    const trigger =
-      make(
-        'button',
-        'Trigger Agent Trade',
-        'mayhem-trigger-button'
+    // Only an active, canonical, authorized Manual Mayhem launch may
+    // display an agent-trade action. Historical/paused/expired launches
+    // remain visible with status and activity metrics but no trade button.
+    const canTrigger =
+      enabled &&
+      status === 'active' &&
+      manualMayhemReady(launch) &&
+      !needsAuthorization &&
+      !launch.pending &&
+      typeof onTrigger === 'function';
+
+    if (canTrigger) {
+      const trigger =
+        make(
+          'button',
+          'Trigger Agent Trade',
+          'mayhem-trigger-button'
+        );
+
+      trigger.type = 'button';
+
+      trigger.addEventListener(
+        'click',
+        async () => {
+          // A displayed button must not sign after the expiry deadline.
+          if (
+            !manualMayhemReady(launch) ||
+            Date.now() >= launch.expiresAt
+          ) {
+            trigger.disabled = true;
+            trigger.textContent = 'Agent ended';
+            return;
+          }
+
+          trigger.disabled = true;
+          trigger.textContent = 'Requesting agent trade...';
+
+          try {
+            await onTrigger();
+          } catch {
+            trigger.textContent = 'Trigger Agent Trade';
+            host.append(
+              make(
+                'p',
+                'Trigger request failed. Refresh status before retrying.',
+                'fine'
+              )
+            );
+          }
+        }
       );
 
-    trigger.type =
-      'button';
-
-    trigger.disabled =
-      !enabled ||
-      !manualMayhemReady(launch) ||
-      needsAuthorization ||
-      status === 'ended' ||
-      Boolean(
-        launch.pending
-      ) ||
-      !onTrigger;
-
-    trigger.addEventListener(
-      'click',
-      async () => {
-        trigger.disabled =
-          true;
-
-        trigger.textContent =
-          'Requesting agent trade...';
-
-        try {
-          await onTrigger();
-        } catch {
-          trigger.textContent =
-            'Trigger Agent Trade';
-
-          host.append(
-            make(
-              'p',
-              'Trigger request failed. Refresh status before retrying.',
-              'fine'
-            )
-          );
-        }
-      }
-    );
-
-    host.append(trigger);
+      host.append(trigger);
+    } else if (status === 'ended') {
+      host.append(
+        make(
+          'p',
+          'Manual Mayhem has ended. Agent trade requests are unavailable. Normal market trading remains separate.',
+          'fine'
+        )
+      );
+    } else if (status === 'paused') {
+      host.append(
+        make(
+          'p',
+          'Manual Mayhem is paused. Agent trade requests are unavailable.',
+          'fine'
+        )
+      );
+    }
   }
 
   const metrics =
