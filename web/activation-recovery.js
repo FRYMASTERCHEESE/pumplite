@@ -12,5 +12,5 @@ export function recoveryTarget(view, launchId, buyer) {
 
 export function manualMayhemReady(view,now=Date.now()) {
  const mint=view?.activation?.mint || view?.reservation?.mint;
- return view?.mode==='manual' && view.authorized===true && view.canonicalActivation===true && typeof mint==='string' && view.mint===mint && view.status==='active' && Number.isSafeInteger(view.expiresAt) && now<view.expiresAt && !view.pending;
+ return view?.mode==='manual' && view.authorized===true && view.canonicalActivation===true && typeof mint==='string' && view.mint===mint && view.status!=='ended' && Number.isSafeInteger(view.expiresAt) && now<view.expiresAt && !view.pending;
 }
