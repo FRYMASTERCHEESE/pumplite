@@ -1,0 +1,32 @@
+name: One-time MAYM recovery read
+
+on:
+  push:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    if: github.event.head_commit.message == 'Inspect MAYM activation on chain'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Read MAYM signatures from PumpLite RPC
+        shell: bash
+        run: |
+          set -euo pipefail
+          body='{"jsonrpc":"2.0","id":1,"method":"getSignaturesForAddress","params":["FEofu2h5RY4yyuoZJKT4VhwWqJ78ScEy6WjoFCyQ1Xqe",{"limit":10,"commitment":"confirmed"}]}'
+          curl --fail-with-body -sS \
+            -H 'Origin: https://frymastercheese.github.io' \
+            -H 'Content-Type: application/json' \
+            --data "$body" \
+            https://pumplite-rpc.coreyedge123.workers.dev/rpc | tee /tmp/signatures.json
+          echo
+          python - <<'PY'
+          import json
+          data=json.load(open('/tmp/signatures.json'))
+          rows=data.get('result') or []
+          print('MAYM_SIGNATURES')
+          for row in rows:
+              print(row.get('signature'), row.get('slot'), row.get('err'), row.get('confirmationStatus'))
+          PY
