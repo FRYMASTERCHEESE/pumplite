@@ -90,16 +90,30 @@ export class MayhemStore {
       const c=row(this.sql,'SELECT envelope FROM mayhem_choices WHERE launch_id=?',r.launchId);
       const choice=c && JSON.parse(c.envelope);
       const launch=row(this.sql,'SELECT * FROM solana_launches WHERE id=?',r.launchId);
-      const activation=row(this.sql,'SELECT launch_id FROM solana_launch_activations WHERE launch_id=?',r.launchId);
+      const activation=row(this.sql,'SELECT mint,buyer FROM solana_launch_activations WHERE launch_id=?',r.launchId);
       const reservation=row(this.sql,'SELECT * FROM solana_launch_reservations WHERE launch_id=?',r.launchId);
-      if(activation || !choice || !launch || launch.status!=='pending' || !reservation || reservation.expires_at<=now || reservation.mint!==r.mint || reservation.buyer!==r.creator || launch.creator!==r.creator || r.controller!==controller || r.controller===r.creator) fail('Mayhem requires an unactivated canonical creator reservation');
+      const activatedRecovery=Boolean(
+        activation &&
+        launch?.status==='activated' &&
+        activation.mint===r.mint &&
+        activation.buyer===r.creator
+      );
+      const pendingAuthorization=Boolean(
+        !activation &&
+        launch?.status==='pending' &&
+        reservation?.expires_at>now
+      );
+      if((!pendingAuthorization&&!activatedRecovery) || !choice || !launch || !reservation || reservation.mint!==r.mint || reservation.buyer!==r.creator || launch.creator!==r.creator || r.controller!==controller || r.controller===r.creator) fail('Mayhem requires a canonical creator reservation or matching canonical activation');
       for(const k of ['launchId','creator','mode','createdAt','expiresAt']) if(choice.record[k]!==r[k]) fail('Mayhem authorization conflicts with creation choice');
       const old=row(this.sql,'SELECT envelope FROM mayhem_authorizations WHERE launch_id=?',r.launchId);
       if(old) {
         const previous=JSON.parse(old.envelope).record, state=this.state(r.launchId);
         if(previous.mint===r.mint) {
           if(previous.controller!==r.controller) fail('Controller is immutable');
-          return state;
+          if(activatedRecovery && state.status==='paused' && state.reason==='Awaiting verified activation' && !state.pending && state.tradeCount===0 && state.solIn===0 && state.solOut===0 && state.inventory==='0') {
+            this.save({...state,status:'active',reason:null});
+          }
+          return this.state(r.launchId);
         }
         // reserveLaunch only replaces expired reservations. The new canonical mint
         // must also receive its own creator signature; no old signature is reused.
@@ -108,11 +122,11 @@ export class MayhemStore {
         if(row(this.sql,'SELECT mint FROM mayhem_authorization_history WHERE launch_id=? AND mint=?',r.launchId,r.mint)) fail('An expired mint cannot be reused');
         this.sql.exec('INSERT OR IGNORE INTO mayhem_authorization_history VALUES (?,?,?)',r.launchId,previous.mint,old.envelope);
         this.sql.exec('UPDATE mayhem_authorizations SET mint=?, envelope=? WHERE launch_id=?',r.mint,JSON.stringify(verified),r.launchId);
-        this.save({...state,...r});
+        this.save({...state,...r,status:activatedRecovery?'active':'paused',reason:activatedRecovery?null:'Awaiting verified activation'});
         return this.state(r.launchId);
       }
       this.sql.exec('INSERT INTO mayhem_authorizations VALUES (?,?,?)',r.launchId,r.mint,JSON.stringify(verified));
-      const state={...r,status:'paused',reason:'Awaiting verified activation',tradeCount:0,solIn:0,solOut:0,inventory:'0',lastRequest:null,lastAgentTrade:null,pending:null};
+      const state={...r,status:activatedRecovery?'active':'paused',reason:activatedRecovery?null:'Awaiting verified activation',tradeCount:0,solIn:0,solOut:0,inventory:'0',lastRequest:null,lastAgentTrade:null,pending:null};
       this.sql.exec('INSERT INTO mayhem_states VALUES (?,?)',r.launchId,JSON.stringify(state));
       return state;
     });
