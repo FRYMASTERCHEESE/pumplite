@@ -39,6 +39,20 @@ const launch={creator:'creator',authorized:true,mint:'mint',controller:'controll
 async function withApi(view,fn){const old=globalThis.fetch;globalThis.fetch=async url=>Response.json(String(url).endsWith('capabilities')?cap:view);try{return await fn()}finally{globalThis.fetch=old}}
 test('canonical existing mint authorization resumes without another signature',()=>withApi(launch,async()=>{const r=await authorizeReservedMint('a'.repeat(64),'creator',()=>{throw Error('must not sign again')});assert.equal(r.mint,'mint')}));
 test('controller mismatch does not resume',()=>withApi({...launch,controller:'other'},async()=>{await assert.rejects(authorizeReservedMint('a'.repeat(64),'creator',()=>{}),/mismatch/)}));
+test('post-activation replacement mint recovery still requires a fresh creator authorization signature',async()=>{
+ const [client,server]=await Promise.all([
+  readFile('web/mayhem-ui.js','utf8'),
+  readFile('workers/pumplite-upload-guard/src/mayhem.js','utf8')
+ ]);
+ assert.match(client,/activatedRecovery/);
+ assert.match(client,/launch\.canonicalActivation === true/);
+ assert.match(client,/launch\.mint !==\s*launch\.reservation\?\.mint/);
+ assert.match(server,/activatedRecovery=Boolean/);
+ assert.match(server,/activation\.mint===r\.mint/);
+ assert.match(server,/activation\.buyer===r\.creator/);
+ assert.match(server,/UPDATE mayhem_authorizations SET mint=\?, envelope=\?/);
+ assert.match(server,/status:activatedRecovery\?'active':'paused'/);
+});
 test('lost mint signer cannot be replaced for existing Manual reservation',()=>withApi(launch,()=>assert.rejects(assertMayhemReservationRecoverable('a'.repeat(64)),/original open browser tab/)));
 test('ordinary non-Mayhem launch remains compatible',()=>withApi({mode:'off'},()=>assertMayhemReservationRecoverable('a'.repeat(64))));
 test('pending objects and duplicate mints cannot pass activated discovery validator',()=>{
