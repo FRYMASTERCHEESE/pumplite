@@ -1,0 +1,2 @@
+Retry confirmed MAYM registry finalization after upload-guard deploy.
+UTC: 2026-10-09T10:50:00Z
