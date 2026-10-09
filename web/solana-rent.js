@@ -10,7 +10,7 @@ export function minimumActivationGross(rent) {
   // Activation charges a 0.25% fee using integer division (gross/400).
   // Return a conservative gross amount whose net transfer keeps the new
   // zero-data market PDA rent-exempt.
-  const gross=(rent*400n+398n)/399n;
+  const gross=rent+(rent-1n)/399n;
   if(gross>18446744073709551615n) throw Error('Activation rent floor is too large');
   return gross;
 }
