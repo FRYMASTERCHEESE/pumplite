@@ -607,6 +607,16 @@ renderPendingLaunches({
     sync.hidden =
       !mine;
 
+    // A failed reconciliation must not permit a second creator activation.
+    // Keep this fail-closed state across quote input updates.
+    let registryRecoveryPending = false;
+    function lockForRegistryRecovery() {
+      registryRecoveryPending = true;
+      activate.disabled = true;
+      reserve.disabled = true;
+      activate.textContent = "Activation verification required";
+    }
+
     function reservationReady() {
       const value =
         reservations.get(
@@ -688,6 +698,7 @@ renderPendingLaunches({
           });
 
         activate.disabled =
+          registryRecoveryPending ||
           !transactionsEnabled ||
           !wallet;
       } catch (error) {
@@ -753,6 +764,9 @@ renderPendingLaunches({
       () => {
         run(
           async () => {
+            if (registryRecoveryPending) {
+              throw Error("Existing activation requires registry verification. Do not buy again.");
+            }
             const buyAmount =
               parseSol(
                 amount.value
@@ -852,6 +866,7 @@ renderPendingLaunches({
                       launch.id
                   });
             } catch {
+              lockForRegistryRecovery();
               sync.hidden =
                 false;
 
@@ -921,6 +936,7 @@ renderPendingLaunches({
                 error?.message ||
                 "Registry verification is still pending.";
 
+              lockForRegistryRecovery();
               sync.hidden =
                 false;
 
