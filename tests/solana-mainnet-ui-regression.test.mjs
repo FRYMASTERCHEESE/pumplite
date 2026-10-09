@@ -253,7 +253,7 @@ test(
     assert.equal(
       matchingActivatedMarket(
         pending,
-        [activated, {...activated, id: 'some-other-activated-mint'}]
+        [activated, {...activated, id: 'A'.repeat(44)}]
       ),
       null,
       'ambiguous same-name markets must not be guessed'
