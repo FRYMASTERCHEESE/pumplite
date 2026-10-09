@@ -1,4 +1,4 @@
-name: One-time MAYM recovery read
+name: One-time MAYM registry recovery
 
 on:
   push:
@@ -7,26 +7,41 @@ permissions:
   contents: read
 
 jobs:
-  inspect:
-    if: github.event.head_commit.message == 'Inspect MAYM activation on chain'
+  recover:
+    if: github.event.head_commit.message == 'Recover confirmed MAYM activation'
     runs-on: ubuntu-latest
     steps:
-      - name: Read MAYM signatures from PumpLite RPC
+      - name: Finalize existing confirmed MAYM activation
         shell: bash
         run: |
           set -euo pipefail
-          body='{"jsonrpc":"2.0","id":1,"method":"getSignaturesForAddress","params":["FEofu2h5RY4yyuoZJKT4VhwWqJ78ScEy6WjoFCyQ1Xqe",{"limit":10,"commitment":"confirmed"}]}'
+          body='{"launchId":"3827e9f07371f0a00abb1e88957b2818a9042b8674047d04c3b5c8dfa0b06f4e","signature":"45BnbRhTP3nhA3jSwAir5kHMTWfYNgjQ438cPRnWEWpYjGf4GpAbVW51fNUR4EsvG7PkJ76BhL9yZYugh1Dyxc3G"}'
           curl --fail-with-body -sS \
             -H 'Origin: https://frymastercheese.github.io' \
             -H 'Content-Type: application/json' \
             --data "$body" \
-            https://pumplite-rpc.coreyedge123.workers.dev/rpc | tee /tmp/signatures.json
+            https://pumplite-rpc.coreyedge123.workers.dev/launch/finalize | tee /tmp/finalized.json
           echo
           python - <<'PY'
           import json
-          data=json.load(open('/tmp/signatures.json'))
-          rows=data.get('result') or []
-          print('MAYM_SIGNATURES')
-          for row in rows:
-              print(row.get('signature'), row.get('slot'), row.get('err'), row.get('confirmationStatus'))
+          data=json.load(open('/tmp/finalized.json'))
+          assert data.get('ok') is True, data
+          a=data.get('activation') or {}
+          print('FINALIZED', a.get('launchId'), a.get('mint'), a.get('market'), a.get('transactionSignature'), a.get('slot'))
+          PY
+      - name: Read Manual Mayhem state after finalization
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail-with-body -sS \
+            -H 'Origin: https://frymastercheese.github.io' \
+            https://pumplite-rpc.coreyedge123.workers.dev/mayhem/3827e9f07371f0a00abb1e88957b2818a9042b8674047d04c3b5c8dfa0b06f4e | tee /tmp/mayhem.json
+          echo
+          python - <<'PY'
+          import json
+          data=json.load(open('/tmp/mayhem.json'))
+          for k in ['mode','authorized','canonicalActivation','status','reason','mint','controller','hasActivity']:
+              print(k, data.get(k))
+          print('reservation', data.get('reservation'))
+          print('metrics', data.get('metrics'))
           PY
