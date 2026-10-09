@@ -2299,6 +2299,15 @@ $('connect').addEventListener('click', () => action(async () => {
     await loadMarket(marketId);
   }
 }));
+$('copy-market-token').addEventListener(
+  'click',
+  () => action(async () => {
+    if (!state.market?.token) throw Error('Open a token market first');
+    await copyMetadataText(state.market.token);
+    status(state.market.symbol + ' mint address copied.');
+  })
+);
+
 $('copy-review-market').addEventListener(
   'click',
   () => action(async () => {
