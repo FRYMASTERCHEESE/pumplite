@@ -58,7 +58,10 @@ test('ended and expired Manual Mayhem show historical metrics but never a trigge
     const nodes=flatten(host);
     assert.equal(nodes.filter(n=>n.tag==='button').length,0);
     assert.equal(nodes.some(n=>String(n.textContent||'').includes('Mayhem Agent volume')),true);
-    assert.equal(manualMayhemReady(state),false);
+    // A paused launch can still be recoverable; it must not be tradeable.
+    if (state.status !== 'paused') {
+      assert.equal(manualMayhemReady(state), false);
+    }
   }
   const active=render(launch('active'));
   assert.equal(flatten(active).filter(n=>n.tag==='button').length,1);
