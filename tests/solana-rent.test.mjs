@@ -15,7 +15,7 @@ test('rent consent is explicit, capped and must leave positive minimum proceeds'
  requireRentConsent(0n,1n,undefined);
 });
 test('Manual Mayhem activation gross covers the market rent floor after the 0.25% fee',()=>{
- assert.equal(minimumActivationGross(890880n),893113n);
+ assert.equal(minimumActivationGross(890880n),893112n);
  const gross=minimumActivationGross(890880n), fee=gross/400n;
  assert.ok(gross-fee>=890880n);
  assert.ok((gross-1n)-((gross-1n)/400n)<890880n);
