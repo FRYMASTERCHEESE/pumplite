@@ -13,12 +13,12 @@ Use Cloudflare Workers Builds with the GitHub repository `FRYMASTERCHEESE/pumpli
 
 Configure each existing Worker separately:
 
-| Worker | Root directory | Deploy command |
-| --- | --- | --- |
-| pumplite-upload-guard | `workers/pumplite-upload-guard` | `npx wrangler deploy --keep-vars` |
-| pumplite-rpc | `workers/pumplite-rpc` | `npx wrangler deploy --keep-vars` |
+| Worker | Root directory | Build command | Deploy command |
+| --- | --- | --- | --- |
+| pumplite-upload-guard | `workers/pumplite-upload-guard` | `echo "No build step"` | `npx wrangler deploy --keep-vars` |
+| pumplite-rpc | `workers/pumplite-rpc` | `echo "No build step"` | `npx wrangler deploy --keep-vars` |
 
-Deploy `pumplite-upload-guard` before `pumplite-rpc` when both change. Use `--keep-vars` for manual/CI deploys so dashboard-managed production variables are preserved.
+Deploy `pumplite-upload-guard` before `pumplite-rpc` when both change. These worker roots do not need a package build step; Cloudflare Builds uses the no-op build command above and deploys with Wrangler. Use `--keep-vars` so dashboard-managed production variables and secrets are preserved.
 
 Do not put Cloudflare API tokens, account IDs, private keys, wallet seed phrases, or controller signer material in this repository. Cloudflare's GitHub integration should hold its own deployment authorization.
 
