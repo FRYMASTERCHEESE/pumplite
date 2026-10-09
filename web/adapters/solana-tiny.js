@@ -27,6 +27,8 @@ import {
   boundedFetch
 } from '../rpc-fetch.js';
 
+import { parseTinyTradeTransaction } from '../solana-tiny-history.js';
+
 import {
   assertSolanaMainnet
 } from '../solana-network.js';
@@ -973,6 +975,132 @@ export function adapter(
     };
   }
 
+  const tradeScanCache = new Map();
+  const holderStatsCache = new Map();
+
+  async function scanTinyTrades(m, requestedLimit = 60) {
+    const limit = Math.max(1, Math.min(80, Number(requestedLimit) || 60));
+    const mintText = String(m?.token || '');
+    const marketText = String(m?.marketAddress || m?.id || '');
+    if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(mintText)) throw Error('Invalid PumpLite mint for trade history');
+    if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(marketText)) throw Error('Invalid PumpLite market for trade history');
+
+    const key = mintText + ':' + limit;
+    const cached = tradeScanCache.get(key);
+    if (cached && Date.now() - cached.at < 12_000) return cached.value;
+
+    const mint = new PublicKey(mintText);
+    const signatures = await connection.getSignaturesForAddress(
+      mint,
+      { limit },
+      'confirmed'
+    );
+
+    const trades = [];
+    let readFailures = 0;
+
+    for (let offset = 0; offset < signatures.length; offset += 5) {
+      const batch = signatures.slice(offset, offset + 5);
+      const rows = await Promise.all(
+        batch.map(async item => {
+          if (item?.err !== null || typeof item?.signature !== 'string') return null;
+          try {
+            return await connection.getParsedTransaction(
+              item.signature,
+              {
+                commitment: 'confirmed',
+                maxSupportedTransactionVersion: 0
+              }
+            );
+          } catch {
+            readFailures++;
+            return null;
+          }
+        })
+      );
+
+      for (const tx of rows) {
+        const trade = parseTinyTradeTransaction(tx, {
+          programId: program().toBase58(),
+          mint: mintText,
+          market: marketText,
+          treasury: config.treasury,
+          decimals: Number(m?.decimals ?? 6)
+        });
+        if (trade) trades.push(trade);
+      }
+    }
+
+    trades.sort((a, b) => a.blockNumber - b.blockNumber);
+
+    const oldestSignatureTime = signatures
+      .map(item => Number(item?.blockTime))
+      .filter(Number.isFinite)
+      .reduce((min, value) => Math.min(min, value), Number.POSITIVE_INFINITY);
+
+    const value = {
+      trades,
+      scannedSignatures: signatures.length,
+      capped: signatures.length === limit,
+      readFailures,
+      oldestSignatureTime: Number.isFinite(oldestSignatureTime) ? oldestSignatureTime : null,
+      observedAt: Date.now()
+    };
+
+    tradeScanCache.set(key, { at: Date.now(), value });
+    return value;
+  }
+
+  async function readHolderStats(m) {
+    const mintText = String(m?.token || '');
+    if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(mintText)) throw Error('Invalid PumpLite mint for holder scan');
+
+    const cached = holderStatsCache.get(mintText);
+    if (cached && Date.now() - cached.at < 30_000) return cached.value;
+
+    const accounts = await connection.getProgramAccounts(
+      TINY_TOKEN_PROGRAM,
+      {
+        commitment: 'confirmed',
+        filters: [
+          { dataSize: 165 },
+          { memcmp: { offset: 0, bytes: mintText } }
+        ]
+      }
+    );
+
+    const owners = new Set();
+    let positiveAccounts = 0;
+
+    for (const row of accounts) {
+      const info = row?.account;
+      const data = info ? Buffer.from(info.data) : null;
+      if (
+        !info ||
+        !info.owner.equals(TINY_TOKEN_PROGRAM) ||
+        !data ||
+        data.length !== 165 ||
+        !new PublicKey(data.subarray(0, 32)).equals(new PublicKey(mintText))
+      ) continue;
+
+      const amount = data.readBigUInt64LE(64);
+      if (amount <= 0n) continue;
+
+      positiveAccounts++;
+      owners.add(new PublicKey(data.subarray(32, 64)).toBase58());
+    }
+
+    const value = {
+      holders: owners.size,
+      positiveAccounts,
+      observedAt: Date.now(),
+      source: 'Solana Token Program account scan'
+    };
+
+    holderStatsCache.set(mintText, { at: Date.now(), value });
+    return value;
+  }
+
   return {
     disconnect,
 
@@ -1711,6 +1839,41 @@ export function adapter(
     },
 
     market,
+
+    async tradeHistory(m, limit = 60) {
+      return (await scanTinyTrades(m, limit)).trades;
+    },
+
+    async marketStats24h(m) {
+      const scan = await scanTinyTrades(m, 80);
+      const cutoff = Math.floor(Date.now() / 1000) - 86_400;
+      const trades = scan.trades.filter(trade =>
+        Number.isFinite(Number(trade.timestamp)) &&
+        Number(trade.timestamp) >= cutoff
+      );
+      const volume = trades.reduce((sum, trade) => sum + trade.nativeGross, 0n);
+      const coverageComplete =
+        scan.readFailures === 0 &&
+        (
+          !scan.capped ||
+          (
+            Number.isFinite(scan.oldestSignatureTime) &&
+            scan.oldestSignatureTime <= cutoff
+          )
+        );
+
+      return {
+        volume,
+        trades: trades.length,
+        coverageComplete,
+        scannedSignatures: scan.scannedSignatures,
+        observedAt: scan.observedAt
+      };
+    },
+
+    async holderStats(m) {
+      return readHolderStats(m);
+    },
 
     async balances(m) {
       const owner =
