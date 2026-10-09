@@ -170,3 +170,11 @@ test('Phantom Ethereum provider is discovered without requesting wallet access',
 
   discovered.dispose();
 });
+
+
+test('wallet diagnostic stays quiet until the user starts a connection attempt', async () => {
+  const diagnostic = await readFile('web/phantom-diagnostic.js', 'utf8');
+  assert.match(diagnostic, /var connectionAttempt = false/);
+  assert.match(diagnostic, /if \(!connectionAttempt\) return/);
+  assert.doesNotMatch(diagnostic, /Page error before\/during connection/);
+});
