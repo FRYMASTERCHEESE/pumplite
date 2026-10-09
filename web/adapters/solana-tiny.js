@@ -1,3 +1,4 @@
+import { recoveryTarget } from '../activation-recovery.js';
 import { publicLaunchRetryCache } from '../launch-retry.js';
 import { readTinyMarketState } from '../solana-tiny-state.js';
 import { snapshotTransaction, publicInstructionSequence, validateWalletTransaction } from '../solana-transaction-validation.js';
@@ -1735,22 +1736,14 @@ export function adapter(
       const mayhem =
         await mayhemResponse.json();
 
-      if (
-        !mayhemResponse.ok ||
-        mayhem?.mode !== 'manual' ||
-        mayhem?.creator !== buyerText ||
-        typeof mayhem?.reservation?.mint !== 'string'
-      ) {
-        throw Error(
-          'Manual Mayhem activation proof is not recoverable from the registry yet'
-        );
-      }
+      if(!mayhemResponse.ok)throw Error('Mayhem registry read failed (HTTP '+mayhemResponse.status+'). No activation was sent; retry when the service recovers.');
+      const target=recoveryTarget(mayhem,launchId,buyerText);
 
       let mint;
       try {
         mint =
           new PublicKey(
-            mayhem.reservation.mint
+            target.mint
           );
       } catch {
         throw Error(
@@ -1764,9 +1757,10 @@ export function adapter(
           program()
         ).toBase58();
 
+      if(target.market && target.market!==market)throw Error('Canonical activation market does not match the mint PDA. Registry review required.');
       await network();
 
-      const candidates =
+      const candidates = target.signature ? [{signature:target.signature,err:null}] :
         await connection
           .getSignaturesForAddress(
             mint,
@@ -1831,7 +1825,7 @@ export function adapter(
       }
 
       throw Error(
-        'Confirmed activation was found but registry verification is still pending' +
+        (candidates.some(item=>item?.err===null) ? 'Candidate transaction found but registry verification rejected it' : 'No successful activation found in the bounded history. Provide the original public transaction signature for review; do not activate again') +
         (lastError?.message
           ? ': ' + lastError.message
           : '')

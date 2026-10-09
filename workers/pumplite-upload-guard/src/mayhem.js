@@ -178,7 +178,8 @@ export class MayhemStore {
     const state=stored?this.refresh(id,now):{...choice.record,mint:null,status:now>=choice.record.expiresAt?'ended':'paused',reason:'Creator mint authorization required',pending:null};
     const reservation=row(this.sql,'SELECT mint,expires_at FROM solana_launch_reservations WHERE launch_id=?',id);
     const actions=this.sql.exec('SELECT action FROM mayhem_requests WHERE launch_id=? ORDER BY rowid DESC LIMIT 256',id).toArray().map(r=>JSON.parse(r.action));
-    return {...state,choice,canonicalActivation:Boolean(row(this.sql,'SELECT launch_id FROM solana_launch_activations WHERE launch_id=?',id)),hasActivity:actions.length>0,authorized:Boolean(stored),reservation:reservation?{mint:reservation.mint,expiresAt:reservation.expires_at}:null,actions,metrics:{...mayhemMetrics(actions),agentVolume:stored?String(state.solIn+state.solOut):null,agentTrades:stored?state.tradeCount:null}};
+    const activation=row(this.sql,'SELECT launch_id AS launchId,mint,market,buyer,transaction_signature AS transactionSignature,slot FROM solana_launch_activations WHERE launch_id=?',id);
+    return {...state,choice,activation:activation||null,canonicalActivation:Boolean(row(this.sql,'SELECT launch_id FROM solana_launch_activations WHERE launch_id=?',id)),hasActivity:actions.length>0,authorized:Boolean(stored),reservation:reservation?{mint:reservation.mint,expiresAt:reservation.expires_at}:null,actions,metrics:{...mayhemMetrics(actions),agentVolume:stored?String(state.solIn+state.solOut):null,agentTrades:stored?state.tradeCount:null}};
   }
   // Private trusted observer calls this only after validating finalized chain evidence.
   settle(id,evidence,now) {

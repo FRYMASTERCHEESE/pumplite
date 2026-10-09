@@ -930,7 +930,7 @@ renderPendingLaunches({
                 ". DO NOT submit another activation. Use Retry registry sync again.";
 
               status(
-                "On-chain activation remains confirmed. Registry sync has not completed yet."
+                "Registry verification did not complete. No activation was submitted by this retry."
               );
 
               return;
@@ -953,7 +953,7 @@ renderPendingLaunches({
               short(
                 finalized.mint
               ) +
-              ". Registry sync completed.";
+              ". Registry sync completed. Open this token page to review Manual Mayhem authorization; no agent trade was triggered.";
 
             status(
               launch.name +

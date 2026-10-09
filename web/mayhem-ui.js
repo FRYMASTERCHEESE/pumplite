@@ -1,3 +1,4 @@
+import { manualMayhemReady } from './activation-recovery.js';
 import { updateTokenMayhem, renderTokenDetailCard } from './token-detail-card.js';
 import { reservationRecovery, authorizationMatches } from './mayhem-reservation-policy.js';
 import { launchStage } from './launch-retry.js';
@@ -330,6 +331,7 @@ signedMayhemRequest(
   now = Date.now()
 ) {
   if (
+    !manualMayhemReady(launch,now) ||
     launch.creator !== creator ||
     launch.mode !== 'manual' ||
     launch.status === 'ended' ||
@@ -527,6 +529,7 @@ export function renderMayhemPanel(
 
     trigger.disabled =
       !enabled ||
+      !manualMayhemReady(launch) ||
       needsAuthorization ||
       status === 'ended' ||
       Boolean(
