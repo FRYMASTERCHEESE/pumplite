@@ -114,7 +114,7 @@ test(
 
     assert.match(
       source,
-      /DELETE FROM solana_launch_reservations/
+      /DELETE FROM\s+solana_launch_reservations/
     );
   }
 );
