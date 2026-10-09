@@ -1,6 +1,6 @@
 {
   "name": "PumpLite Official Token List",
-  "timestamp": "2026-10-09T08:55:00Z",
+  "timestamp": "2026-10-09T10:10:00Z",
   "version": {
     "major": 1,
     "minor": 0,
@@ -9,9 +9,7 @@
   "keywords": [
     "pumplite",
     "plite",
-    "base",
-    "solana",
-    "plsol"
+    "base"
   ],
   "tokens": [
     {
@@ -33,21 +31,6 @@
         "blockscout": "https://base.blockscout.com/token/0xb15A460142c77b42cDF57815b0eeFEb24b593196",
         "geckoTerminal": "https://www.geckoterminal.com/base/pools/0xDAD81f9f5DbF71Ce54D63f96eE45231D97d6B086",
         "dexScreener": "https://dexscreener.com/base/0xDAD81f9f5DbF71Ce54D63f96eE45231D97d6B086"
-      }
-    },
-    {
-      "chainId": 101,
-      "address": "EUKhN8eP97NjRHzxwRT5pdgLg7BX5KRTBhJYa2hMu9ma",
-      "name": "PumpLite Solana",
-      "symbol": "PLSOL",
-      "decimals": 6,
-      "logoURI": "https://frymastercheese.github.io/pumplite/assets/plite-logo-200.png",
-      "extensions": {
-        "website": "https://frymastercheese.github.io/pumplite/plsol.html",
-        "trade": "https://frymastercheese.github.io/pumplite/#solana/EUKhN8eP97NjRHzxwRT5pdgLg7BX5KRTBhJYa2hMu9ma",
-        "solscan": "https://solscan.io/token/EUKhN8eP97NjRHzxwRT5pdgLg7BX5KRTBhJYa2hMu9ma",
-        "status": "https://frymastercheese.github.io/pumplite/status.html",
-        "twitter": "https://x.com/ChillKiwiSol"
       }
     }
   ]
