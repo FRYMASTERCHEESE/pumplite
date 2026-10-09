@@ -334,7 +334,7 @@ signedMayhemRequest(
     !manualMayhemReady(launch,now) ||
     launch.creator !== creator ||
     launch.mode !== 'manual' ||
-    launch.status === 'ended' ||
+    launch.status !== 'active' ||
     now >= launch.expiresAt ||
     launch.pending
   ) {
@@ -543,6 +543,7 @@ export function renderMayhemPanel(
         async () => {
           // A displayed button must not sign after the expiry deadline.
           if (
+            launch.status !== 'active' ||
             !manualMayhemReady(launch) ||
             Date.now() >= launch.expiresAt
           ) {
