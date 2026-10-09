@@ -869,14 +869,33 @@ authorizeReservedMint(
       api('capabilities')
     ]);
 
+  const activatedRecovery =
+    launch.canonicalActivation === true &&
+    launch.mode === 'manual' &&
+    launch.hasActivity === false &&
+    launch.mint !==
+      launch.reservation?.mint &&
+    launch.expiresAt >
+      Date.now();
+
   if (
     !cap.enabled ||
-    launch.canonicalActivation ||
     launch.creator !== creator ||
     launch.status === 'ended' ||
     !launch.reservation ||
-    launch.reservation.expiresAt <=
-      Date.now()
+    (
+      !activatedRecovery &&
+      launch.reservation.expiresAt <=
+        Date.now()
+    ) ||
+    (
+      launch.canonicalActivation === true &&
+      !activatedRecovery &&
+      !authorizationMatches(
+        launch,
+        cap.controller
+      )
+    )
   ) {
     throw Error(
       'Pending creator authorization unavailable'
