@@ -499,7 +499,7 @@ function renderRecentTrades(market) {
         market.nativeDecimals,
         14
       ) +
-      ' ETH / ' +
+      ' ' + market.unit + ' / ' +
       market.symbol;
 
     const time = document.createElement('small');
@@ -508,7 +508,7 @@ function renderRecentTrades(market) {
         ? new Date(
             Number(trade.timestamp) * 1000
           ).toLocaleString()
-        : 'Base block ' + trade.blockNumber;
+        : (state.chain === 'solana' ? 'Solana slot ' : 'Base block ') + trade.blockNumber;
 
     link.append(side, amount, price, time);
     root.append(link);

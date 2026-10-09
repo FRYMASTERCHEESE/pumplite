@@ -267,3 +267,40 @@ test(
     assert.match(ui, /matchingActivatedMarket\([\s\S]*?\)\s*:\s*null;/);
   }
 );
+
+test(
+  'Solana recent trades use market native currency instead of hardcoded ETH',
+  async () => {
+    const app =
+      await readFile(
+        'web/app.js',
+        'utf8'
+      );
+
+    const start =
+      app.indexOf(
+        'function renderRecentTrades(market)'
+      );
+    const end =
+      app.indexOf(
+        '\nlet pliteDexStatsRequest',
+        start
+      );
+    assert.ok(start >= 0 && end > start);
+
+    const recentTrades =
+      app.slice(start, end);
+    assert.match(
+      recentTrades,
+      /' ' \+ market\.unit \+ ' \/ '/
+    );
+    assert.doesNotMatch(
+      recentTrades,
+      /' ETH \/ '/
+    );
+    assert.match(
+      recentTrades,
+      /'Solana slot '/
+    );
+  }
+);
