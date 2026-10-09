@@ -15,10 +15,10 @@ Configure each existing Worker separately:
 
 | Worker | Root directory | Deploy command |
 | --- | --- | --- |
-| pumplite-upload-guard | `workers/pumplite-upload-guard` | `npx wrangler deploy` |
-| pumplite-rpc | `workers/pumplite-rpc` | `npx wrangler deploy` |
+| pumplite-upload-guard | `workers/pumplite-upload-guard` | `npx wrangler deploy --keep-vars` |
+| pumplite-rpc | `workers/pumplite-rpc` | `npx wrangler deploy --keep-vars` |
 
-Deploy `pumplite-upload-guard` before `pumplite-rpc` when both change.
+Deploy `pumplite-upload-guard` before `pumplite-rpc` when both change. Use `--keep-vars` for manual/CI deploys so dashboard-managed production variables are preserved.
 
 Do not put Cloudflare API tokens, account IDs, private keys, wallet seed phrases, or controller signer material in this repository. Cloudflare's GitHub integration should hold its own deployment authorization.
 
