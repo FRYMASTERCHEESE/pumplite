@@ -107,8 +107,10 @@ export async function verifyRedesignBrowser(browser, base) {
     await page.screenshot({path:'build/screenshots/redesign/line-'+width+'.png',fullPage:true});
     await page.evaluate(()=>window.ChartFixture.renderPriceChart(document.querySelector('#price-chart'),window.chartTestTrades,'FIXTURE',9,'SOL',{style:'candles',range:'LIVE'}));
     assert.equal(await page.locator('.candle-body').count(),2);
-    const bounds=await page.locator('#price-chart svg').boundingBox();
-    await page.mouse.move(bounds.x+bounds.width/2,bounds.y+60);
+    // Keyboard inspection is deterministic across the new compact mobile viewport:
+    // hover at a fixed pixel can be over a noninteractive chart gutter.
+    await svg.focus();
+    await svg.press('Home');
     assert.match(await page.locator('.chart-inspector').textContent(),/O .* H .* L .* C /);
     await page.screenshot({path:'build/screenshots/redesign/candles-'+width+'.png',fullPage:true});
     await page.evaluate(()=>window.ChartFixture.renderPriceChart(document.querySelector('#price-chart'),[],'FIXTURE',9,'SOL'));
