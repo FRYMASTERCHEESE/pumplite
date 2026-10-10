@@ -60,6 +60,11 @@ export function verifyReceiptTrade({
   });
   assert.equal(call?.name, side, 'Transaction did not call the expected trade method');
 
+  const minimumOutput = side === 'buy' ? call.args[0] : call.args[1];
+  const deadline = side === 'buy' ? call.args[1] : call.args[2];
+  assert.ok(minimumOutput > 0n, 'Trade minimum output must be positive');
+  assert.ok(deadline > 0n, 'Trade deadline must be positive');
+
   const topic = marketInterface.getEvent('Trade').topicHash;
   const transferTopic = tokenInterface.getEvent('Transfer').topicHash;
   const matches = receipt.logs.filter(log =>
@@ -72,6 +77,13 @@ export function verifyReceiptTrade({
   assert.equal(getAddress(trade.args.trader), getAddress(trader), 'Trade event wallet mismatch');
   assert.equal(trade.args.isBuy, side === 'buy', 'Trade event side mismatch');
   assert.ok(trade.args.input > 0n && trade.args.output > 0n, 'Trade executed without positive amounts');
+  assert.ok(minimumOutput <= trade.args.output, 'Signed minimum output exceeds executed amount');
+  if (side === 'buy') {
+    assert.equal(transaction.value, trade.args.input, 'Signed buy ETH value differs from executed input');
+  } else {
+    assert.equal(transaction.value, 0n, 'Sell transaction must not send ETH');
+    assert.equal(call.args[0], trade.args.input, 'Signed sell token input differs from executed input');
+  }
 
   const matchingTransfers = receipt.logs.filter(log => {
     if (getAddress(log.address) !== getAddress(token) ||
