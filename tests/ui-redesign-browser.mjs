@@ -102,11 +102,15 @@ export async function verifyRedesignBrowser(browser, base) {
       await page.screenshot({path:'build/screenshots/redesign/'+name+'-'+width+'.png',fullPage:true});
     }
     await go('create');
+    if (width <= 740 && await page.locator('#app-action-sheet').isVisible()) {
+      await page.locator('#app-sheet-items button').filter({hasText:'Create coin'}).click();
+    }
     assert.equal(await page.locator('#auto-prepare-metadata').isChecked(),true,
       'Auto setup enabled by default for one-flow coin creation at '+width);
     await page.locator('#name').fill('Safe Fixture Coin');
     await page.locator('#symbol').fill('SAFE');
-    await page.locator('#create').click();
+    await page.locator('#create').focus();
+    await page.keyboard.press('Enter');
     await page.waitForFunction(
       () => document.querySelector('#create-action-status')?.textContent?.includes('Auto setup needs a token image')
     );
