@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {
   discoverReceiptVerifiedClaimLogs,
+  discoverPinnedReceiptClaimLogs,
   verifiedClaimCreationBlock
 } from './base-claim-receipt-discovery.mjs';
 import {
@@ -1280,10 +1281,10 @@ async function claimChecksWithProvider(
 
   let logs;
   try {
-    // Explorer is a tx-hash discovery source only. Every event returned
-    // here is re-read from an authentic Base transaction receipt; the
-    // proof must reconcile with claimCount and claimed() contract reads.
-    logs = await discoverReceiptVerifiedClaimLogs({
+    // A known transaction hash is only a lookup key. Its Mainnet receipt
+    // is checked fresh against this snapshot and each emitted event is
+    // independently reconciled against on-chain claimCount and claimed().
+    logs = await discoverPinnedReceiptClaimLogs({
       provider,
       contractAddress: claimAddress,
       claimedTopic,
@@ -1291,24 +1292,48 @@ async function claimChecksWithProvider(
       snapshotBlock: blockTag,
       expectedCount: Number(claimCount)
     });
-    console.log('Claim history: receipt-verified indexed discovery');
-  } catch (indexerError) {
+    console.log('Claim history: current on-chain receipt checkpoint verified');
+  } catch (checkpointError) {
     console.warn(
-      'Indexed claim discovery could not complete: ' +
-      (indexerError?.message || String(indexerError)) +
-      '. Trying direct on-chain historical logs.'
+      'Pinned claim receipts cannot prove the current count: ' +
+      (checkpointError?.message || String(checkpointError))
     );
-
-    logs = await getLogsBounded(
-      provider,
-      {
-        address: claimAddress,
-        topics: [claimedTopic]
-      },
-      claimCreationBlock,
-      blockTag
-    );
-    console.log('Claim history: direct on-chain log scan');
+    try {
+      // Public indexer is used only for transaction-hash discovery.
+      // Its results must be independently proven from Mainnet receipts.
+      logs = await discoverReceiptVerifiedClaimLogs({
+        provider,
+        contractAddress: claimAddress,
+        claimedTopic,
+        creationBlock: claimCreationBlock,
+        snapshotBlock: blockTag,
+        expectedCount: Number(claimCount)
+      });
+      console.log('Claim history: receipt-verified indexed discovery');
+    } catch (indexerError) {
+      console.warn(
+        'Indexed discovery cannot establish complete claim receipts: ' +
+        (indexerError?.message || String(indexerError))
+      );
+      if (!archiveRpcUrl) {
+        throw Error(
+          'Historical claim verification BLOCKED: the on-chain count ' +
+          'differs from verified receipt evidence, or receipt reads failed; ' +
+          'public indexer is unavailable. Supply additional on-chain claim ' +
+          'receipts or an archive-capable Base RPC. No claim is assumed.'
+        );
+      }
+      logs = await getLogsBounded(
+        provider,
+        {
+          address: claimAddress,
+          topics: [claimedTopic]
+        },
+        claimCreationBlock,
+        blockTag
+      );
+      console.log('Claim history: direct archive RPC log scan');
+    }
   }
 
   assert.equal(
