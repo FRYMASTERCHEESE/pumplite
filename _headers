@@ -5,3 +5,7 @@
   Referrer-Policy: no-referrer
   Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
   Strict-Transport-Security: max-age=31536000
+
+/live.html
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; media-src 'self' blob:; connect-src 'self' https://*.cloudflarestream.com; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+  Permissions-Policy: camera=(self), microphone=(self), geolocation=(), payment=()
