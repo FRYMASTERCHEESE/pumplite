@@ -1,0 +1,41 @@
+name: One-time Auto Setup asset rebuild
+on:
+  push:
+    branches:
+      - feature/one-tap-auto-create-metadata-v1
+    paths:
+      - .github/workflows/auto-create-assets-snapshot.yml
+      - web/app.js
+      - web/styles.css
+      - index.html
+permissions:
+  contents: read
+jobs:
+  snapshot:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 10.11.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm build:pages
+      - name: Emit reviewed public asset snapshot for deterministic GitHub content update
+        run: |
+          node --input-type=module <<'NODE'
+          import {readFile} from 'node:fs/promises';
+          for(const [key,path] of [['app','assets/app.js'],['styles','assets/styles.css']]){
+            const source=await readFile(path,'utf8');
+            console.log('AUTOCREATE_ASSET_BEGIN '+key+' '+source.length);
+            for(let i=0;i<source.length;i+=600){
+              console.log('AUTOCREATE_ASSET_CHUNK '+key+' '+i+' '+JSON.stringify(source.slice(i,i+600)));
+            }
+            console.log('AUTOCREATE_ASSET_END '+key);
+          }
+          NODE
