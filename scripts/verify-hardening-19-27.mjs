@@ -206,8 +206,34 @@ async function fetchText(url) {
   throw lastError;
 }
 
+// An archive endpoint may be needed for historical Base event logs.
+// Its URL must not be logged because it can contain API credentials.
+const archiveRpcUrl =
+  String(process.env.PUMPLITE_HARDENING_ARCHIVE_RPC_URL || '').trim();
+
+if (archiveRpcUrl) {
+  const parsed = new URL(archiveRpcUrl);
+  assert.equal(parsed.protocol, 'https:', 'Archive RPC must use HTTPS');
+  assert.equal(parsed.username, '', 'Archive RPC URL must not contain userinfo');
+  assert.equal(parsed.password, '', 'Archive RPC URL must not contain userinfo');
+}
+
+function rpcDisplayName(rpcUrl) {
+  return archiveRpcUrl && rpcUrl === archiveRpcUrl
+    ? 'configured archive RPC (address hidden)'
+    : new URL(rpcUrl).origin;
+}
+
+function rpcFailureMessage(error, rpcUrl) {
+  if (archiveRpcUrl && rpcUrl === archiveRpcUrl) {
+    return 'Archive RPC request failed (' + String(error?.code || 'unavailable') + ')';
+  }
+  return String(error?.shortMessage || error?.reason || error?.message || error);
+}
+
 function rpcUrls() {
   return [
+    ...(archiveRpcUrl ? [archiveRpcUrl] : []),
     'https://base.drpc.org/',
     'https://public.1rpc.io/base',
     'https://mainnet.base.org',
@@ -1408,7 +1434,7 @@ async function claimChecksWithProvider(
 
   console.log(
     'Claim RPC:',
-    rpcUrl
+    rpcDisplayName(rpcUrl)
   );
 
   console.log(
@@ -1507,12 +1533,9 @@ async function runClaimChecks() {
     } catch (error) {
       console.warn(
         'Skipping unavailable claim RPC ' +
-          rpcUrl +
+          rpcDisplayName(rpcUrl) +
           ': ' +
-          (
-            error?.message ||
-            String(error)
-          )
+          rpcFailureMessage(error, rpcUrl)
       );
 
       continue;
@@ -1564,14 +1587,9 @@ async function runClaimChecks() {
 
       console.warn(
         'Claim hardening attempt failed through ' +
-          rpcUrl +
+          rpcDisplayName(rpcUrl) +
           ': ' +
-          (
-            error?.shortMessage ||
-            error?.reason ||
-            error?.message ||
-            String(error)
-          )
+          rpcFailureMessage(error, rpcUrl)
       );
     } finally {
       clearTimeout(
@@ -1582,11 +1600,16 @@ async function runClaimChecks() {
     }
   }
 
-  throw (
-    lastError ||
-    Error(
-      'No healthy Base RPC was available for claim hardening'
-    )
+  // A genuine proof mismatch must stay a failing assertion, not an RPC outage.
+  // External RPC errors must not disclose a credential-bearing archive URL.
+  if (lastError?.code === 'ERR_ASSERTION') {
+    throw lastError;
+  }
+  throw Error(
+    'Historical Base claim verification BLOCKED: no configured RPC ' +
+    'completed archive log checks. Provide a working HTTPS ' +
+    'PUMPLITE_HARDENING_ARCHIVE_RPC_URL GitHub Actions secret. ' +
+    'No claim status was inferred and no transaction was sent.'
   );
 }
 const runLiveHardening =
