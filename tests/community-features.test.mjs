@@ -6,7 +6,7 @@ const load=filename=>readFile(filename,'utf8');
 test('SOL and Base ETH bounty page prevents public/funded claims and asks for no wallet action',async()=>{
   const html=await load('bounties.html');
   const script=await load('bounties.js');
-  for(const s of ['value="solana"','value="base"','Private draft','Funding is NOT active.','No money will be collected','id="bounty-list"','id="bounty-amount"'])
+  for(const s of ['value="solana"','value="base"','Save private draft','Funding is NOT active.','No money will be collected','id="bounty-list"','id="bounty-amount"'])
     assert.ok(html.includes(s),s);
   assert.match(script,/pumplite:bounty-drafts:v1/);
   assert.match(script,/decimals:9/);
