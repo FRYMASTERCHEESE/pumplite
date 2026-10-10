@@ -3,6 +3,9 @@
 // No wallet signatures, RPC writes or keys are requested by this module.
 (() => {
   'use strict';
+  // The main wallet app intentionally refuses embedded frames. Never run
+  // mobile-shell mutations after its anti-embedding guard removes the UI.
+  if (window.top !== window.self || !document.getElementById('app-wallet-chip')) return;
   const $ = id => document.getElementById(id);
   const mobile = window.matchMedia('(max-width:740px)');
   const view = $('app-feed-content');
