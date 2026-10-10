@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><meta name="description" content="PumpLite liquidity funding plan for new Solana and Base coins plus the official PLITE/WETH Uniswap V2 pool. Explicit wallet approval required; nothing is funded by viewing this page."><title>PumpLite · Transparent Liquidity</title><link rel="stylesheet" href="./community.css"></head>
+<body><header><a href="./">← PumpLite</a><strong>Liquidity</strong><span class="tag">OPT-IN · REAL FUNDS ONLY</span></header>
+<main>
+<h1>Build real liquidity</h1><p class="intro">Two separate, transparent funding routes: back a new PumpLite coin with real SOL or ETH purchases, and optionally supply PLITE + WETH to the existing Uniswap V2 pool on Base.</p>
+<div class="warning"><strong>Nothing funds itself when a coin is created.</strong> PumpLite charges a 0% creation fee. No launch tax or share of trading fees is automatically routed to PLITE. This page does not connect a wallet, request signatures, make deposits or promise returns. Any real funding requires your own separate wallet review and approval.</div>
+<section class="card" aria-labelledby="new-coin-heading">
+<h2 id="new-coin-heading">1 · Fund the newly created coin</h2>
+<p class="muted">Every approved buy adds native-asset backing to that coin’s <strong>PumpLite bonding curve</strong>, subject to protocol fees and market accounting. This is <strong>not</strong> external DEX liquidity and not an irreversible pool lock.</p>
+<div class="stack">
+<label for="plan-chain">New coin network<select id="plan-chain"><option value="base">Base Mainnet — ETH</option><option value="solana">Solana Mainnet — SOL</option></select></label>
+<label for="plan-coin-amount">Amount you might use for a real first purchase<input id="plan-coin-amount" type="text" inputmode="decimal" maxlength="32" autocomplete="off" placeholder="0.001"><small>Planning amount only; not a debit, quote or guaranteed backing. You may enter 0.</small></label>
+<p id="plan-coin-instructions" class="muted" role="status">Base: in PumpLite’s Create coin dialog, enter this amount as the optional first buy. Coin creation and that purchase are separately approved in your wallet.</p>
+<a href="./?page=create" id="plan-create-link">Open PumpLite coin creator →</a>
+</div></section>
+<section class="card" aria-labelledby="plite-pool-heading">
+<h2 id="plite-pool-heading">2 · Fund the PLITE/WETH pool on Base</h2>
+<p class="muted">The original PLITE token has an existing <strong>Uniswap V2</strong> pool, separate from the bonding curve. To provide real liquidity, a contributor must hold <strong>both</strong> PLITE and WETH on Base, and match the pool’s <em>current</em> reserve ratio in Uniswap. Do not send tokens directly to the pair contract.</p>
+<div class="cols">
+<label for="plan-plite">PLITE intended contribution<input type="text" id="plan-plite" inputmode="decimal" autocomplete="off" maxlength="32" placeholder="100000"></label>
+<label for="plan-weth">WETH intended contribution<input type="text" id="plan-weth" inputmode="decimal" autocomplete="off" maxlength="32" placeholder="0.001"></label>
+</div>
+<p class="muted">These amounts are planning notes only. The current pool ratio, WETH wrapping (if necessary), fees, slippage, approvals and actual deposit amounts must be reviewed inside Uniswap. At the currently very thin liquidity level, price impact and impermanent loss can be substantial.</p>
+<box>
+<div class="stack">
+<small class="muted">Verified official identity</small>
+<code>PLITE: 0xb15A460142c77b42cDF57815b0eeFEb24b593196</code>
+<code>WETH: 0x4200000000000000000000000000000000000006</code>
+<code>Uniswap V2 pair: 0xDAD81f9f5DbF71Ce54D63f96eE45231D97d6B086</code>
+</div></box>
+<p><a id="plan-uniswap-link" href="https://app.uniswap.org/explore/pools/base/0xDAD81f9f5DbF71Ce54D63f96eE45231D97d6B086" target="_blank" rel="noopener noreferrer">Open official existing PLITE/WETH pool on Uniswap ↗</a></p>
+<p><a href="https://support.uniswap.org/hc/en-us/articles/20915582427917-How-to-add-a-new-liquidity-position-to-Uniswap-v2" target="_blank" rel="noopener noreferrer">Official Uniswap V2 add-liquidity instructions ↗</a></p>
+</section>
+<section class="card" aria-labelledby="review-heading">
+<h2 id="review-heading">3 · Review your opt-in funding plan</h2>
+<p class="muted">Prepare an easy-to-follow record before initiating any actual transaction. PumpLite does not save or send this plan; it is never a funding receipt.</p>
+<div class="row"><button id="plan-review" type="button">Review plan — no transaction</button><button id="plan-clear" type="button" class="secondary">Clear amounts</button></div>
+<div id="plan-output" class="draft" role="status" aria-live="polite"><p class="muted">Enter intended amounts above, then choose Review plan. No funds are requested.</p></div>
+</section>
+<section class="card"><h2>What cannot happen automatically yet?</h2><p class="muted">PumpLite currently has no audited launch-fee splitter, automated PLITE/WETH liquidity allocator, LP-token lock, cross-chain funding mechanism or permission to take money from creators. A production system that splits launch proceeds to a second asset/pool would need explicit creator consent, fresh contract and security reviews, precise allocations/receipt accounting, refunds/failures handling, user-controlled wallet approvals and a new deployment. No part of this page assumes that infrastructure already exists.</p>
+<p class="muted">Real on-chain deposits and verified trading activity—not extra accounts, displayed market cap or metadata edits—are the relevant evidence of liquidity. An optional first buy is not a promise of a market price or profitable exit.</p>
+</section>
+</main><script defer src="./liquidity.js"></script></body></html>
