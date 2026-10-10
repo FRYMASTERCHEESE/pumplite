@@ -10,6 +10,10 @@ on:
     paths:
       - "index.html"
       - "claim.html"
+      - "plsol.html"
+      - "plsol.js"
+      - "creator-tokens.html"
+      - "solana-token-list.json"
       - "verification.html"
       - "status.html"
       - "status.js"
