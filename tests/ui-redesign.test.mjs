@@ -44,3 +44,17 @@ test('portfolio reads are bounded and discard wallet/network changes',async()=>{
  assert.match(source,/adapter.balances\(market\)/);
  assert.doesNotMatch(source,/signTransaction|sendTransaction|\.buy\(|\.sell\(/);
 });
+
+test('trading terminal keeps Create, Explore, Search and Buy/Sell discoverable without direct transactions',async()=>{
+ const html=await readFile('index.html','utf8');
+ for(const marker of ['class="terminal-header-links"','href="./?page=markets"','href="./?page=create"','id="terminal-search-form"','id="terminal-token-query"','data-trade-jump="buy"','data-trade-jump="sell"','href="./launchpad-terminal.css"','src="./launchpad-terminal.js"']) assert.ok(html.includes(marker),marker);
+ const script=await readFile('launchpad-terminal.js','utf8');
+ assert.match(script,/event\.preventDefault\(\)/);
+ assert.match(script,/marketFilter\.dispatchEvent/);
+ assert.match(script,/scrollIntoView/);
+ assert.doesNotMatch(script,/sendTransaction|signTransaction|sendRawTransaction|wallet\.connect\(|adapter\.buy\(|adapter\.sell\(/);
+ const css=await readFile('launchpad-terminal.css','utf8');
+ assert.match(css,/terminal-header-links/);
+ assert.match(css,/terminal-market-actions/);
+ assert.match(css,/token-market-card::after/);
+});

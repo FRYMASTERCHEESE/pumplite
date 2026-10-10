@@ -124,6 +124,12 @@ initial +=
   ).length;
 console.log('Initial page: ' + initial + ' bytes gzip; all JS chunks: ' + total + ' bytes gzip');
 if (initial > 64_000) throw Error('Initial page exceeds 64 KB gzip budget');
+const terminalBytes = gzipSync(await readFile('launchpad-terminal.css')).length +
+  gzipSync(await readFile('launchpad-terminal.js')).length;
+if (terminalBytes > 6_000 || initial + terminalBytes > 70_000) {
+  throw Error('Trading terminal stylesheet/scripts exceed the extra 6 KB or combined 70 KB gzip budget');
+}
+console.log('Trading shortcuts extra:', terminalBytes, 'bytes gzip; combined initial:', initial + terminalBytes);
 async function list(path) {
   const entries = await readdir(path, { withFileTypes: true });
   return (await Promise.all(entries.map(e => e.isDirectory() ? list(resolve(path, e.name)) : resolve(path, e.name)))).flat();
@@ -144,6 +150,8 @@ if (checkOnly) {
   await mkdir(dist, { recursive: true });
   for (const path of [
     'index.html',
+    'launchpad-terminal.css',
+    'launchpad-terminal.js',
     'plsol.html',
     'creator-tokens.html',
     'claim.html',

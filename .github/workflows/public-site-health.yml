@@ -9,6 +9,8 @@ on:
       - main
     paths:
       - "index.html"
+      - "launchpad-terminal.css"
+      - "launchpad-terminal.js"
       - "claim.html"
       - "plsol.html"
       - "plsol.js"

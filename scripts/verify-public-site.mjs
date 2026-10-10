@@ -10,6 +10,12 @@ const localIndex =
 const localClaim =
   await readFile('claim.html', 'utf8');
 
+const localTerminalStyles =
+  await readFile('launchpad-terminal.css', 'utf8');
+
+const localTerminalScript =
+  await readFile('launchpad-terminal.js', 'utf8');
+
 const localPlsolHtml =
   await readFile('plsol.html', 'utf8');
 
@@ -403,6 +409,19 @@ async function verifyOnce() {
     ),
     'Live home page is not on the expected app build yet'
   );
+
+  assert.ok(index.includes('href="./launchpad-terminal.css"') &&
+    index.includes('src="./launchpad-terminal.js"'),
+    'Live terminal layout/interaction asset references are missing');
+  const [liveTerminalStyles, liveTerminalScript] = await Promise.all([
+    fetchText('launchpad-terminal.css'),
+    fetchText('launchpad-terminal.js')
+  ]);
+  const normalizeTerminal = text => text.replace(/\r\n?/g, '\n');
+  assert.equal(normalizeTerminal(liveTerminalStyles), normalizeTerminal(localTerminalStyles),
+    'Live terminal CSS differs from the reviewed source');
+  assert.equal(normalizeTerminal(liveTerminalScript), normalizeTerminal(localTerminalScript),
+    'Live terminal action handlers differ from the reviewed source');
 
   assert.ok(
     claim.includes(

@@ -15,6 +15,8 @@ let browser, server;
 try {
   for (const file of [
     'index.html',
+    'launchpad-terminal.css',
+    'launchpad-terminal.js',
     'claim.html',
     'plsol.html',
     'plsol.js',
@@ -73,6 +75,8 @@ try {
   assert.equal((await fetch(base + 'node_modules/@solana/web3.js')).status, 404, 'No Node resolution fallback');
 
   for (const publicPath of [
+    'launchpad-terminal.css',
+    'launchpad-terminal.js',
     'status.js',
     'manifest.webmanifest',
     'robots.txt',
