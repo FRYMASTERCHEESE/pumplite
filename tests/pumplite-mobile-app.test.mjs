@@ -29,7 +29,7 @@ test('mobile shell uses existing markets and wallet UI without constructing trad
  assert.match(app,/pumplite:followed-markets:v1/);
  assert.match(app,/window\.localStorage/);
  assert.match(app,/validMarketKey/);
- assert.match(app,/followed on this device/i);
+ assert.match(app,/No coins followed yet/i);
  assert.match(app,/Unfollow this coin/);
  assert.doesNotMatch(app,/Friends is not connected yet/);
 });
