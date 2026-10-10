@@ -200,6 +200,7 @@ function controls() {
     !ownerReviewReady || !state.reviewProof?.active;
   $('copy-review-uid').disabled =
     !state.reviewProof?.uid;
+  $('auto-prepare-metadata').disabled = state.busy;
   $('metadata-image').disabled = state.busy || !metadataEnabled;
   $('publish-metadata').disabled = state.busy || !metadataEnabled;
   $('metadata-upload-help').textContent =
@@ -2469,7 +2470,7 @@ $('metadata-image').addEventListener('change', async () => {
   } catch(error){if(sequence===mediaSequence){$('media-status').textContent=error.message;$('metadata-image').value='';controls();}}
 });
 
-$('publish-metadata').addEventListener('click', () => action(async () => {
+async function publishTokenMetadata() {
   const inline = $('metadata-publish-status');
 
   try {
@@ -2548,8 +2549,8 @@ $('publish-metadata').addEventListener('click', () => action(async () => {
 
     throw error;
   }
-}));
-
+}
+$('publish-metadata').addEventListener('click', () => action(publishTokenMetadata));
 const HOME_PAGE_TARGETS = Object.freeze({
   home: 'home-overview',
   create: 'create-section',
@@ -3957,7 +3958,21 @@ $('create-form').addEventListener('submit', e => {
     const inline = $('create-action-status');
 
     try {
-      // Validate everything before requesting wallet access.
+      // A single explicit Create click may prepare IPFS metadata first. The
+      // existing wallet message signature and final on-chain approval are
+      // never skipped. Do not sign, publish or spend on page load.
+      if ($('auto-prepare-metadata').checked && !$('uri').value.trim()) {
+        validateMetadata($('name').value.trim(), $('symbol').value.trim(), '');
+        if (!$('metadata-image').files?.[0]) {
+          throw Error('Auto setup needs a token image. Choose a PNG, JPEG or WebP image, or turn off Auto setup and provide a published metadata URI.');
+        }
+        $('create-action-status').textContent =
+          'Auto setup: authorizing and publishing your image + metadata to IPFS. Review the wallet message request; it does not spend SOL or ETH.';
+        await publishTokenMetadata();
+      }
+
+      // Verify actual finalized URI and every launch setting before opening
+      // the wallet's separate, explicit on-chain creation review.
       creationData();
 
       if (!state.wallet) {
