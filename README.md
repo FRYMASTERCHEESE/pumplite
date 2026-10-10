@@ -1,7 +1,7 @@
 # PumpLite — Base V2 Mainnet
 
 A token launchpad targeting **Solana Mainnet and Base Mainnet**.
-**Base Mainnet V2 is deployed and enabled for real transactions** through LaunchFactoryV2 `0xdA8c34819ae397FD4bE3C95947DEA64f4A3278f4`. V2 includes fixed or permanently capped mintable supply, Mayhem market support, Buy & Burn, and wallet-signed bonding-curve trading. **Solana Mainnet remains undeployed and transaction-locked.** Independent security/economic review remains appropriate for production financial software.
+**Base Mainnet V2 is deployed and enabled for real transactions** through LaunchFactoryV2 `0xdA8c34819ae397FD4bE3C95947DEA64f4A3278f4`. V2 includes fixed or permanently capped mintable supply, Mayhem market support, Buy & Burn, and wallet-signed bonding-curve trading. **Solana Mainnet is configured for wallet-approved transactions against the pinned tiny-program identity `3CHqrdJzwWQj1QikCzpjBhC8iQ3paaMtD1x9kwoW1rku`; live-wallet buy/sell acceptance remains a separate release gate.** Independent security/economic review remains appropriate for production financial software.
 No admin panel, owner withdrawals, mutable fees, proxies, or market-edit controls are provided.
 
 For the current live/deployment status, PLITE addresses, DEX pair, metadata state and historical-document boundary,
@@ -21,8 +21,8 @@ pnpm preview
 
 Open http://127.0.0.1:4173. The preview binds only to loopback.
 The initial page makes no blockchain requests; libraries are loaded only when needed.
-Production configuration enables Base Mainnet V2 at `0xdA8c34819ae397FD4bE3C95947DEA64f4A3278f4` with `contractVersion=2` and `transactionsEnabled=true`. Solana remains locked with `programId=null` and `transactionsEnabled=false`.
-There are deliberately no deployment scripts. Do not enable writes merely because tests pass.
+Production configuration enables Base Mainnet V2 at `0xdA8c34819ae397FD4bE3C95947DEA64f4A3278f4` with `contractVersion=2` and `transactionsEnabled=true`. Solana Mainnet uses the pinned tiny program `3CHqrdJzwWQj1QikCzpjBhC8iQ3paaMtD1x9kwoW1rku` with `transactionsEnabled=true` in the public `config.json`; independent live-wallet acceptance must not be inferred from that flag.
+There are deliberately no contract/program deployment scripts in this frontend release path. Do not change enabled writes or deployed identities merely because tests pass.
 
 Browser checks, with the preview running:
 
@@ -101,7 +101,7 @@ Local Windows verification passed the SBF build, IDL generation/schema check, ho
 SVM integration tests. The GitHub-hosted Solana verification workflow is active and has passed on current Main.
 A passing Solana build is not proof of a Solana Mainnet deployment.
 See [test instructions](tests/solana/README.md) and the [exact verification report](docs/SOLANA_VERIFICATION.md).
-The program identity remains build configuration only; transactions are still disabled.
+That historical Anchor verification artifact is separate from the currently configured tiny Mainnet program; a passing build is not proof that every real-wallet trade path works.
 
 ## Base contracts
 
