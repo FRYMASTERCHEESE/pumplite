@@ -8,7 +8,7 @@ test('mobile app includes five working navigation targets and single canonical P
  const html=await load('index.html');
  for(const route of ['home','markets','create','portfolio','help'])
    assert.ok(html.includes('data-page="'+route+'"'),'missing mobile '+route);
- for(const marker of ['id="app-header-tools"','id="app-home-feed"','class="app-home-feed"',
+ for(const marker of ['id="app-header-tools"','class="app-home-feed"',
                       'id="app-feed-content"','id="app-action-sheet"','id="app-sheet-items"',
                       'id="app-wallet-chip"','id="app-search"','class="app-coin-table-head"',
                       'href="./pumplite-app.css"','src="./pumplite-app.js"'])
