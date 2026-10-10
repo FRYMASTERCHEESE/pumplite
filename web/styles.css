@@ -775,3 +775,12 @@ body.redesign{--green:#83efad;--purple:#b6a5ff;--panel:#151718;--line:#2a2d2e;--
  .redesign .featured-token-card{min-height:0}
  .redesign .launchpad-hero{padding:24px 20px;margin-top:16px}
 }
+
+/* Auto setup is a user-controlled, single-action metadata preparation flow.
+   No wallet transaction is triggered by the checkbox itself. */
+#auto-prepare-metadata{width:20px;height:20px;min-height:20px;margin:2px 0 0;flex:0 0 20px;accent-color:#b4f49c}
+.auto-create-option{display:flex;align-items:flex-start;gap:12px;padding:13px;margin:10px 0 15px;border:1px solid #446f4f;border-radius:10px;background:#17281d;color:#e9fff0;cursor:pointer}
+.auto-create-option span{display:grid;gap:4px;flex:1;min-width:0}
+.auto-create-option strong{font-size:14px}
+.auto-create-option small{color:#c2dcc6;font-size:12px;font-weight:400;line-height:1.55}
+.auto-create-option:has(input:focus-visible){outline:2px solid #b4f49c;outline-offset:3px}
