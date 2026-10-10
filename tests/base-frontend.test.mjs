@@ -22,6 +22,39 @@ test('Base adapter rejects wrong configuration and wrong RPC before wallet acces
 test('Base frontend lifecycle executes only in a process-local EVM with a synthetic EIP-1193 provider', { timeout: 60_000 }, async t => {
   // No RPC listener, real wallet, persisted signing material, fork or public-chain requests.
   const rpc = ganache.provider({ logging: { quiet: true }, chain: { chainId: 8453, hardfork: 'shanghai' }, wallet: { totalAccounts: 2 } });
+
+  // Exercise the actual bounded fetch transport against the isolated Ganache
+  // fixture. No configured public Base endpoint is contacted by this test.
+  t.mock.method(globalThis, 'fetch', async (url, options = {}) => {
+    assert.equal(String(url), config.rpcUrl, 'Fixture must not fetch an unexpected RPC URL');
+    assert.equal(options.method, 'POST', 'Fixture RPC requests must be POST');
+    const body = typeof options.body === 'string'
+      ? options.body
+      : new TextDecoder().decode(options.body);
+    const payload = JSON.parse(body);
+    const reply = async request => {
+      try {
+        const result = await rpc.request({ method: request.method, params: request.params || [] });
+        return { jsonrpc: '2.0', id: request.id, result };
+      } catch (error) {
+        return {
+          jsonrpc: '2.0',
+          id: request.id,
+          error: {
+            code: Number.isInteger(error?.code) ? error.code : -32000,
+            message: error?.message || 'Fixture RPC rejected'
+          }
+        };
+      }
+    };
+    const response = Array.isArray(payload)
+      ? await Promise.all(payload.map(reply))
+      : await reply(payload);
+    return new Response(JSON.stringify(response), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  });
   const provider = new BrowserProvider(rpc);
   const signer = await provider.getSigner();
   const artifact = JSON.parse(await readFile('build/base/LaunchFactory.json'));

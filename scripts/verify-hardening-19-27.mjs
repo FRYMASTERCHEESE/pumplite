@@ -1,5 +1,10 @@
 import assert from 'node:assert/strict';
 import {
+  discoverReceiptVerifiedClaimLogs,
+  discoverPinnedReceiptClaimLogs,
+  verifiedClaimCreationBlock
+} from './base-claim-receipt-discovery.mjs';
+import {
   readdir,
   readFile,
   stat
@@ -206,8 +211,34 @@ async function fetchText(url) {
   throw lastError;
 }
 
+// An archive endpoint may be needed for historical Base event logs.
+// Its URL must not be logged because it can contain API credentials.
+const archiveRpcUrl =
+  String(process.env.PUMPLITE_HARDENING_ARCHIVE_RPC_URL || '').trim();
+
+if (archiveRpcUrl) {
+  const parsed = new URL(archiveRpcUrl);
+  assert.equal(parsed.protocol, 'https:', 'Archive RPC must use HTTPS');
+  assert.equal(parsed.username, '', 'Archive RPC URL must not contain userinfo');
+  assert.equal(parsed.password, '', 'Archive RPC URL must not contain userinfo');
+}
+
+function rpcDisplayName(rpcUrl) {
+  return archiveRpcUrl && rpcUrl === archiveRpcUrl
+    ? 'configured archive RPC (address hidden)'
+    : new URL(rpcUrl).origin;
+}
+
+function rpcFailureMessage(error, rpcUrl) {
+  if (archiveRpcUrl && rpcUrl === archiveRpcUrl) {
+    return 'Archive RPC request failed (' + String(error?.code || 'unavailable') + ')';
+  }
+  return String(error?.shortMessage || error?.reason || error?.message || error);
+}
+
 function rpcUrls() {
   return [
+    ...(archiveRpcUrl ? [archiveRpcUrl] : []),
     'https://base.drpc.org/',
     'https://public.1rpc.io/base',
     'https://mainnet.base.org',
@@ -1237,16 +1268,73 @@ async function claimChecksWithProvider(
     'remainingClaims does not match maxClaims - claimCount'
   );
 
-  const logs =
-    await getLogsBounded(
+  // Search begins at the on-chain verified claim contract creation block,
+  // never at the much older Base V2 factory deployment block.
+  const claimCreationBlock =
+    await verifiedClaimCreationBlock(provider, claimAddress);
+
+  assert.ok(
+    claimCreationBlock >= deploymentBlock &&
+      claimCreationBlock <= blockTag,
+    'Claim contract creation is outside the reviewed Base V2 history'
+  );
+
+  let logs;
+  try {
+    // A known transaction hash is only a lookup key. Its Mainnet receipt
+    // is checked fresh against this snapshot and each emitted event is
+    // independently reconciled against on-chain claimCount and claimed().
+    logs = await discoverPinnedReceiptClaimLogs({
       provider,
-      {
-        address: claimAddress,
-        topics: [claimedTopic]
-      },
-      deploymentBlock,
-      blockTag
+      contractAddress: claimAddress,
+      claimedTopic,
+      creationBlock: claimCreationBlock,
+      snapshotBlock: blockTag,
+      expectedCount: Number(claimCount)
+    });
+    console.log('Claim history: current on-chain receipt checkpoint verified');
+  } catch (checkpointError) {
+    console.warn(
+      'Pinned claim receipts cannot prove the current count: ' +
+      (checkpointError?.message || String(checkpointError))
     );
+    try {
+      // Public indexer is used only for transaction-hash discovery.
+      // Its results must be independently proven from Mainnet receipts.
+      logs = await discoverReceiptVerifiedClaimLogs({
+        provider,
+        contractAddress: claimAddress,
+        claimedTopic,
+        creationBlock: claimCreationBlock,
+        snapshotBlock: blockTag,
+        expectedCount: Number(claimCount)
+      });
+      console.log('Claim history: receipt-verified indexed discovery');
+    } catch (indexerError) {
+      console.warn(
+        'Indexed discovery cannot establish complete claim receipts: ' +
+        (indexerError?.message || String(indexerError))
+      );
+      if (!archiveRpcUrl) {
+        throw Error(
+          'Historical claim verification BLOCKED: the on-chain count ' +
+          'differs from verified receipt evidence, or receipt reads failed; ' +
+          'public indexer is unavailable. Supply additional on-chain claim ' +
+          'receipts or an archive-capable Base RPC. No claim is assumed.'
+        );
+      }
+      logs = await getLogsBounded(
+        provider,
+        {
+          address: claimAddress,
+          topics: [claimedTopic]
+        },
+        claimCreationBlock,
+        blockTag
+      );
+      console.log('Claim history: direct archive RPC log scan');
+    }
+  }
 
   assert.equal(
     BigInt(logs.length),
@@ -1408,7 +1496,7 @@ async function claimChecksWithProvider(
 
   console.log(
     'Claim RPC:',
-    rpcUrl
+    rpcDisplayName(rpcUrl)
   );
 
   console.log(
@@ -1496,6 +1584,7 @@ async function probeClaimRpc(
 
 async function runClaimChecks() {
   let lastError;
+  let assertionError;
 
   for (
     const rpcUrl of rpcUrls()
@@ -1507,12 +1596,9 @@ async function runClaimChecks() {
     } catch (error) {
       console.warn(
         'Skipping unavailable claim RPC ' +
-          rpcUrl +
+          rpcDisplayName(rpcUrl) +
           ': ' +
-          (
-            error?.message ||
-            String(error)
-          )
+          rpcFailureMessage(error, rpcUrl)
       );
 
       continue;
@@ -1561,17 +1647,15 @@ async function runClaimChecks() {
     } catch (error) {
       lastError =
         error;
+      if (error?.code === 'ERR_ASSERTION') {
+        assertionError ??= error;
+      }
 
       console.warn(
         'Claim hardening attempt failed through ' +
-          rpcUrl +
+          rpcDisplayName(rpcUrl) +
           ': ' +
-          (
-            error?.shortMessage ||
-            error?.reason ||
-            error?.message ||
-            String(error)
-          )
+          rpcFailureMessage(error, rpcUrl)
       );
     } finally {
       clearTimeout(
@@ -1582,11 +1666,16 @@ async function runClaimChecks() {
     }
   }
 
-  throw (
-    lastError ||
-    Error(
-      'No healthy Base RPC was available for claim hardening'
-    )
+  // A genuine proof mismatch must stay a failing assertion, not an RPC outage.
+  // External RPC errors must not disclose a credential-bearing archive URL.
+  if (assertionError) {
+    throw assertionError;
+  }
+  throw Error(
+    'Historical Base claim verification BLOCKED: no configured RPC ' +
+    'completed archive log checks. Provide a working HTTPS ' +
+    'PUMPLITE_HARDENING_ARCHIVE_RPC_URL GitHub Actions secret. ' +
+    'No claim status was inferred and no transaction was sent.'
   );
 }
 const runLiveHardening =

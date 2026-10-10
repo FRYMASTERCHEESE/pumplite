@@ -57,3 +57,21 @@ test('Steps 19-27 hardening verifier covers all nine production gates and stays 
     );
   }
 });
+
+test('Archive RPC monitoring supports private HTTPS endpoints, redacts them, and remains fail-closed', async () => {
+  const source = await readFile('scripts/verify-hardening-19-27.mjs', 'utf8');
+  const workflow = await readFile('.github/workflows/hardening-19-27.yml', 'utf8');
+
+  assert.match(workflow, /PUMPLITE_HARDENING_ARCHIVE_RPC_URL:\s*\$\{\{ secrets\.PUMPLITE_HARDENING_ARCHIVE_RPC_URL \}\}/);
+  assert.match(source, /archiveRpcUrl \? \[archiveRpcUrl\] : \[\]/);
+  assert.match(source, /assert\.equal\(parsed\.protocol, 'https:'/);
+  assert.match(source, /configured archive RPC \(address hidden\)/);
+  assert.match(source, /rpcDisplayName\(rpcUrl\)/);
+  assert.match(source, /rpcFailureMessage\(error, rpcUrl\)/);
+  assert.match(source, /assertionError \?\?= error/);
+  assert.match(source, /Historical Base claim verification BLOCKED/);
+
+  assert.doesNotMatch(source, /'Claim RPC:',\s*rpcUrl/);
+  assert.doesNotMatch(source, /'Skipping unavailable claim RPC '\s*\+\s*rpcUrl/);
+  assert.doesNotMatch(source, /'Claim hardening attempt failed through '\s*\+\s*rpcUrl/);
+});
