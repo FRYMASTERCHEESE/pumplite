@@ -26,11 +26,11 @@
  .redesign #home-overview[hidden]{display:none!important}
  .redesign .home-dashboard>.launchpad-hero,.redesign .home-dashboard>.platform-live-stats,.redesign .home-dashboard>.home-live-launches{display:none}
  .redesign .app-home-feed{display:block;min-height:calc(100vh - 250px);padding-bottom:18px}
- .redesign .app-feed-tabs{display:flex;align-items:center;gap:20px;overflow-x:auto;white-space:nowrap;scrollbar-width:none;border-bottom:1px solid #202124;padding:17px 3px 15px;margin-bottom:14px}
+ .redesign .app-feed-tabs{display:flex;align-items:center;gap:12px;justify-content:space-between;overflow-x:auto;white-space:nowrap;scrollbar-width:none;border-bottom:1px solid #202124;padding:17px 4px 15px;margin-bottom:14px}
  .app-feed-tabs::-webkit-scrollbar{display:none}
- .redesign .app-feed-tabs button{padding:8px 0;margin:0;border:0;border-radius:0;background:transparent;color:#9898a0;font-size:23px;font-weight:780;line-height:1.2;white-space:nowrap}
+ .redesign .app-feed-tabs button{padding:8px 2px;margin:0;min-width:0;flex:0 0 auto;border:0;border-radius:0;background:transparent;color:#9898a0;font-size:clamp(17px,5.1vw,23px);font-weight:780;line-height:1.2;letter-spacing:-.4px;white-space:nowrap}
  .redesign .app-feed-tabs button.is-active{color:#f4f4f7}
- .redesign .app-feed-network{margin-left:auto;font-size:10px;color:#8edcaf;border:1px solid #27563e;border-radius:8px;padding:5px 7px}
+ .redesign .app-feed-network{margin-left:auto;flex:0 0 auto;font-size:10px;color:#8edcaf;border:1px solid #27563e;border-radius:8px;padding:5px 7px}
  .redesign .app-feed-content{display:grid;gap:0;min-height:170px}
  .redesign .app-feed-loading,.redesign .app-feed-empty{font-size:13px;line-height:1.6;color:#9d9da5;padding:25px 12px;background:#141416;border:1px solid #26272a;border-radius:12px}
  .redesign .app-market-update{display:grid;grid-template-columns:48px minmax(0,1fr);gap:12px;padding:17px 6px 20px;border-bottom:1px solid #27272a}
@@ -39,6 +39,11 @@
  .redesign .app-feed-line{display:flex;align-items:center;flex-wrap:wrap;gap:8px;color:#ededf0;font-size:14px}
  .redesign .app-feed-line strong{font-weight:800}
  .redesign .app-feed-line small{font-size:11px;color:#8b8b93}
+ .redesign .app-follow-toggle{margin:0 0 0 auto;min-height:37px;padding:7px 9px;flex:0 0 auto;border:1px solid #365543;border-radius:8px;background:#152018;color:#a4f4bb;font-size:11px;font-weight:800;white-space:nowrap}
+ .redesign .app-follow-toggle[aria-pressed=true],.redesign .app-market-follow[aria-pressed=true]{background:#24472f;color:#b8ffd0;border-color:#6ccc8b}
+ .redesign .app-feed-browse{display:block;margin:16px 0 0;padding:11px 15px;min-height:43px;width:max-content;max-width:100%;border:1px solid #509b6d;border-radius:9px;background:#193725;color:#b7ffd0;font-size:13px;font-weight:750}
+ .redesign .app-market-follow:not([hidden]){display:inline-flex;align-items:center;justify-content:center;min-height:41px;margin:0;padding:10px 12px;border-radius:7px;border:1px solid #447352;background:#173020;color:#c1ffd2;font-size:12px;font-weight:750}
+ .redesign .app-market-follow[hidden]{display:none!important}
  .redesign .app-feed-body p{margin:8px 0 13px;line-height:1.55;font-size:14px;color:#d5d5d9}
  .redesign .app-feed-market{display:flex;align-items:center;gap:12px;padding:14px;border-radius:12px;border:1px solid #323338;background:#151518;color:#ececf0;text-decoration:none;overflow-wrap:anywhere}
  .redesign .app-feed-market span:first-child{display:grid;place-items:center;flex:0 0 36px;width:36px;height:36px;background:#203126;border-radius:9px;color:#9ff5b7;font-weight:900}
@@ -107,13 +112,13 @@
  .redesign .app-sheet-items small{display:block;margin-top:3px;color:#aab1aa;font-size:10px;font-weight:400}
  .redesign .app-sheet-items button:disabled{opacity:.5;cursor:not-allowed}
  .redesign #market-page{padding-top:12px}
- .redesign .terminal-market-actions{position:sticky;top:66px;background:#0b0c0eea;z-index:20;padding:9px 0}
+ .redesign .terminal-market-actions{position:sticky;top:66px;background:#0b0c0eea;z-index:20;padding:9px 0;grid-template-columns:1fr 1fr auto auto}
  .redesign .terminal-market-actions button{min-height:43px}
  .redesign footer{padding-bottom:110px}
 }
 @media(max-width:400px){
  .app-header-tools{gap:2px!important}
  .redesign #app-wallet-chip{min-width:72px;padding:0 6px;font-size:11px}
- .redesign .app-feed-tabs{gap:15px}
- .redesign .app-feed-tabs button{font-size:21px}
+ .redesign .app-feed-tabs{gap:8px}
+ .redesign .app-feed-tabs button{font-size:17px;letter-spacing:-.6px}
 }
