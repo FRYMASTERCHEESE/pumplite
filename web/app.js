@@ -40,6 +40,7 @@ function diagnostic(message = '') {
   $('wallet-diagnostic').textContent = solanaDiagnostics(window) + (message ? ' | ' + message : '');
 }
 function controls() {
+  invalidatePortfolio();
   $('phantom-diagnostics').hidden = state.chain !== 'solana';
   $('wallet-diagnostic').hidden = state.chain !== 'solana';
   if (state.chain === 'solana' && !state.wallet) $('connect').textContent = state.busy ? 'Preparing / waiting…' : phantomPrepared ? 'Approve in Phantom' : 'Connect wallet';
@@ -366,6 +367,7 @@ let chartRequest = 0;
 let chartTrades = [];
 let chartMarketId = null;
 let chartRange = 'LIVE';
+let chartStyle = 'line';
 
 const CHART_RANGES = Object.freeze({
   LIVE: null,
@@ -752,7 +754,8 @@ function renderMarketChartRange(market) {
     visible,
     market.symbol,
     market.nativeDecimals,
-    market.unit
+    market.unit,
+    { style: chartStyle, range: chartRange }
   );
 
   if (!summary.count) {
@@ -906,6 +909,15 @@ async function loadMarketChart(market) {
   }
 }
 
+for (const button of document.querySelectorAll('[data-chart-style]')) {
+  button.addEventListener('click', () => {
+    chartStyle = button.dataset.chartStyle === 'candles' ? 'candles' : 'line';
+    for (const control of document.querySelectorAll('[data-chart-style]')) {
+      control.setAttribute('aria-pressed', String(control.dataset.chartStyle === chartStyle));
+    }
+    if (state.market) renderMarketChartRange(state.market);
+  });
+}
 for (const button of document.querySelectorAll('[data-chart-range]')) {
   button.addEventListener('click', () => {
     const selected = button.dataset.chartRange;
@@ -1273,6 +1285,13 @@ async function refreshRegistry() {
   catch { $('verification-list-status').textContent='Reviewed list unavailable. Verified badges are hidden; factory provenance is separate.'; }
 }
 function renderPlatformStats() {
+  if (!state.markets.length && !state.platformStats) {
+    for (const id of ['platform-market-count','platform-loaded-reserve','platform-loaded-volume','platform-block']) $(id).textContent = 'Unavailable';
+    $('platform-last-refresh').textContent = 'Waiting for a successful chain read';
+    $('platform-reserve-label').textContent = 'Loaded markets';
+    $('platform-volume-label').textContent = 'Loaded volume';
+    return;
+  }
   const loaded =
     state.markets;
 
@@ -2535,7 +2554,8 @@ const HOME_PAGE_TARGETS = Object.freeze({
   home: 'home-overview',
   create: 'create-section',
   markets: 'explore-section',
-  help: 'help-section'
+  help: 'help-section',
+  portfolio: 'portfolio-section'
 });
 
 function showHomePage(page, { focus = true } = {}) {
@@ -2546,12 +2566,18 @@ function showHomePage(page, { focus = true } = {}) {
   $('create-section').hidden = selected !== 'create';
   $('explore-section').hidden = selected !== 'markets';
   $('help-section').hidden = selected !== 'help';
+  $('portfolio-section').hidden = selected !== 'portfolio';
+  for (const button of document.querySelectorAll('[data-page]')) {
+    if (button.dataset.page === selected) button.setAttribute('aria-current', 'page');
+    else button.removeAttribute('aria-current');
+  }
 
   for (const [id, name] of [
     ['show-home', 'home'],
     ['show-create', 'create'],
     ['show-explore', 'markets'],
-    ['show-help', 'help']
+    ['show-help', 'help'],
+    ['show-portfolio', 'portfolio']
   ]) {
     $(id).setAttribute('aria-pressed', String(selected === name));
   }
@@ -2563,9 +2589,130 @@ function showHomePage(page, { focus = true } = {}) {
   }
 }
 
+// Move existing utility links instead of creating duplicate interfaces.
+const mobileLayout = window.matchMedia('(max-width: 740px)');
+const utilityLinks = [...document.querySelectorAll('.header-controls .utility-header-link, .header-controls .claim-header-link')];
+function placeUtilityLinks() {
+  const destination = document.querySelector(mobileLayout.matches ? '.mobile-utility-links' : '.header-controls');
+  for (const link of utilityLinks) {
+    if (mobileLayout.matches) destination.append(link);
+    else destination.insertBefore(link, $('connect'));
+  }
+}
+mobileLayout.addEventListener('change', placeUtilityLinks);
+placeUtilityLinks();
+let trendingGeneration = 0;
+async function readTrending() {
+  const generation = ++trendingGeneration;
+  const chain = state.chain;
+  const adapter = await getAdapter();
+  const markets = state.markets.slice(0, 6);
+  $('trending-refresh').disabled = true;
+  $('trending-markets').replaceChildren();
+  $('trending-status').textContent = 'Reading bounded confirmed trade history…';
+  const ranked = [];
+  let unavailable = 0;
+  try {
+    for (const market of markets) {
+      if (chain !== state.chain || generation !== trendingGeneration) return;
+      try {
+        if (typeof adapter.tradeHistory !== 'function') throw Error('History unavailable');
+        const trades = await adapter.tradeHistory(market, 30);
+        const cutoff = Math.floor(Date.now()/1000)-86400;
+        const count = trades.filter(t => Number.isSafeInteger(Number(t.timestamp)) && Number(t.timestamp) >= cutoff && Number(t.timestamp) <= Date.now()/1000).length;
+        ranked.push({market,count});
+      } catch { unavailable++; }
+    }
+    if (chain !== state.chain || generation !== trendingGeneration) return;
+    for (const {market,count} of ranked.sort((a,b)=>b.count-a.count)) {
+      const link = document.createElement('a');
+      link.className = 'portfolio-token';
+      link.href = '#' + chain + '/' + encodeURIComponent(market.id);
+      link.textContent = market.symbol + ' · ' + count + ' observed trades in 24h';
+      $('trending-markets').append(link);
+    }
+    $('trending-status').textContent = 'Ranked ' + ranked.length + ' loaded markets by observed 24h trades (up to 30 recent trades per market). ' + unavailable + ' histories unavailable. Includes agent activity; incomplete coverage is not total volume or organic demand.';
+  } finally { $('trending-refresh').disabled = false; }
+}
+$('trending-refresh').addEventListener('click', () => action(readTrending));
+let portfolioGeneration = 0;
+let portfolioIdentity = '';
+function invalidatePortfolio() {
+  const identity = state.chain + ':' + (state.wallet || '');
+  if (identity === portfolioIdentity) return;
+  portfolioIdentity = identity;
+  portfolioGeneration++;
+  trendingGeneration++;
+  $('trending-markets').replaceChildren();
+  $('trending-status').textContent = 'Read recent trades for the selected network. Bounded history includes agent activity.';
+  $('portfolio-balances').replaceChildren();
+  $('portfolio-status').textContent = state.wallet
+    ? 'Wallet connected. Read balances for the selected network.'
+    : 'Connect your wallet using the header, then read your balances.';
+}
+async function readPortfolio() {
+  invalidatePortfolio();
+  const generation = ++portfolioGeneration;
+  const wallet = state.wallet;
+  const chain = state.chain;
+  const adapter = state.adapter;
+  $('portfolio-balances').replaceChildren();
+  if (!wallet || !adapter) {
+    $('portfolio-status').textContent = 'Connect your wallet using the header first.';
+    return;
+  }
+  const markets = [...new Map(state.markets.map(m => [m.token, m])).values()].slice(0, 12);
+  $('portfolio-status').textContent = markets.length ? 'Reading on-chain balances…' : 'No loaded markets. Open Explore and refresh first.';
+  $('portfolio-refresh').disabled = true;
+  let failures = 0;
+  try {
+    for (const market of markets) {
+      if (generation !== portfolioGeneration || wallet !== state.wallet || chain !== state.chain || adapter !== state.adapter) return;
+      try {
+        const balances = await adapter.balances(market);
+        if (generation !== portfolioGeneration || wallet !== state.wallet || chain !== state.chain || adapter !== state.adapter) return;
+        if (!$('portfolio-balances').childElementCount) {
+          const native = document.createElement('p');
+          native.className = 'portfolio-native';
+          native.textContent = formatUnits(balances.native, market.nativeDecimals) + ' ' + market.unit + ' · native balance';
+          $('portfolio-balances').append(native);
+        }
+        const link = document.createElement('a');
+        link.className = 'portfolio-token';
+        link.href = '#' + chain + '/' + encodeURIComponent(market.id);
+        const name = document.createElement('span');
+        name.textContent = market.name + ' (' + market.symbol + ')';
+        const amount = document.createElement('strong');
+        amount.textContent = formatUnits(balances.tokens, market.decimals);
+        link.append(name, amount);
+        $('portfolio-balances').append(link);
+      } catch {
+        failures++;
+      }
+    }
+    if (generation === portfolioGeneration) $('portfolio-status').textContent =
+      'Read ' + (markets.length - failures) + ' of ' + markets.length + ' loaded token balances' +
+      (failures ? '; ' + failures + ' unavailable. Try again later.' : '. Refreshed ' + new Date().toLocaleTimeString() + '.');
+  } finally {
+    $('portfolio-refresh').disabled = false;
+  }
+}
+$('portfolio-refresh').addEventListener('click', () => { void readPortfolio(); });
+for (const button of document.querySelectorAll('[data-page]')) {
+  button.addEventListener('click', () => {
+    if (state.busy) return;
+    if (location.hash.includes('/')) location.hash = state.chain;
+    $('home').hidden = false;
+    $('market-page').hidden = true;
+    showHomePage(button.dataset.page);
+    if (button.dataset.page === 'portfolio') invalidatePortfolio();
+  });
+}
+$('back').addEventListener('click', () => showHomePage('markets', {focus:false}));
 $('show-home').addEventListener('click', () => showHomePage('home'));
 $('show-create').addEventListener('click', () => showHomePage('create'));
 $('show-explore').addEventListener('click', () => showHomePage('markets'));
+$('show-portfolio').addEventListener('click', () => { showHomePage('portfolio'); invalidatePortfolio(); });
 $('show-help').addEventListener('click', () => showHomePage('help'));
 $('hero-explore').addEventListener('click', () => showHomePage('markets'));
 $('hero-create').addEventListener('click', () => showHomePage('create'));
