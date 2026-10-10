@@ -24,8 +24,10 @@ test('mobile shell uses existing markets and wallet UI without constructing trad
                       'show-create','show-portfolio','show-help','app-popover-layer'])
    assert.ok(app.includes(marker),'missing on-chain feature '+marker);
  assert.doesNotMatch(app,/signTransaction|sendTransaction|sendRawTransaction|eth_sendTransaction|secretKey|privateKey|seedPhrase/);
- assert.match(app,/Unavailable — no bounty payment\/escrow backend/);
- assert.match(app,/no broadcast infrastructure/);
+ assert.match(app,/\.\/bounties\.html/);
+ assert.match(app,/\.\/live\.html/);
+ assert.match(app,/funding not enabled yet/);
+ assert.match(app,/Stream account required/);
  assert.match(app,/pumplite:followed-markets:v1/);
  assert.match(app,/window\.localStorage/);
  assert.match(app,/validMarketKey/);
