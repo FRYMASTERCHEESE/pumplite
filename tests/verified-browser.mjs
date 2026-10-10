@@ -264,6 +264,11 @@ export async function verifyBrowser(browser, base) {
   assert.equal(await page.locator('#create').isDisabled(),true);
   await page.goto(base,{waitUntil:'networkidle'});
   await page.locator('#show-create:visible, [data-page=create]:visible').click();
+   if (width <= 740) {
+     assert.equal(await page.locator('#app-action-sheet').isVisible(),true,
+       'mobile Create opens the popup');
+     await page.locator('#app-sheet-items button').filter({hasText:'Create coin'}).click();
+   }
   assert.equal(await page.locator('#create-section').isVisible(),true);
   await page.locator('#name').fill('Social token');await page.locator('#symbol').fill('SOC');
   await page.locator('#description').fill('Synthetic local project');
