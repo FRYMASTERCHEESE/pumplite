@@ -12,6 +12,13 @@ test('public-site verifier is read-only and covers live production pages', async
   for (const required of [
     'https://frymastercheese.github.io/pumplite/',
     'claim.html',
+    'plsol.html',
+    'plsol.js',
+    'creator-tokens.html',
+    'solana-token-list.json',
+    'Official PLSOL token list identity mismatch',
+    'Live official Solana token list is stale',
+    'PLSOL page must link to the canonical market mint',
     'terms.html',
     'privacy.html',
     'risk.html',
