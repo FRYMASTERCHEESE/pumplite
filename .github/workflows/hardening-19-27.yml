@@ -58,4 +58,5 @@ jobs:
           PUMPLITE_HARDENING_LOG_BLOCK_SPAN: "50000"
           PUMPLITE_HARDENING_FETCH_ATTEMPTS: "4"
           PUMPLITE_HARDENING_LIVE: ${{ github.event_name != 'push' }}
+          PUMPLITE_HARDENING_ARCHIVE_RPC_URL: ${{ secrets.PUMPLITE_HARDENING_ARCHIVE_RPC_URL }}
         run: pnpm verify:hardening-19-27
