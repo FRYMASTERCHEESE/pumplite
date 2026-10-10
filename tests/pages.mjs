@@ -15,6 +15,10 @@ try {
   for (const file of [
     'index.html',
     'claim.html',
+    'plsol.html',
+    'plsol.js',
+    'creator-tokens.html',
+    'solana-token-list.json',
     'verification.html',
     'status.html',
     'v3-deploy.html',
@@ -77,7 +81,11 @@ try {
     '.well-known/plite-token.json',
     'v3-deploy.html',
     'verification.html',
-    'status.html'
+    'status.html',
+    'plsol.html',
+    'plsol.js',
+    'creator-tokens.html',
+    'solana-token-list.json'
   ]) {
     assert.equal(
       (await fetch(base + publicPath)).status,
@@ -141,6 +149,36 @@ try {
   assert.equal(chunks.filter(name => /^base-v2-/.test(name)).length, 1, 'Base V2 bundle must exist exactly once');
   assert.equal(chunks.filter(name => /^base-v3-/.test(name)).length, 1, 'Base V3 Classic/Mayhem bundle must exist exactly once');
   browser = await chromium.launch({ headless: true, ...(process.env.BROWSER_EXECUTABLE ? { executablePath: process.env.BROWSER_EXECUTABLE } : {}) });
+
+  // These official coin pages are linked from the live site but were
+  // previously omitted from the exported Pages browser fixture.
+  // Exercise their real static assets on mobile and desktop without a wallet.
+  for (const width of [390, 1440]) {
+    for (const [path, heading] of [
+      ['plsol.html', /PumpLite Solana/i],
+      ['creator-tokens.html', /My Solana collection/i]
+    ]) {
+      const page = await browser.newPage({ viewport: { width, height: 844 } });
+      const errors = [];
+      const missing = [];
+      page.on('pageerror', error => errors.push(error.message));
+      page.on('response', response => {
+        if (response.url().startsWith(origin + '/') && response.status() >= 400) {
+          missing.push(response.status() + ' ' + response.url());
+        }
+      });
+      await page.goto(base + path, { waitUntil: 'networkidle' });
+      assert.match(await page.locator('main h1').innerText(), heading, path + ' heading');
+      assert.equal(await page.locator('a.brand').getAttribute('href'), './', path + ' return to home');
+      assert.ok(
+        await page.locator('a[href="./"]').count() > 0,
+        path + ' must provide a way back to the homepage'
+      );
+      assert.deepEqual(errors, [], path + ' JavaScript errors at ' + width + 'px');
+      assert.deepEqual(missing, [], path + ' missing assets at ' + width + 'px');
+      await page.close();
+    }
+  }
   await verifyBrowser(browser,base);
   await verifySolanaRentBrowser(browser, base);
 
