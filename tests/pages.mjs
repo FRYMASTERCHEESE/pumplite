@@ -17,6 +17,8 @@ try {
     'index.html',
     'launchpad-terminal.css',
     'launchpad-terminal.js',
+    'pumplite-app.css',
+    'pumplite-app.js',
     'claim.html',
     'plsol.html',
     'plsol.js',
@@ -77,6 +79,8 @@ try {
   for (const publicPath of [
     'launchpad-terminal.css',
     'launchpad-terminal.js',
+    'pumplite-app.css',
+    'pumplite-app.js',
     'status.js',
     'manifest.webmanifest',
     'robots.txt',
