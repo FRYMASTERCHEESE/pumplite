@@ -26,7 +26,12 @@ test('mobile shell uses existing markets and wallet UI without constructing trad
  assert.doesNotMatch(app,/signTransaction|sendTransaction|sendRawTransaction|eth_sendTransaction|secretKey|privateKey|seedPhrase/);
  assert.match(app,/Unavailable — no bounty payment\/escrow backend/);
  assert.match(app,/no broadcast infrastructure/);
- assert.match(app,/not connected yet/);
+ assert.match(app,/pumplite:followed-markets:v1/);
+ assert.match(app,/window\.localStorage/);
+ assert.match(app,/validMarketKey/);
+ assert.match(app,/No coins followed yet/i);
+ assert.match(app,/Unfollow this coin/);
+ assert.doesNotMatch(app,/Friends is not connected yet/);
 });
 
 test('mobile visual app exposes real list and popup while preserving hidden routes',async()=>{
@@ -36,6 +41,8 @@ test('mobile visual app exposes real list and popup while preserving hidden rout
  for(const marker of ['.app-feed-tabs','.app-coin-filters','.app-coin-table-head',
                       '.app-action-sheet','.app-popover-backdrop','.bottom-nav button svg'])
    assert.ok(css.includes(marker),marker);
+ assert.match(css,/app-follow-toggle/);
+ assert.match(css,/app-market-follow/);
  assert.doesNotMatch(css,/fake.*chart|fake.*market|fabricated.*price/i);
 });
 

@@ -19,6 +19,71 @@
   let renderPending = false;
   const plain = (element, max=120) => (element?.textContent || '').trim().slice(0,max);
   const panel = id => $(id)?.click();
+  // A followed-coin list works without creating fake social profiles, server data
+  // or a wallet signature. Entries are public market identifiers on this device.
+  const followsStorageKey = 'pumplite:followed-markets:v1';
+  const validMarketKey = value => {
+    if (typeof value !== 'string' || value.length > 80) return false;
+    const [network, market] = value.split(':');
+    return network === 'base'
+      ? /^0x[0-9a-f]{40}$/.test(market || '')
+      : network === 'solana' && /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(market || '');
+  };
+  let persistentFollows = true;
+  function readFollows() {
+    try {
+      const saved = JSON.parse(window.localStorage.getItem(followsStorageKey) || '[]');
+      if (!Array.isArray(saved)) return new Set();
+      return new Set(saved.slice(0,100).filter(validMarketKey));
+    } catch {
+      persistentFollows = false;
+      return new Set();
+    }
+  }
+  const follows = readFollows();
+  function saveFollows() {
+    try {
+      window.localStorage.setItem(followsStorageKey, JSON.stringify([...follows].slice(0,100)));
+      persistentFollows = true;
+    } catch {
+      persistentFollows = false; // Session memory still works when storage is blocked.
+    }
+  }
+  function keyForMarketHref(href) {
+    const chain = $('chain')?.value;
+    if (!['base','solana'].includes(chain) || typeof href !== 'string') return null;
+    const prefix = '#' + chain + '/';
+    if (!href.startsWith(prefix)) return null;
+    let id;
+    try { id = decodeURIComponent(href.slice(prefix.length)); } catch { return null; }
+    const key = chain + ':' + (chain === 'base' ? id.toLowerCase() : id);
+    return validMarketKey(key) ? key : null;
+  }
+  const keyForCard = card => keyForMarketHref(card?.getAttribute('href') || '');
+  function toggleFollow(key) {
+    if (!validMarketKey(key)) return;
+    if (follows.has(key)) follows.delete(key);
+    else {
+      if (follows.size >= 100) return;
+      follows.add(key);
+    }
+    saveFollows();
+    renderFeed();
+    syncMarketFollowButton();
+  }
+  function marketRows() {
+    const seen = new Set();
+    const cards = [
+      ...originals.home?.querySelectorAll('a.token-market-card') || [],
+      ...originals.markets?.querySelectorAll('a.token-market-card') || []
+    ];
+    return cards.filter(card => {
+      const key = keyForCard(card);
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    }).slice(0,300);
+  }
 
   function home(){ panel('show-home'); window.scrollTo({top:0,behavior:'instant'}); }
   function explore(){ panel('show-explore'); window.scrollTo({top:0,behavior:'instant'}); }
@@ -54,15 +119,24 @@
   function renderFeed() {
     if (!view || !mobile.matches) return;
     view.replaceChildren();
-    if (currentFeed === 'following') {
-      view.append(block('p','app-feed-empty',
-        'Friends is not connected yet. PumpLite does not currently host social profiles or following. Switch to Callouts or Top for real on-chain markets.'));
-      return;
-    }
     const source = currentFeed === 'top' ? originals.markets : originals.home;
-    const rows = [...source?.querySelectorAll('a.token-market-card') || []]
-      .slice(0,currentFeed === 'top' ? 12 : 8);
+    const rows = currentFeed === 'following'
+      ? marketRows().filter(card => follows.has(keyForCard(card))).slice(0,100)
+      : [...source?.querySelectorAll('a.token-market-card') || []]
+          .slice(0,currentFeed === 'top' ? 12 : 8);
     if (!rows.length) {
+      if (currentFeed === 'following') {
+        const box = block('div','app-feed-empty');
+        box.append(block('p','',follows.size
+          ? 'No followed coins are loaded on this network. Browse markets or change networks to find your saved coins.'
+          : 'No coins followed yet. Tap ☆ Follow beside a coin in Callouts or Top to save it on this device.'));
+        const browse = block('button','app-feed-browse','Explore coins →');
+        browse.type = 'button';
+        browse.addEventListener('click',explore);
+        box.append(browse);
+        view.append(box);
+        return;
+      }
       const status = plain($('home-live-status'),180);
       view.append(block('p','app-feed-empty',
         (status && !/Reading real markets/i.test(status) ? status + ' ' : '') +
@@ -83,8 +157,19 @@
       const byline = block('div','app-feed-line');
       byline.append(block('strong','', 'PumpLite markets'),block('small','',
         (currentFeed === 'top' ? 'Rank #'+(index+1)+' · ' : '')+network+' · '+(age || 'on-chain')));
+      const marketKey = keyForCard(card);
+      if (marketKey) {
+        const followed = follows.has(marketKey);
+        const follow = block('button','app-follow-toggle', followed ? '★ Following' : '☆ Follow');
+        follow.type = 'button';
+        follow.setAttribute('aria-pressed',String(followed));
+        follow.setAttribute('aria-label',(followed ? 'Unfollow ' : 'Follow ') + title + ' on this device');
+        follow.addEventListener('click',() => toggleFollow(marketKey));
+        byline.append(follow);
+      }
       const message = block('p','',
         currentFeed === 'top' ? 'Top loaded market by curve-implied market cap.' :
+        currentFeed === 'following' ? 'Saved on this device. Open its on-chain market.' :
         'A coin listed on PumpLite. See real price, curve and trading details.');
       const link = block('a','app-feed-market');
       link.href = card.getAttribute('href') || '#';
@@ -97,8 +182,10 @@
       post.append(avatar,content);
       view.append(post);
     });
-    view.append(block('p','app-feed-disclosure',
-      'Market activity only. These are on-chain market listings, not user-written posts, endorsements or investment advice. Top ranks loaded markets only.'));
+    view.append(block('p','app-feed-disclosure', currentFeed === 'following'
+      ? 'Following saves public coin addresses on this device only, not social accounts. ' +
+        (persistentFollows ? 'Saved locally in this browser.' : 'Browser storage is blocked: saved for this session only.')
+      : 'Market activity only. These are on-chain market listings, not user-written posts, endorsements or investment advice. Top ranks loaded markets only.'));
   }
 
   function queueFeed() {
@@ -109,7 +196,35 @@
   for (const source of Object.values(originals)) {
     if (source) new MutationObserver(queueFeed).observe(source,{childList:true,subtree:true,characterData:true});
   }
-  $('chain')?.addEventListener('change', queueFeed);
+  // Also make the Follow control available on the token's market detail page,
+  // so any coin discovered in Explore can be saved without a backend.
+  const marketActions = document.querySelector('.terminal-market-actions');
+  const marketFollow = block('button','app-market-follow','☆ Follow');
+  marketFollow.type = 'button';
+  marketFollow.hidden = true;
+  function syncMarketFollowButton() {
+    if (!marketActions) return;
+    const key = keyForMarketHref(window.location.hash);
+    const marketVisible = !$('market-page')?.hidden;
+    marketFollow.hidden = !key || !marketVisible;
+    if (!key || !marketVisible) return;
+    const followed = follows.has(key);
+    marketFollow.textContent = followed ? '★ Following' : '☆ Follow';
+    marketFollow.setAttribute('aria-pressed',String(followed));
+    marketFollow.setAttribute('aria-label', followed ? 'Unfollow this coin' : 'Follow this coin on this device');
+  }
+  if (marketActions) {
+    marketActions.append(marketFollow);
+    marketFollow.addEventListener('click',() => {
+      const key = keyForMarketHref(window.location.hash);
+      if (key) toggleFollow(key);
+    });
+    window.addEventListener('hashchange', syncMarketFollowButton);
+    if ($('market-page')) new MutationObserver(syncMarketFollowButton)
+      .observe($('market-page'), {attributes:true,attributeFilter:['hidden']});
+    syncMarketFollowButton();
+  }
+  $('chain')?.addEventListener('change', () => { queueFeed(); syncMarketFollowButton(); });
   mobile.addEventListener('change', queueFeed);
   feedButtons.forEach(b => b.addEventListener('click', () => setFeedTab(b.dataset.appFeed)));
   sortButtons.forEach(b => b.addEventListener('click', () => {
