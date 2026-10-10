@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   CLAIM_CREATION_TRANSACTION,
+  PINNED_BASE_CLAIM_TRANSACTIONS,
+  discoverPinnedReceiptClaimLogs,
   discoverReceiptVerifiedClaimLogs,
   verifiedClaimCreationBlock
 } from '../scripts/base-claim-receipt-discovery.mjs';
@@ -43,6 +45,7 @@ function harness(overrides = {}) {
         };
       }
       return {
+        hash,
         status: 1,
         blockNumber: 52034101,
         logs: [chainLog],
@@ -112,4 +115,42 @@ test('indexer pagination must complete and cannot loop or silently truncate', as
 test('failed, missing and mismatched chain receipts are never accepted', async () => {
   await assert.rejects(discover({claimReceipt:{status:0}}), /unavailable or failed/);
   await assert.rejects(discover({claimReceipt:{logs:[]}}), /absent from its on-chain receipt/);
+});
+
+test('known claim receipts are independently proven against live count and chain receipt', async () => {
+  assert.equal(PINNED_BASE_CLAIM_TRANSACTIONS.length, 1);
+  const {provider} = harness();
+  const logs = await discoverPinnedReceiptClaimLogs({
+    provider,
+    contractAddress: claim,
+    claimedTopic: topic,
+    creationBlock: 52033932,
+    snapshotBlock: 52034102,
+    expectedCount: 1
+  });
+  assert.equal(logs.length, 1);
+  assert.equal(logs[0].transactionHash, hash);
+});
+
+test('pinned history cannot claim a complete proof after a new claim appears', async () => {
+  const {provider} = harness();
+  await assert.rejects(discoverPinnedReceiptClaimLogs({
+    provider, contractAddress: claim, claimedTopic: topic,
+    creationBlock: 52033932, snapshotBlock: 52034102, expectedCount: 2
+  }), /new claim evidence needed/);
+});
+
+test('failed or fabricated pinned receipts cannot pass the historical gate', async () => {
+  for (const overrides of [
+    {claimReceipt:{status:0}},
+    {claimReceipt:{logs:[]}},
+    {claimReceipt:{hash:'0x'+'f'.repeat(64)}},
+    {claimReceipt:{blockNumber:52033931}}
+  ]) {
+    await assert.rejects(discoverPinnedReceiptClaimLogs({
+      provider:harness(overrides).provider,
+      contractAddress:claim, claimedTopic:topic,
+      creationBlock:52033932, snapshotBlock:52034102, expectedCount:1
+    }));
+  }
 });
