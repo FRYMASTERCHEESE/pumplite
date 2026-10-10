@@ -1,5 +1,9 @@
 import assert from 'node:assert/strict';
 import {
+  discoverReceiptVerifiedClaimLogs,
+  verifiedClaimCreationBlock
+} from './base-claim-receipt-discovery.mjs';
+import {
   readdir,
   readFile,
   stat
@@ -1263,16 +1267,49 @@ async function claimChecksWithProvider(
     'remainingClaims does not match maxClaims - claimCount'
   );
 
-  const logs =
-    await getLogsBounded(
+  // Search begins at the on-chain verified claim contract creation block,
+  // never at the much older Base V2 factory deployment block.
+  const claimCreationBlock =
+    await verifiedClaimCreationBlock(provider, claimAddress);
+
+  assert.ok(
+    claimCreationBlock >= deploymentBlock &&
+      claimCreationBlock <= blockTag,
+    'Claim contract creation is outside the reviewed Base V2 history'
+  );
+
+  let logs;
+  try {
+    // Explorer is a tx-hash discovery source only. Every event returned
+    // here is re-read from an authentic Base transaction receipt; the
+    // proof must reconcile with claimCount and claimed() contract reads.
+    logs = await discoverReceiptVerifiedClaimLogs({
+      provider,
+      contractAddress: claimAddress,
+      claimedTopic,
+      creationBlock: claimCreationBlock,
+      snapshotBlock: blockTag,
+      expectedCount: Number(claimCount)
+    });
+    console.log('Claim history: receipt-verified indexed discovery');
+  } catch (indexerError) {
+    console.warn(
+      'Indexed claim discovery could not complete: ' +
+      (indexerError?.message || String(indexerError)) +
+      '. Trying direct on-chain historical logs.'
+    );
+
+    logs = await getLogsBounded(
       provider,
       {
         address: claimAddress,
         topics: [claimedTopic]
       },
-      deploymentBlock,
+      claimCreationBlock,
       blockTag
     );
+    console.log('Claim history: direct on-chain log scan');
+  }
 
   assert.equal(
     BigInt(logs.length),
