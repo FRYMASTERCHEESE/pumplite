@@ -29,9 +29,31 @@ export async function verifyRedesignBrowser(browser, base) {
       assert.equal(await page.locator('#app-feed-content').isVisible(),true,
         'genuine market feed at '+width);
       assert.equal(await page.locator('.app-feed-tabs button').count(),3,
-        'Callouts, Friends and Top tabs');
+        'Callouts, Following and Top tabs');
       await page.locator('[data-app-feed="following"]').click();
-      assert.match(await page.locator('#app-feed-content').textContent(),/not connected yet/i);
+      assert.match(await page.locator('#app-feed-content').textContent(),/No coins followed yet/i);
+      await page.locator('[data-app-feed="latest"]').click();
+      // Synthetic market fixture; the production list remains genuine on-chain data.
+      await page.evaluate(() => {
+        const chain=document.querySelector('#chain').value;
+        const market=chain==='base'?'0x'+'1'.repeat(40):'11111111111111111111111111111112';
+        const card=document.createElement('a');
+        card.className='token-market-card';
+        card.setAttribute('href','#'+chain+'/'+market);
+        card.innerHTML='<span class="token-card-identity"><b>Fixture Coin</b><span class="ticker">FX / SOL</span></span>'+
+          '<span class="token-age">Now</span><span class="token-card-metrics"><span></span><span><strong>0.01 SOL</strong></span></span>';
+        document.querySelector('#home-markets').append(card);
+      });
+      await page.waitForFunction(()=>!!document.querySelector('#app-feed-content .app-follow-toggle'));
+      await page.locator('#app-feed-content .app-follow-toggle').first().click();
+      assert.equal(await page.locator('#app-feed-content .app-follow-toggle').first().getAttribute('aria-pressed'),'true');
+      const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('pumplite:followed-markets:v1')||'[]'));
+      assert.equal(saved.length,1,'followed market stored locally without a wallet action');
+      await page.locator('[data-app-feed="following"]').click();
+      assert.match(await page.locator('#app-feed-content').textContent(),/Fixture Coin/);
+      await page.locator('#app-feed-content .app-follow-toggle').click();
+      assert.match(await page.locator('#app-feed-content').textContent(),/No coins followed yet/);
+      assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('pumplite:followed-markets:v1')||'[]').length),0);
       await page.locator('[data-app-feed="latest"]').click();
       await page.locator('#app-search').click();
       assert.equal(await page.locator('#explore-section').isVisible(),true,
