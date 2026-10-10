@@ -10,6 +10,18 @@ const localIndex =
 const localClaim =
   await readFile('claim.html', 'utf8');
 
+const localPlsolHtml =
+  await readFile('plsol.html', 'utf8');
+
+const localPlsolScript =
+  await readFile('plsol.js', 'utf8');
+
+const localCreatorTokens =
+  await readFile('creator-tokens.html', 'utf8');
+
+const localSolanaTokenList =
+  JSON.parse(await readFile('solana-token-list.json', 'utf8'));
+
 const localStatus =
   await readFile('status.html', 'utf8');
 
@@ -216,7 +228,11 @@ async function verifyOnce() {
     sitemap,
     tokenList,
     securityText,
-    v3DeployBundle
+    v3DeployBundle,
+    plsolPage,
+    plsolScript,
+    creatorTokensPage,
+    solanaTokenList
   ] = await Promise.all([
     fetchText('verification.html'),
     fetchText('status.html'),
@@ -227,7 +243,11 @@ async function verifyOnce() {
     fetchText('sitemap.xml'),
     fetchJson('token-list.json'),
     fetchText('.well-known/security.txt'),
-    fetchText(expectedV3Deploy)
+    fetchText(expectedV3Deploy),
+    fetchText('plsol.html'),
+    fetchText('plsol.js'),
+    fetchText('creator-tokens.html'),
+    fetchJson('solana-token-list.json')
   ]);
 
   assert.ok(
@@ -300,6 +320,58 @@ async function verifyOnce() {
         '0xb15a460142c77b42cdf57815b0eefeb24b593196'
     ),
     'Live token list is missing official PLITE'
+  );
+
+  // Fail closed if official Solana identity/link pages are stale or
+  // do not match the source committed to GitHub Pages.
+  const normalizePagesText = value => value.replace(/\r\n?/g, '\n');
+  for (const [label, live, source] of [
+    ['PLSOL page', plsolPage, localPlsolHtml],
+    ['PLSOL copy/share script', plsolScript, localPlsolScript],
+    ['Creator coin page', creatorTokensPage, localCreatorTokens]
+  ]) {
+    assert.equal(
+      normalizePagesText(live),
+      normalizePagesText(source),
+      'Live ' + label + ' is stale or differs from this commit'
+    );
+  }
+
+  assert.deepEqual(
+    solanaTokenList,
+    localSolanaTokenList,
+    'Live official Solana token list is stale or differs from this commit'
+  );
+
+  const plsolMint =
+    'EUKhN8eP97NjRHzxwRT5pdgLg7BX5KRTBhJYa2hMu9ma';
+
+  const listedPlsol = solanaTokenList.tokens?.filter(
+    item =>
+      item.chainId === 101 &&
+      item.symbol === 'PLSOL' &&
+      item.address === plsolMint
+  );
+
+  assert.equal(listedPlsol?.length, 1, 'Official PLSOL token list identity mismatch');
+
+  for (const [label, text] of [
+    ['PLSOL page', plsolPage],
+    ['PLSOL copy/share script', plsolScript]
+  ]) {
+    assert.ok(
+      text.includes(plsolMint),
+      label + ' does not contain the official PLSOL mint'
+    );
+  }
+
+  assert.ok(
+    plsolPage.includes('href="./#solana/' + plsolMint + '"'),
+    'PLSOL page must link to the canonical market mint'
+  );
+  assert.ok(
+    creatorTokensPage.includes('My Solana collection'),
+    'Live creator coin page is missing its heading'
   );
 
   assert.ok(
