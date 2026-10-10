@@ -165,6 +165,8 @@ if (checkOnly) {
     'live.html',
     'live.js',
     'community.css',
+    'liquidity.html',
+    'liquidity.js',
     'plsol.html',
     'creator-tokens.html',
     'claim.html',
