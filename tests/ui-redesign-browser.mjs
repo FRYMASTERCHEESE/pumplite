@@ -101,7 +101,23 @@ export async function verifyRedesignBrowser(browser, base) {
       await page.evaluate(()=>window.scrollTo(0,0));
       await page.screenshot({path:'build/screenshots/redesign/'+name+'-'+width+'.png',fullPage:true});
     }
-    assert.equal(await page.locator('.bottom-nav').isVisible(),width<=740);
+    await go('create');
+    assert.equal(await page.locator('#auto-prepare-metadata').isChecked(),true,
+      'Auto setup enabled by default for one-flow coin creation at '+width);
+    await page.locator('#name').fill('Safe Fixture Coin');
+    await page.locator('#symbol').fill('SAFE');
+    await page.locator('#create').click();
+    await page.waitForFunction(
+      () => document.querySelector('#create-action-status')?.textContent?.includes('Auto setup needs a token image')
+    );
+    assert.equal(await page.locator('#initial-buy-dialog').isVisible(),false,
+      'No publish, transaction review or spending occurs without the chosen image');
+    assert.equal(await page.locator('#uri').inputValue(),'',
+      'Auto setup does not invent a metadata URI');
+    await page.locator('#auto-prepare-metadata').uncheck();
+    assert.equal(await page.locator('#auto-prepare-metadata').isChecked(),false,
+      'Creators can disable automatic metadata publishing and use manual mode');
+        assert.equal(await page.locator('.bottom-nav').isVisible(),width<=740);
     assert.equal(await page.locator('.home-page-tabs').isVisible(),width>740);
     await go('portfolio');
     await page.locator('#portfolio-refresh').click();
