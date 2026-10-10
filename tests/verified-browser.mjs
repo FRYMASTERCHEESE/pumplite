@@ -204,7 +204,7 @@ export async function verifyBrowser(browser, base) {
   await page.goto(base,{waitUntil:'networkidle'});
   await page.waitForFunction(()=>document.querySelector('#chain')?.value==='base');
   assert.equal(await page.locator('#chain').inputValue(),'base');
-  await page.locator('#show-explore').click();
+  await page.locator('#show-explore:visible, [data-page=markets]:visible').click();
   assert.equal(await page.locator('#explore-section').isVisible(),true);
   assert.equal(await page.locator('#create-section').isVisible(),false);
   await page.locator('#refresh').click();await page.waitForFunction(()=>document.querySelectorAll('.market-row').length===1);
@@ -263,7 +263,7 @@ export async function verifyBrowser(browser, base) {
   assert.equal(await page.locator('#market-badges .badge').count(),0);
   assert.equal(await page.locator('#create').isDisabled(),true);
   await page.goto(base,{waitUntil:'networkidle'});
-  await page.locator('#show-create').click();
+  await page.locator('#show-create:visible, [data-page=create]:visible').click();
   assert.equal(await page.locator('#create-section').isVisible(),true);
   await page.locator('#name').fill('Social token');await page.locator('#symbol').fill('SOC');
   await page.locator('#description').fill('Synthetic local project');

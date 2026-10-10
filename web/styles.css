@@ -645,3 +645,133 @@ footer{border-color:#20232d}
 .token-hero-progress>div strong{color:#e8eaf0}
 @media(max-width:740px){.token-hero-card{padding:17px}.token-hero-avatar{width:64px;height:64px;flex-basis:64px;border-radius:18px}.token-address-row{align-items:stretch;flex-direction:column}.token-copy-button{align-self:flex-start}.token-hero-stats{grid-template-columns:1fr 1fr}}
 @media(max-width:430px){.token-hero-head{align-items:flex-start}.token-hero-stats{grid-template-columns:1fr}.token-hero-progress>div{display:grid}}
+
+/* Review-only launchpad redesign. Scoped to preserve secondary utility pages. */
+body.redesign{--green:#83efad;--purple:#b6a5ff;--panel:#151718;--line:#2a2d2e;--muted:#a3aaa7;background:#090b0b;color:#f2f6f3;padding-bottom:96px}
+.redesign header{max-width:1440px;padding:20px 28px;background:#090b0b;border-bottom:1px solid var(--line)}
+.redesign .mark{border-radius:12px;background:var(--green);color:#092115}
+.redesign main,.redesign footer{max-width:1280px}
+.redesign .header-controls{flex-wrap:wrap;justify-content:flex-end}
+.redesign .header-controls .utility-header-link{font-size:11px}
+.redesign button,.redesign input,.redesign select,.redesign textarea{border-radius:12px}
+.redesign input,.redesign select,.redesign textarea{background:#0d1010;border-color:var(--line)}
+.redesign .primary{background:var(--green);border-color:var(--green);color:#092115}
+.redesign .outline{border-color:#343b37;color:#dbe5df;background:#141917}
+.redesign .notice{background:#121916;border:1px solid #2b3d32;color:#bccdc2;font-size:12px;border-radius:12px}
+.redesign .home-page-tabs{border-bottom:1px solid var(--line);padding-bottom:16px}
+.redesign .home-page-tabs [aria-pressed=true]{color:var(--green);background:#17261d;border-color:#3e604a}
+.redesign .launchpad-hero{background:radial-gradient(ellipse at 85% 5%,#17442a55,transparent 65%);border:1px solid var(--line);border-radius:28px;padding:42px;gap:38px;margin-top:24px}
+.redesign .launchpad-hero h1{font-size:clamp(38px,5.3vw,68px);line-height:1.03;letter-spacing:-2.5px;font-weight:750}
+.redesign .launchpad-hero h1 em{font-style:normal;color:var(--green)}
+.redesign .intro{color:#a8b3ac}
+.redesign .featured-token-card{background:#141917;border:1px solid #314238;border-radius:22px;box-shadow:0 12px 48px #0003}
+.redesign .featured-token-facts{background:none}
+.redesign .featured-token-facts span{background:#101512;border-color:var(--line)}
+.redesign .featured-market-link,.redesign .featured-claim-link{border-color:#3b5544;color:var(--green)}
+.redesign .live-stat,.redesign .panel,.redesign .token-market-card{background:#131616;border-color:var(--line);border-radius:20px;box-shadow:none}
+.redesign .live-stat{padding:18px}
+.redesign .token-market-card{transition:border-color .16s,background .16s,transform .16s}
+.redesign .token-market-card:hover{border-color:#50735b;background:#18211c;transform:translateY(-2px)}
+.redesign .token-card-metrics{gap:12px}
+.redesign .token-avatar{border-radius:16px}
+.redesign .token-card-progress progress::-webkit-progress-value,.redesign .token-hero-progress progress::-webkit-progress-value{background:var(--green)}
+.redesign .token-hero-card{background:#111714;border-color:#2d3e32}
+.redesign .token-hero-stats>div{background:#0c100e;border-color:#27332c}
+.redesign .token-hero-stats{grid-template-columns:repeat(4,minmax(0,1fr))}
+.redesign .token-hero-avatar{background:#1c3527;color:var(--green)}
+.redesign .market-chart-panel{background:#0d1010;border-radius:24px;margin-top:24px}
+.redesign .chart-current-price{font-size:clamp(27px,4vw,46px);letter-spacing:-1px}
+.redesign .chart-range-tabs{display:flex;justify-content:space-between;gap:4px;flex-wrap:wrap}
+.redesign .chart-range{flex:1;min-width:42px;background:transparent;border:1px solid transparent;color:var(--muted);padding:8px}
+.redesign .chart-range.active{background:#1c2921;color:var(--green);border-color:#355140}
+.redesign .wallet-price-chart{height:auto;min-height:300px}
+.redesign .price-chart svg{display:block;width:100%;height:300px;touch-action:pan-y}
+.redesign .price-chart .trend-up{stroke:#83efad}
+.redesign .price-chart .trend-down{stroke:#ff5c7a}
+.redesign .price-chart .trend-flat{stroke:#a3aaa7}
+.redesign .price-chart .trend-area-up{fill:#83efad12}
+.redesign .price-chart .trend-area-down{fill:#ff5c7a12}
+.redesign .chart-change.up{color:#83efad}
+.redesign .chart-change.down{color:#ff5c7a}
+.chart-tools{display:flex;gap:4px;justify-content:flex-end;margin:8px 0}
+.chart-tools button{background:transparent;border:1px solid var(--line);color:var(--muted);font-size:12px}
+.chart-tools [aria-pressed=true]{color:var(--green);border-color:var(--green)}
+.chart-crosshair{stroke:#bbc8bf;stroke-width:1;stroke-dasharray:3 4;pointer-events:none}
+.candle-wick{stroke-width:1.5}
+.candle-up{fill:#83efad}
+.candle-down{fill:#ff5c7a}
+.chart-inspector{font-size:12px;min-height:40px;color:var(--muted);overflow-wrap:anywhere;padding:0 12px}
+.redesign .simple-buy-card,.redesign .simple-sell-card{background:#131b16;border-color:#2d3b31;border-radius:20px}
+.redesign .launch{max-width:800px;margin:auto;width:100%}
+.redesign .media-picker{border:1px dashed #46614f;border-radius:18px;padding:20px;background:#101a14}
+.redesign fieldset{border-color:var(--line)}
+.redesign .market-toolbar{gap:16px}
+.redesign .market-search-label input{min-height:52px}
+.bottom-nav{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);z-index:20;width:min(540px,calc(100% - 24px));display:flex;padding:7px 10px max(7px,env(safe-area-inset-bottom));border:1px solid #354038;border-radius:24px;background:#131916f5;box-shadow:0 8px 40px #0008}
+.bottom-nav button{flex:1;display:grid;place-items:center;gap:3px;min-width:0;min-height:56px;padding:6px 3px;background:none;border:0;color:#a7b1aa;font-size:10px}
+.bottom-nav button span{font-size:24px;line-height:1}
+.bottom-nav button[aria-current=page]{color:var(--green);background:#213126}
+.bottom-nav .nav-create span{background:var(--green);color:#092115;border-radius:50%;width:30px;height:30px;line-height:30px}
+.portfolio-panel{margin:26px 0;min-height:280px}
+.portfolio-list{display:grid;gap:8px}
+.portfolio-native{font-size:clamp(22px,4vw,34px);color:var(--green);overflow-wrap:anywhere}
+.portfolio-token{display:flex;justify-content:space-between;gap:20px;padding:20px;border:1px solid var(--line);border-radius:14px;color:#ecf2ef;text-decoration:none;overflow-wrap:anywhere}
+.redesign footer{padding-bottom:32px}
+@media(min-width:1000px){.redesign .workspace:has(.launch:not([hidden])){grid-template-columns:1fr}.redesign .workspace:has(.discovery:not([hidden])){grid-template-columns:1fr}.redesign .discovery{grid-column:1}.redesign #markets{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:740px){
+ .redesign header{padding:16px;gap:14px}.redesign main{padding:16px}
+ .redesign .header-controls{gap:8px}.redesign .header-controls select{min-height:44px}
+ .redesign .header-controls .utility-header-link,.redesign .claim-header-link{font-size:10px}
+ .redesign .launchpad-hero{padding:24px 20px;gap:24px;border-radius:22px}
+ .redesign .launchpad-hero h1{font-size:42px}
+ .redesign .hero-actions{flex-wrap:wrap}.redesign .hero-actions>*{flex:1;white-space:nowrap}
+ .redesign .home-page-tabs{overflow-x:auto;flex-wrap:nowrap;gap:6px}
+ .redesign .home-page-tabs>*{white-space:nowrap;font-size:11px;min-width:max-content}
+ .redesign .platform-live-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .redesign .token-hero-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .redesign .panel{padding:18px}.redesign .market-heading h1{font-size:30px}
+ .redesign .price-chart svg{height:250px}.redesign .wallet-price-chart{min-height:290px}
+ .redesign .token-card-head{gap:12px}.redesign .token-card-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .portfolio-token{padding:14px;flex-wrap:wrap}
+}
+@media(prefers-reduced-motion:reduce){.redesign *, .redesign *::before,.redesign *::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+.trending-panel{border:1px solid var(--line);border-radius:18px;padding:18px;margin:18px 0 24px;background:#101713}.trending-panel h3{margin:0}.trending-panel #trending-markets{display:grid;gap:8px}
+
+.redesign .network-pill,.redesign .badge.verified{color:#cec2ff;border-color:#615581;background:#211d2f}
+.redesign .chart-tools [aria-pressed=true]{color:#cec2ff;border-color:#8e7bbb;background:#211d2f}
+.redesign .featured-token-head small,.redesign .token-age{color:#b8abc9}
+.redesign .featured-token-card{background:radial-gradient(ellipse at 100% 0,#48347035,transparent 65%),#141917}
+.redesign .wallet-guide{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:20px 0}
+.redesign .wallet-guide article{padding:20px;background:#181622;border:1px solid #3f354f;border-radius:18px}
+.redesign .wallet-guide h3{margin-top:0;color:#cec2ff}
+.redesign button:disabled{cursor:not-allowed}
+.redesign :focus-visible{outline:3px solid #b6a5ff;outline-offset:4px}
+.redesign #connect{border-color:#665785;background:#242033;min-width:138px}
+@media(min-width:741px){.redesign .bottom-nav{display:none}.redesign{padding-bottom:0}.redesign .home-page-tabs{display:flex}}
+@media(max-width:740px){.redesign .home-page-tabs{display:none}.redesign .wallet-guide{grid-template-columns:1fr}}
+
+/* Keep the mobile header compact; utility destinations live under More. */
+.redesign .launchpad-hero-copy{background:none;border:0;box-shadow:none;padding:0;min-height:0}
+.redesign .featured-market-link{color:#08110c}
+.redesign .hero-link{border-radius:12px;text-decoration:none}
+.redesign .home-page-tabs>a{display:flex;align-items:center;justify-content:center;padding:10px 16px;border-radius:12px;text-decoration:none;font-size:13px}
+.redesign #wallet-choice-label:has(select:empty){display:none}
+.redesign .mobile-utility-links{display:none}
+.redesign .home-market-grid>.empty{grid-column:1/-1}
+.redesign .back{border:1px solid var(--line);border-radius:999px;padding:10px 16px;text-decoration:none}
+@media(max-width:740px){
+ .redesign header{position:relative;display:block;padding:18px 16px}
+ .redesign header .brand{margin-bottom:16px}
+ .redesign .header-controls{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);width:100%;gap:10px}
+ .redesign .header-controls #chain{width:100%;font-size:13px}
+ .redesign .header-controls #connect{min-width:0;width:100%;font-size:12px;grid-column:2;grid-row:1}
+ .redesign .header-controls #wallet-choice-label{grid-column:1/-1}
+ .redesign .header-controls #wallet-choice-label select{width:100%}
+ .redesign .header-controls .utility-header-link,.redesign .header-controls .claim-header-link{display:none}
+ .redesign .mobile-utility-links{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0}
+ .redesign .mobile-utility-links a{padding:12px;border:1px solid var(--line);border-radius:12px}
+ .redesign .featured-token-facts{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .redesign .featured-token-card{min-height:0}
+ .redesign .launchpad-hero{padding:24px 20px;margin-top:16px}
+}

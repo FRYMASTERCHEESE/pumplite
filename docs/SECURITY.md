@@ -1,11 +1,11 @@
 # Security boundaries and current release gates
 
-Status date: 1 October 2026.
+Status date: 10 October 2026 (configuration and repository checkpoint).
 
 PumpLite Base V2 is deployed and enabled for real transactions at
 `0xdA8c34819ae397FD4bE3C95947DEA64f4A3278f4`. The older Base V1 factory at `0xf722BeD94c4A41B2C71cDCDEB5EEA062352aEe44`
-is separate and is not the active public V2 factory. Solana Mainnet remains undeployed and
-transaction-locked.
+is separate and is not the active public V2 factory. Solana Mainnet is now configured for
+wallet-approved transactions using pinned tiny program `3CHqrdJzwWQj1QikCzpjBhC8iQ3paaMtD1x9kwoW1rku`; this does not certify every real-wallet trade path.
 
 PumpLite has not received an independent third-party smart-contract/economic audit. Automated,
 integration, adversarial and browser testing reduces known implementation risk but is not a substitute
@@ -42,8 +42,9 @@ No wallet credentials are required by CI.
 
 ## Current live boundaries
 
-Base Mainnet writes are enabled with contractVersion=2. Solana remains fail-closed with
-`programId=null` and `transactionsEnabled=false`.
+Base Mainnet writes are enabled with contractVersion=2. Solana Mainnet `config.json` pins tiny program
+`3CHqrdJzwWQj1QikCzpjBhC8iQ3paaMtD1x9kwoW1rku` with `transactionsEnabled=true`; identity/chain validation must still fail closed on mismatches.
+The historical `programId=null` / `transactionsEnabled=false` lock is no longer the active configuration.
 
 Real user-approved Base wallet operations have occurred, including the PLITE launch and a separately
 approved PLITE/WETH Uniswap V2 liquidity position. Local EVM and browser tests remain local tests and
@@ -85,7 +86,7 @@ For significant public funds, remaining security work includes:
 3. Continue adversarial/stateful testing for edge cases, MEV, slippage, tiny-trade rounding and long sequences.
 4. Monitor public RPC capacity, metadata infrastructure and GitHub Pages availability.
 5. Re-run the complete release checks after any contract, transaction, wallet, RPC or metadata change.
-6. Keep Solana transaction-locked until a separate deployment, authority and acceptance process is explicitly approved.
+6. Treat Solana as a live write-enabled Mainnet product; verify authority, exact program identity, and wallet/device acceptance before further releases, and never change on-chain code or authorities implicitly.
 
 ## Historical reports
 

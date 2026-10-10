@@ -56,7 +56,9 @@ test(
 
     assert.ok(
       status.includes(
-        'transactionsEnabled=false'
+        'transactionsEnabled=true'
+      ) && status.includes(
+        '3CHqrdJzwWQj1QikCzpjBhC8iQ3paaMtD1x9kwoW1rku'
       )
     );
   }
@@ -138,7 +140,9 @@ test(
 
     assert.ok(
       security.includes(
-        'transaction-locked'
+        'transactionsEnabled=true'
+      ) && security.includes(
+        'independent third-party smart-contract/economic audit'
       )
     );
   }

@@ -1,4 +1,5 @@
 import { formatUnits } from './math.js';
+import { chartPoints, candleSeries } from './chart-series.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 
@@ -34,7 +35,7 @@ function timeLabel(point) {
   return 'Block ' + Number(point.blockNumber).toLocaleString();
 }
 
-export function renderPriceChart(container, trades, symbol = 'TOKEN', nativeDecimals = 18, unit = 'ETH') {
+export function renderPriceChart(container, trades, symbol = 'TOKEN', nativeDecimals = 18, unit = 'ETH', options = {}) {
   container.replaceChildren();
 
   if (!Array.isArray(trades) || trades.length === 0) {
@@ -45,16 +46,7 @@ export function renderPriceChart(container, trades, symbol = 'TOKEN', nativeDeci
     return { count: 0, changePct: null, latestPrice: null };
   }
 
-  const points = trades
-    .map((trade, index) => ({
-      index,
-      price: priceNumber(trade.price, nativeDecimals),
-      side: trade.isBuy ? 'buy' : 'sell',
-      blockNumber: Number(trade.blockNumber),
-      timestamp: Number(trade.timestamp || 0),
-      transactionHash: trade.transactionHash
-    }))
-    .filter(point => Number.isFinite(point.price) && point.price > 0);
+  const points = chartPoints(trades, value => priceNumber(value, nativeDecimals));
 
   if (!points.length) {
     const empty = document.createElement('p');
@@ -85,7 +77,9 @@ export function renderPriceChart(container, trades, symbol = 'TOKEN', nativeDeci
   const changePct = first > 0 ? (latest - first) / first * 100 : 0;
   const direction = changePct > 0 ? 'up' : changePct < 0 ? 'down' : 'flat';
 
-  const x = index =>
+  const hasTime = points.every(p => Number.isSafeInteger(p.timestamp) && p.timestamp > 0) && points.at(-1).timestamp > points[0].timestamp;
+  const timeX = time => padLeft + (time - points[0].timestamp) * (width - padLeft - padRight) / (points.at(-1).timestamp - points[0].timestamp);
+  const x = index => hasTime ? timeX(points[index].timestamp) :
     points.length === 1
       ? width / 2
       : padLeft +
@@ -119,7 +113,34 @@ export function renderPriceChart(container, trades, symbol = 'TOKEN', nativeDeci
     }));
   }
 
-  if (points.length === 1) {
+  const candles = options.style === 'candles' ? candleSeries(points, options.range) : [];
+  if (options.style === 'candles' && !candles.length) {
+    const notice = document.createElement('p');
+    notice.className = 'fine';
+    notice.textContent = 'Candles need timestamped confirmed trades. Showing execution sequence instead.';
+    container.append(notice);
+  }
+  if (candles.length) {
+    const firstTime = candles[0].time;
+    const span = candles.at(-1).time - firstTime;
+    const candleX = time => span ? padLeft + 8 + (time - firstTime) * (width - padLeft - padRight - 16) / span : width / 2;
+    const bodyWidth = Math.max(2, Math.min(14, (width - padLeft - padRight) / candles.length * 0.65));
+    for (const candle of candles) {
+      const cx = candleX(candle.time);
+      const color = candle.close >= candle.open ? 'up' : 'down';
+      svg.append(node('line', {x1:cx,x2:cx,y1:y(candle.high),y2:y(candle.low),class:'candle-wick trend-' + color}));
+      const body = node('rect', {x:cx-bodyWidth/2,y:Math.min(y(candle.open),y(candle.close)),
+        width:bodyWidth,height:Math.max(1,Math.abs(y(candle.close)-y(candle.open))),class:'candle-body candle-' + color});
+      const title = node('title');
+      title.textContent = timeLabel({timestamp:candle.time}) + ' · Open ' + priceLabel(candle.open) + ' · High ' + priceLabel(candle.high) + ' · Low ' + priceLabel(candle.low) + ' · Close ' + priceLabel(candle.close) + ' · ' + candle.count + ' trades';
+      body.append(title);
+      svg.append(body);
+    }
+    const coverage = document.createElement('p');
+    coverage.className = 'fine';
+    coverage.textContent = 'OHLC from loaded confirmed trades only. Empty intervals are not filled; incomplete history may omit trades.';
+    container.append(coverage);
+  } else if (points.length === 1) {
     const dot = node('circle', {
       cx: x(0),
       cy: y(points[0].price),
@@ -221,7 +242,54 @@ export function renderPriceChart(container, trades, symbol = 'TOKEN', nativeDeci
     svg.append(endLabel);
   }
 
-  container.append(svg);
+  const cursor = node('line', {x1:0,x2:0,y1:padTop,y2:height-padBottom,class:'chart-crosshair',visibility:'hidden'});
+  svg.append(cursor);
+  const inspect = document.createElement('p');
+  inspect.className = 'chart-inspector';
+  inspect.setAttribute('aria-live', 'polite');
+  inspect.textContent = 'Touch or hover to inspect · use left/right arrow keys';
+  svg.setAttribute('aria-hidden', 'false');
+  svg.setAttribute('role', 'group');
+  svg.setAttribute('tabindex', '0');
+  svg.setAttribute('aria-label', 'Execution chart. Use left and right arrow keys to inspect confirmed trades.');
+  const candleSpan = candles.length ? candles.at(-1).time - candles[0].time : 0;
+  const candleX = candle => candleSpan ? padLeft + 8 + (candle.time-candles[0].time) * (width-padLeft-padRight-16)/candleSpan : width/2;
+  const inspectCount = candles.length || points.length;
+  let selected = inspectCount - 1;
+  function inspectAt(index) {
+    selected = Math.max(0, Math.min(inspectCount - 1, index));
+    if (candles.length) {
+      const candle = candles[selected];
+      cursor.setAttribute('x1',candleX(candle)); cursor.setAttribute('x2',candleX(candle)); cursor.setAttribute('visibility','visible');
+      inspect.textContent = timeLabel({timestamp:candle.time}) + ' · O ' + priceLabel(candle.open) + ' H ' + priceLabel(candle.high) + ' L ' + priceLabel(candle.low) + ' C ' + priceLabel(candle.close) + ' ' + unit + ' · ' + candle.count + ' trades';
+      return;
+    }
+    const point = points[selected];
+    cursor.setAttribute('x1', x(selected)); cursor.setAttribute('x2', x(selected));
+    cursor.setAttribute('visibility', 'visible');
+    inspect.textContent = priceLabel(point.price) + ' ' + unit + '/' + symbol + ' · ' + timeLabel(point) + ' · ' + point.side;
+  }
+  // Candle inspection reports the bucket under the pointer; no invented intermediate values.
+  svg.addEventListener('pointermove', event => {
+    const rect = svg.getBoundingClientRect();
+    if (!rect.width) return;
+    const px = (event.clientX - rect.left) * width / rect.width;
+    if (candles.length) {
+      let nearest = 0;
+      for (let i=1;i<candles.length;i++) if (Math.abs(candleX(candles[i])-px)<Math.abs(candleX(candles[nearest])-px)) nearest=i;
+      inspectAt(nearest);
+    } else {
+      let nearest = 0;
+      for (let i=1;i<points.length;i++) if (Math.abs(x(i)-px)<Math.abs(x(nearest)-px)) nearest=i;
+      inspectAt(nearest);
+    }
+  });
+  svg.addEventListener('keydown', event => {
+    if (!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return;
+    event.preventDefault();
+    inspectAt(event.key === 'Home' ? 0 : event.key === 'End' ? inspectCount-1 : selected + (event.key === 'ArrowLeft' ? -1 : 1));
+  });
+  container.append(svg, inspect);
 
   return {
     count: points.length,

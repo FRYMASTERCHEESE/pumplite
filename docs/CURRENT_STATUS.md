@@ -1,6 +1,6 @@
 # PumpLite current status
 
-Status date: 2 October 2026.
+Status date: 10 October 2026 (configuration and repository checkpoint; not a fresh wallet-trade certification).
 
 This file is the current operational-status reference. Documents such as IMPLEMENTATION_REPORT.md,
 READINESS_FOLLOWUP.md, RELEASE_CANDIDATE.md, RELEASE_HANDOFF.md and LOCAL_READINESS_CLOSURE.md record
@@ -18,7 +18,7 @@ PumpLite Base V2 is deployed and public writes are enabled.
 - Platform fee: 25 bps (0.25%)
 - Mayhem support while active: 75 bps (0.75%) retained as real market backing
 - PumpLite creation fee: 0%; Base network gas still applies
-- Solana remains separately locked and undeployed
+- Solana Mainnet is now configured for the pinned tiny program with wallet-approved transactions enabled; see the current Solana section below.
 
 Base Mainnet wallet signing has been exercised with real user-approved operations. PLITE was created
 on Base through the live PumpLite V2 deployment, and a separate PLITE/WETH Uniswap V2 liquidity
@@ -83,9 +83,13 @@ external services and token/liquidity risks.
 
 ## Solana
 
-The Solana program continues to be build/test material only for the public product configuration:
-`programId=null` and `transactionsEnabled=false`. Passing Solana verification does not establish
-a Solana Mainnet deployment.
+The public repository and live Pages `config.json` target Solana Mainnet using `protocol=tiny`,
+`programId=3CHqrdJzwWQj1QikCzpjBhC8iQ3paaMtD1x9kwoW1rku` and `transactionsEnabled=true`.
+This supersedes the historical `programId=null` / `transactionsEnabled=false` build-only checkpoint.
+The program deployment/provenance was separately recorded in the October 2026 work; a configured
+program identity and offline simulation do not by themselves certify successful real-wallet buys,
+sells, or all mobile wallet paths. Continue independent on-chain checks and wallet acceptance;
+never treat a simulation as a completed Mainnet transaction.
 
 Current-status note: the documents listed above are historical verification checkpoints and must be read at the commit and date they recorded.
 ## Read-only Base production verification

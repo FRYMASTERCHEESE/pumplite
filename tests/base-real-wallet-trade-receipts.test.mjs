@@ -71,6 +71,37 @@ test('real Base SELL proof requires wallet token transfer into official market',
   assert.equal(proof.input,'500');
 });
 
+test('real Base BUY proof rejects ETH amount mismatch and impossible slippage',()=>{
+  const wrongValue=fixture('buy',{transaction:{value:101n}});
+  assert.throws(()=>verifyReceiptTrade(wrongValue),/Signed buy ETH value/);
+  const wrongMinimum=fixture('buy',{transaction:{
+    data:marketInterface.encodeFunctionData('buy',[501n,100000000n])
+  }});
+  assert.throws(()=>verifyReceiptTrade(wrongMinimum),/minimum output exceeds executed/);
+});
+
+test('real Base SELL proof rejects wrong token amount and native payment',()=>{
+  const wrongInput=fixture('sell',{transaction:{
+    data:marketInterface.encodeFunctionData('sell',[501n,1n,100000000n])
+  }});
+  assert.throws(()=>verifyReceiptTrade(wrongInput),/Signed sell token input/);
+  const wrongValue=fixture('sell',{transaction:{value:1n}});
+  assert.throws(()=>verifyReceiptTrade(wrongValue),/Sell transaction must not send ETH/);
+});
+
+test('wallet receipts reject absent slippage protection and invalid deadlines',()=>{
+  for(const side of ['buy','sell']){
+    const zeroMinimum=fixture(side,{transaction:{
+      data:marketInterface.encodeFunctionData(side,side==='buy'?[0n,100000000n]:[500n,0n,100000000n])
+    }});
+    assert.throws(()=>verifyReceiptTrade(zeroMinimum),/minimum output must be positive/);
+    const zeroDeadline=fixture(side,{transaction:{
+      data:marketInterface.encodeFunctionData(side,side==='buy'?[1n,0n]:[500n,1n,0n])
+    }});
+    assert.throws(()=>verifyReceiptTrade(zeroDeadline),/deadline must be positive/);
+  }
+});
+
 test('failed receipts, spoofed wallets, wrong chains and unrelated markets fail closed',()=>{
   assert.throws(()=>verifyReceiptTrade(fixture('buy',{receipt:{status:0}})),/did not succeed/);
   assert.throws(()=>verifyReceiptTrade(fixture('buy',{transaction:{chainId:1n}})),/not on Base/);
