@@ -338,6 +338,7 @@
           <label for="image-uri">Published image URI</label><input id="image-uri" placeholder="ipfs://… or https://…" maxlength="500">
           <button id="download-metadata" type="button" class="outline full">Copy metadata JSON</button>
           <p class="fine">Mobile wallet browsers often block file downloads. This button copies the complete metadata JSON instead. You can paste it into a file later if you need the manual backup.</p></details>
+          <p class="fine" id="launch-liquidity-disclosure"><strong>Real liquidity (opt-in only):</strong> On Base you may choose an optional first ETH buy, approved separately in your wallet, to back your new coin's PumpLite curve. On Solana Classic the new coin is created without a first buy; buy from its market later if you want real SOL backing. PLITE's separate Uniswap V2 PLITE/WETH pool is not funded by coin creation fees. <a href="./liquidity.html">Review both transparent liquidity routes →</a></p>
           <p id="creation-review" class="fine">Check the name, ticker and metadata first. PumpLite charges 0% to create; Base network gas still applies. If PumpLite does not yet have wallet access, tapping Create coin will request access to the same wallet you are using.</p>
           <button id="create" class="primary" type="submit" disabled>Create coin</button>
           <p id="create-action-status" class="fine" role="status" aria-live="polite">Auto setup is on: enter your coin name and ticker, choose an image, then tap Create coin. Approve the metadata message and final transaction in your wallet. No funds move without wallet approval.</p>
@@ -528,6 +529,7 @@
           <p id="plite-dex-live-status" class="fine">Live Uniswap V2 reserve data has not been loaded yet.</p>
           <p class="fine">This external PLITE/WETH pool is separate from the PumpLite bonding curve. Its reserves, swaps, fees and DEX price can change independently and are not included in PumpLite curve backing or curve volume.</p>
           <div class="links">
+            <a href="./liquidity.html">Plan an optional liquidity contribution</a>
             <a href="https://app.uniswap.org/explore/pools/base/0xDAD81f9f5DbF71Ce54D63f96eE45231D97d6B086" target="_blank" rel="noopener noreferrer">Open Uniswap pool</a>
             <a href="https://basescan.org/address/0xDAD81f9f5DbF71Ce54D63f96eE45231D97d6B086" target="_blank" rel="noopener noreferrer">View LP contract on BaseScan</a>
           </div>
