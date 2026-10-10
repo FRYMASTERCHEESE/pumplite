@@ -110,8 +110,10 @@ export async function verifyRedesignBrowser(browser, base) {
     await page.locator('#name').fill('Safe Fixture Coin');
     await page.locator('#symbol').fill('SAFE');
     await page.locator('#create-form').evaluate(form=>form.requestSubmit());
-    await page.waitForTimeout(300);
-    assert.match(await page.locator('#create-action-status').textContent(),
+    await page.waitForFunction(
+      () => document.querySelector('#status-text')?.textContent?.includes('Auto setup needs a token image')
+    );
+    assert.match(await page.locator('#status-text').textContent(),
       /Auto setup needs a token image/,
       'Auto setup blocks missing images without requesting wallet approval at '+width);
     assert.equal(await page.locator('#initial-buy-dialog').isVisible(),false,
