@@ -1522,6 +1522,7 @@ async function probeClaimRpc(
 
 async function runClaimChecks() {
   let lastError;
+  let assertionError;
 
   for (
     const rpcUrl of rpcUrls()
@@ -1584,6 +1585,9 @@ async function runClaimChecks() {
     } catch (error) {
       lastError =
         error;
+      if (error?.code === 'ERR_ASSERTION') {
+        assertionError ??= error;
+      }
 
       console.warn(
         'Claim hardening attempt failed through ' +
@@ -1602,8 +1606,8 @@ async function runClaimChecks() {
 
   // A genuine proof mismatch must stay a failing assertion, not an RPC outage.
   // External RPC errors must not disclose a credential-bearing archive URL.
-  if (lastError?.code === 'ERR_ASSERTION') {
-    throw lastError;
+  if (assertionError) {
+    throw assertionError;
   }
   throw Error(
     'Historical Base claim verification BLOCKED: no configured RPC ' +
