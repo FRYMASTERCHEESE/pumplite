@@ -273,8 +273,8 @@
     {icon:'▤',label:'My coins',detail:'See your created token collection',run:()=>location.assign('./creator-tokens.html')},
     {icon:'◉',label:'Market callouts',detail:'View real on-chain token updates',run:()=>{home();setFeedTab('latest');}},
     {icon:'◈',label:'Live markets',detail:'Browse the live market feed',run:explore},
-    {icon:'♧',label:'Post bounty',detail:'Unavailable — no bounty payment/escrow backend',disabled:true},
-    {icon:'◉',label:'Go live video',detail:'Unavailable — no broadcast infrastructure',disabled:true}
+    {icon:'♧',label:'SOL / ETH bounties',detail:'Prepare drafts; funding not enabled yet',run:()=>location.assign('./bounties.html')},
+    {icon:'◉',label:'Go live video',detail:'Real Cloudflare WebRTC broadcasts (Stream account required)',run:()=>location.assign('./live.html')}
   ];
   const moreActions = () => [
     {icon:'♕',label:'Leaderboard',detail:'Sort on-chain markets by curve cap',run:()=>{explore();sortButtons.find(b=>b.dataset.appSort==='market-cap')?.click();}},
@@ -286,7 +286,8 @@
     {icon:'PL',label:'PLITE',detail:'View the PLITE Base market',run:()=>{location.hash='base/0xa522A4Ef81fD31daec390ab46A32D4886e1461C7';}},
     {icon:'⚙',label:'Support & safety',detail:'Wallet help and risk warnings',run:help},
     {icon:'◎',label:'Profile / My coins',detail:'Your created tokens',run:()=>location.assign('./creator-tokens.html')},
-    {icon:'⊕',label:'Post bounty',detail:'Unavailable until payments backend exists',disabled:true}
+    {icon:'♧',label:'SOL / ETH bounties',detail:'Prepare honest unfunded bounty drafts',run:()=>location.assign('./bounties.html')},
+    {icon:'◉',label:'Go live video',detail:'WebRTC camera broadcast and viewer',run:()=>location.assign('./live.html')}
   ];
   const walletActions = () => [
     {icon:'◎',label:'Connect wallet',detail:'Approve in Phantom or an EVM wallet',run:()=>panel('connect')},

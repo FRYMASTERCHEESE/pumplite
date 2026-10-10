@@ -67,8 +67,10 @@ export async function verifyRedesignBrowser(browser, base) {
       await page.locator('.bottom-nav [data-page="create"]').click();
       assert.equal(await page.locator('#app-action-sheet').isVisible(),true);
       assert.equal(await page.locator('#app-sheet-items button').filter({hasText:'Create coin'}).count(),1);
-      assert.equal(await page.locator('#app-sheet-items button').filter({hasText:'Post bounty'}).isDisabled(),true,
-        'no fake bounty creation without payment backend');
+      assert.equal(await page.locator('#app-sheet-items button').filter({hasText:'SOL / ETH bounties'}).count(),1,
+        'bounty authoring navigation is available');
+      assert.equal(await page.locator('#app-sheet-items button').filter({hasText:'Go live video'}).count(),1,
+        'real WHIP/WHEP page is linked');
       await page.locator('#app-sheet-close').click();
       await page.locator('.bottom-nav [data-page="help"]').click();
       assert.equal(await page.locator('#app-action-sheet').isVisible(),true);

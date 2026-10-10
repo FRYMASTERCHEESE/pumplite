@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><title>PumpLite Bounties · SOL and Base ETH</title><meta name="description" content="Prepare transparent Solana SOL and Base ETH bounty proposals. Real funding and escrow require the separately verified payout backend."><link rel="stylesheet" href="./community.css"></head>
+<body><header><a href="./">← PumpLite</a><strong>Bounties</strong><span class="tag">SOL + BASE ETH</span></header>
+<main><h1>Community bounties</h1><p class="intro">Create bounty proposals in SOL on Solana or ETH on Base. Review the rules and rewards before any real funding.</p>
+<div class="warning"><strong>Funding is NOT active.</strong> These are private draft proposals saved to this browser, not publicly posted or escrowed. No money will be collected, transferred or promised by PumpLite until audited payment contracts, verified funding and dispute/payout controls exist. Do not transfer coins to an address given by strangers.</div>
+<section class="card"><h2>Prepare a bounty</h2><form id="bounty-form" class="stack">
+<div class="cols"><label>Reward network<select id="bounty-network" required><option value="solana">Solana Mainnet — SOL</option><option value="base">Base Mainnet — ETH</option></select></label><label>Reward amount<input id="bounty-amount" type="text" inputmode="decimal" maxlength="24" placeholder="0.10" autocomplete="off" required><small id="bounty-asset">SOL reward amount</small></label></div>
+<label>Title<input id="bounty-title" maxlength="90" minlength="5" placeholder="Example: Design an original PumpLite icon" required></label>
+<label>Description and acceptance criteria<textarea id="bounty-description" minlength="25" maxlength="2500" placeholder="What must someone submit? What evidence is required? How will the winner be selected?" required></textarea></label>
+<label>Submission deadline (UTC)<input id="bounty-deadline" type="date" required></label>
+<div class="row"><button type="submit">Save private draft</button><button id="bounty-export" class="secondary" type="button">Copy drafts as JSON</button></div>
+<p class="muted">Your browser stores draft text only. Saving doesn't publish a bounty, connect a wallet or request a signature.</p><p id="bounty-status" role="status" aria-live="polite" class="status"></p></form></section>
+<section class="card"><h2>My draft bounties <span id="bounty-count">0</span></h2><div id="bounty-list" class="stack"><p class="muted">No drafts yet.</p></div></section>
+<section class="card"><h2>What is needed to make rewards payable?</h2><p class="muted">A dedicated authenticated PumpLite backend, separate audited Solana and Base escrow/funding programs, chain-specific deposit verification, immutable selection rules, independent review and a dispute/refund workflow. A draft is not evidence of money held. Those production integrations are not connected.</p></section>
+</main><script defer src="./bounties.js"></script></body></html>

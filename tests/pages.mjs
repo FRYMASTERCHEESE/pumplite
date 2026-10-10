@@ -1,4 +1,5 @@
 import {verifyRedesignBrowser} from './ui-redesign-browser.mjs';
+import {verifyCommunityBrowser} from './community-browser.mjs';
 import {verifySolanaRentBrowser} from './solana-rent-browser.mjs';
 import { verifyBrowser } from './verified-browser.mjs';
 import assert from 'node:assert/strict';
@@ -19,6 +20,11 @@ try {
     'launchpad-terminal.js',
     'pumplite-app.css',
     'pumplite-app.js',
+    'bounties.html',
+    'bounties.js',
+    'live.html',
+    'live.js',
+    'community.css',
     'claim.html',
     'plsol.html',
     'plsol.js',
@@ -81,6 +87,9 @@ try {
     'launchpad-terminal.js',
     'pumplite-app.css',
     'pumplite-app.js',
+    'bounties.js',
+    'live.js',
+    'community.css',
     'status.js',
     'manifest.webmanifest',
     'robots.txt',
@@ -190,6 +199,7 @@ try {
   }
   await verifyBrowser(browser,base);
   await verifyRedesignBrowser(browser,base);
+  await verifyCommunityBrowser(browser,base);
   await verifySolanaRentBrowser(browser, base);
 
   // V3 injected-wallet boot does not race wallet discovery.

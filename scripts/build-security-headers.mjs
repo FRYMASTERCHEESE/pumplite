@@ -1,7 +1,10 @@
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { securityHeaders } from './security-headers.mjs';
 const headers = securityHeaders(await readFile('index.html','utf8'));
-const files = { '_headers': '/*\n' + Object.entries(headers).map(([k,v])=>'  '+k+': '+v).join('\n')+'\n',
+const liveScope = '\n/live.html\n' +
+  "  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; media-src 'self' blob:; connect-src 'self' https://*.cloudflarestream.com; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'\n" +
+  '  Permissions-Policy: camera=(self), microphone=(self), geolocation=(), payment=()\n';
+const files = { '_headers': '/*\n' + Object.entries(headers).map(([k,v])=>'  '+k+': '+v).join('\n')+'\n'+liveScope,
   'ops/security-headers.conf': '# Include in the HTTPS static-site server block. No RPC/signing proxy.\n'+Object.entries(headers).map(([k,v])=>'add_header '+k+' "'+v+'" always;').join('\n')+'\n' };
 if (process.argv.includes('--check')) {
   for(const [path,text] of Object.entries(files)) if((await readFile(path,'utf8')).replace(/\r\n/g,'\n')!==text)throw Error('Stale security headers: '+path);
