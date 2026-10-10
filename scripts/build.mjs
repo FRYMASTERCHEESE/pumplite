@@ -130,6 +130,12 @@ if (terminalBytes > 6_000 || initial + terminalBytes > 70_000) {
   throw Error('Trading terminal stylesheet/scripts exceed the extra 6 KB or combined 70 KB gzip budget');
 }
 console.log('Trading shortcuts extra:', terminalBytes, 'bytes gzip; combined initial:', initial + terminalBytes);
+const appShellBytes = gzipSync(await readFile('pumplite-app.css')).length +
+  gzipSync(await readFile('pumplite-app.js')).length;
+if (appShellBytes > 10_000 || initial + terminalBytes + appShellBytes > 82_000) {
+  throw Error('PumpLite mobile app shell exceeds 10 KB extra or 82 KB total compressed budget');
+}
+console.log('Mobile app shell extra:',appShellBytes,'bytes gzip; total:', initial + terminalBytes + appShellBytes);
 async function list(path) {
   const entries = await readdir(path, { withFileTypes: true });
   return (await Promise.all(entries.map(e => e.isDirectory() ? list(resolve(path, e.name)) : resolve(path, e.name)))).flat();
@@ -152,6 +158,8 @@ if (checkOnly) {
     'index.html',
     'launchpad-terminal.css',
     'launchpad-terminal.js',
+    'pumplite-app.css',
+    'pumplite-app.js',
     'plsol.html',
     'creator-tokens.html',
     'claim.html',
