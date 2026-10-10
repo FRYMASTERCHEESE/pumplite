@@ -149,7 +149,7 @@ the verified Uniswap V2 PLITE/WETH pair directly from Base for reserves and rese
 chain reads, not a custodial market-data backend or a guaranteed oracle. Wallet-authorized token image/JSON publishing
 is available through the configured metadata/IPFS service.
 
-Solana name/symbol/URI are stored immutably in the market account. Metaplex wallet metadata is **not published yet**.
+Solana PumpLite market accounts store their own immutable name/symbol/URI. Separately, the official PLSOL mint `EUKhN8eP97NjRHzxwRT5pdgLg7BX5KRTBhJYa2hMu9ma` already has on-chain Metaplex Token Metadata (name `PumpLite Solana`, symbol `PLSOL`, URI `ipfs://bafkreif43vkuy2xgkcilgzm63nc3hqo6nlvvppgzyr4almygxue6zimkle`) whose JSON contains the description and image CID `bafybeif536vvjrwpbyvtxwx432kyqxagji2tafmeetev57e5x2rckjyd5e`. This Metaplex metadata is marked **immutable**: its URI and fields cannot be updated, even by the nominal update authority. Mint/freeze authorities are absent. This wallet metadata does not independently provide a tracked DEX price, liquidity or Phantom verification; Phantom may show a blank price chart while DEX indexing is absent.
 Base tokens expose standard ERC-20 names/symbols; optional metadata URI remains on the market.
 Metadata URLs are not fetched automatically, avoiding untrusted downloads and mobile data use.
 Base mobile handoff links are available for Phantom, Coinbase Wallet and MetaMask, with injected EVM-provider discovery inside compatible wallet browsers. WalletConnect is not implemented.
