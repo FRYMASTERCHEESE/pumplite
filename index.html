@@ -329,6 +329,7 @@
           <label for="discord">Discord</label><input id="discord" type="url" placeholder="https://discord.gg/yourproject" maxlength="256" autocomplete="off">
           </fieldset>
           <fieldset><legend><span>04</span> Publish, review, create</legend>
+          <label class="auto-create-option" for="auto-prepare-metadata"><input type="checkbox" id="auto-prepare-metadata" checked> <span><strong>Auto setup — one creation flow</strong><small>Tap Create coin once: PumpLite publishes your chosen image and token details to IPFS, then opens the final transaction review. Wallet authorizations and network/account costs are still required.</small></span></label>
           <button id="publish-metadata" type="button" class="outline full" disabled>Publish image + metadata to IPFS</button>
           <p id="metadata-upload-help" class="fine">Wallet-authorized publishing is separate from the paid creation transaction.</p>
           <p id="metadata-publish-status" class="fine" role="status" aria-live="polite">Ready when your image and wallet are connected.</p>
@@ -339,7 +340,7 @@
           <p class="fine">Mobile wallet browsers often block file downloads. This button copies the complete metadata JSON instead. You can paste it into a file later if you need the manual backup.</p></details>
           <p id="creation-review" class="fine">Check the name, ticker and metadata first. PumpLite charges 0% to create; Base network gas still applies. If PumpLite does not yet have wallet access, tapping Create coin will request access to the same wallet you are using.</p>
           <button id="create" class="primary" type="submit" disabled>Create coin</button>
-          <p id="create-action-status" class="fine" role="status" aria-live="polite">Fill the token details, publish metadata, then tap Create coin. No transaction is sent until you approve it in your wallet.</p>
+          <p id="create-action-status" class="fine" role="status" aria-live="polite">Auto setup is on: enter your coin name and ticker, choose an image, then tap Create coin. Approve the metadata message and final transaction in your wallet. No funds move without wallet approval.</p>
           <p class="fine">Creation does not grant Verified status. No audit or investment endorsement is implied.</p>
           </fieldset>
         </form>
