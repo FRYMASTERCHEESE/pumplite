@@ -30,11 +30,18 @@
 <link rel="stylesheet" href="./assets/styles.css">
 <script defer src="./assets/phantom-diagnostic.js"></script>
 <script type="module" src="./assets/app.js?boot=20261010audit1"></script>
+<link rel="stylesheet" href="./launchpad-terminal.css">
+<script defer src="./launchpad-terminal.js"></script>
 </head>
 <body class="redesign">
 <a class="skip-link" id="skip-content" href="#main-content">Skip to main content</a>
 <header>
   <a class="brand" href="#" aria-label="PumpLite home"><span class="mark" aria-hidden="true">→</span> PumpLite<span class="beta">MAINNET</span></a>
+  <nav class="terminal-header-links" aria-label="Trading shortcuts">
+    <a href="./?page=markets" class="terminal-header-link">Explore</a>
+    <a href="./?page=create" class="terminal-header-link terminal-create-link">+ Create coin</a>
+    <a href="./creator-tokens.html" class="terminal-header-link terminal-my-coins">My coins</a>
+  </nav>
   <div class="header-controls">
     <label class="sr-only" for="chain">Network</label>
     <select id="chain"><option value="solana">Solana Mainnet</option><option value="base">Base Mainnet</option></select>
@@ -67,12 +74,18 @@
         <div class="launchpad-hero-copy">
           <p class="live-pill"><span aria-hidden="true"></span> SOLANA + BASE MAINNET</p>
           <p class="eyebrow">PUMPLITE LAUNCHPAD</p>
-          <h1>Your next discovery.<br><em>Starts here.</em></h1>
-          <p class="intro">Discover independent coins. Follow real markets. Create something of your own — on Solana and Base.</p>
+          <h1>Discover coins.<br><em>Trade on-chain.</em></h1>
+          <p class="intro">Live launches, real bonding curves and fast trading on Solana and Base. Choose a coin to buy or sell with your wallet.</p>
+          <form id="terminal-search-form" class="terminal-search-form" role="search" aria-label="Search PumpLite coins">
+            <label class="sr-only" for="terminal-token-query">Find a coin</label>
+            <input id="terminal-token-query" type="search" placeholder="Search name, ticker or market address" autocomplete="off" maxlength="120">
+            <button class="primary" type="submit">Search coins</button>
+          </form>
           <div class="hero-actions">
             <a class="primary compact-action hero-link" href="./plsol.html">Buy PLSOL</a>
             <button id="hero-explore" class="primary compact-action" type="button">Explore coins</button>
-            <button id="hero-create" class="outline compact-action" type="button">Create coin</button>
+            <button id="hero-create" class="outline compact-action" type="button">+ Create coin</button>
+            <a class="outline compact-action terminal-plite-link" href="./#base/0xa522A4Ef81fD31daec390ab46A32D4886e1461C7">Trade PLITE</a>
           </div>
           <p class="fine">PLSOL: Connect Phantom → enter NZD or USD → review the SOL amount → approve. Verify the official mint before buying.</p>
         </div>
@@ -111,8 +124,8 @@
 
       <section class="home-live-launches" aria-labelledby="home-live-title">
         <div class="section-title">
-          <div><p class="eyebrow">LIVE LAUNCHES</p><h2 id="home-live-title">Newest on PumpLite</h2></div>
-          <button id="home-refresh-live" class="outline" type="button">Refresh live</button>
+          <div><p class="eyebrow">LIVE LAUNCHES</p><h2 id="home-live-title">Fresh coins <span class="terminal-heading-dot" aria-hidden="true">●</span></h2></div>
+          <div class="terminal-section-actions"><a class="outline" href="./?page=markets">View all markets →</a><button id="home-refresh-live" class="outline" type="button">↻ Refresh</button></div>
         </div>
         <p id="home-live-status" class="fine" role="status">Reading real markets for the selected network. No fake prices, volume or holder counts.</p>
         <div id="home-markets" class="market-list home-market-grid"><p class="empty">Loading the newest Base markets...</p></div>
@@ -337,7 +350,7 @@
   </section>
   <section id="market-page" hidden>
     <a id="back" class="back" href="#">← All markets</a>
-    <div class="section-title market-heading"><div><p class="eyebrow" id="market-symbol">TOKEN MARKET</p><h1 id="market-name">Loading market…</h1></div><button id="refresh-market" class="outline">Refresh market</button></div>
+    <div class="section-title market-heading"><div><p class="eyebrow" id="market-symbol">TOKEN MARKET</p><h1 id="market-name">Loading market…</h1></div><div class="terminal-market-actions" aria-label="Trade this coin"><button type="button" class="terminal-buy" data-trade-jump="buy">Buy</button><button type="button" class="terminal-sell" data-trade-jump="sell">Sell</button><button id="refresh-market" class="outline" type="button">↻ Refresh</button></div></div>
     <div id="market-badges" class="badges"></div>
     <p id="market-source" class="muted"></p>
       <p id="market-metadata" class="fine"></p>
@@ -718,7 +731,7 @@
 </main>
 <nav class="bottom-nav" aria-label="Primary navigation">
   <button type="button" data-page="home" aria-current="page"><span aria-hidden="true">⌂</span>Home</button>
-  <button type="button" data-page="markets"><span aria-hidden="true">◎</span>Explore</button>
+  <button type="button" data-page="markets"><span aria-hidden="true">◎</span>Trade</button>
   <button type="button" data-page="create" class="nav-create"><span aria-hidden="true">＋</span>Create</button>
   <button type="button" data-page="portfolio"><span aria-hidden="true">▣</span>Portfolio</button>
   <button type="button" data-page="help"><span aria-hidden="true">•••</span>More</button>
