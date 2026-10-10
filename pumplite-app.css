@@ -1,0 +1,119 @@
+/* PumpLite native-feeling mobile shell, inspired by current trading-app interaction patterns.
+   No invented balances, social posts, charts, market prices or bounty payouts. */
+.app-header-tools,.app-home-feed,.app-explore-intro,.app-coin-table-head,.app-rewards-hub,.app-popover-layer{display:none}
+.app-popover-layer[hidden]{display:none!important}
+#app-action-sheet button,#app-sheet-close{cursor:pointer}
+@media(max-width:740px){
+ :root{color-scheme:dark}
+ body.redesign{--green:#83efaf;--panel:#0d0e10;--line:#252628;--muted:#94969e;background:#09090b;color:#f2f2f5;padding-bottom:120px}
+ .redesign header{position:sticky;top:0;z-index:35;display:flex;align-items:center;gap:9px;min-height:76px;padding:8px 15px;border-color:#29292b;background:#0b0b0deF;box-shadow:none}
+ .redesign header .brand{font-size:0;display:flex;flex:0 0 auto;width:41px;min-width:41px;margin-right:auto;overflow:hidden;white-space:nowrap}
+ .redesign header .brand .mark{font-size:23px;display:grid;place-items:center;width:36px;height:36px;padding:0;border:1px solid #428e70;border-radius:22px;background:linear-gradient(145deg,#d1fff3,#63dfaa);box-shadow:0 2px 12px #38ff9c22;color:#0b1912;transform:rotate(-35deg)}
+ .redesign header .brand .beta{display:none}
+ .redesign #app-header-tools{display:flex;gap:7px;align-items:center;order:1;width:auto;flex:0 1 auto;margin:0}
+ .app-header-tools>button,.app-header-tools>a{display:grid;place-items:center;flex:0 0 auto;height:40px;min-height:40px;min-width:36px;margin:0;padding:6px;color:#d0d0d5;background:transparent;border:0;border-radius:9px;text-decoration:none}
+ .app-header-tools svg{width:23px;height:23px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+ .redesign #app-wallet-chip{min-width:82px;border:1px solid #36383c;border-radius:10px;background:#17171a;padding:0 10px;color:#f1f1f2;font-size:12px;font-weight:800;white-space:nowrap}
+ .redesign #app-profile{width:39px;height:39px;min-width:39px;border:2px solid #3c5347;border-radius:50%;background:linear-gradient(135deg,#315e43,#95f0a9);color:#0b190e;font-weight:900;font-size:12px}
+ .redesign header .terminal-header-links,.redesign header .header-controls{display:none}
+ .redesign main{padding:0 14px;max-width:720px;margin:auto}
+ .redesign #phantom-diagnostics{padding:5px 9px;margin:5px 0;border:1px solid #24292a;background:#101414;font-size:10px;line-height:1.3}
+ .redesign #phantom-diagnostics p{display:none}
+ .redesign #deployment{margin:4px 0 6px;padding:7px 10px;border:1px solid #28342e;background:#111614;font-size:10px;line-height:1.35}
+ .redesign #home{min-width:0}
+ .redesign .home-page-tabs{display:none}
+ .redesign .home-dashboard{display:block;min-width:0}
+ .redesign #home-overview[hidden]{display:none!important}
+ .redesign .home-dashboard>.launchpad-hero,.redesign .home-dashboard>.platform-live-stats,.redesign .home-dashboard>.home-live-launches{display:none}
+ .redesign .app-home-feed{display:block;min-height:calc(100vh - 250px);padding-bottom:18px}
+ .redesign .app-feed-tabs{display:flex;align-items:center;gap:20px;overflow-x:auto;white-space:nowrap;scrollbar-width:none;border-bottom:1px solid #202124;padding:17px 3px 15px;margin-bottom:14px}
+ .app-feed-tabs::-webkit-scrollbar{display:none}
+ .redesign .app-feed-tabs button{padding:8px 0;margin:0;border:0;border-radius:0;background:transparent;color:#9898a0;font-size:23px;font-weight:780;line-height:1.2;white-space:nowrap}
+ .redesign .app-feed-tabs button.is-active{color:#f4f4f7}
+ .redesign .app-feed-network{margin-left:auto;font-size:10px;color:#8edcaf;border:1px solid #27563e;border-radius:8px;padding:5px 7px}
+ .redesign .app-feed-content{display:grid;gap:0;min-height:170px}
+ .redesign .app-feed-loading,.redesign .app-feed-empty{font-size:13px;line-height:1.6;color:#9d9da5;padding:25px 12px;background:#141416;border:1px solid #26272a;border-radius:12px}
+ .redesign .app-market-update{display:grid;grid-template-columns:48px minmax(0,1fr);gap:12px;padding:17px 6px 20px;border-bottom:1px solid #27272a}
+ .redesign .app-feed-avatar{display:grid;place-items:center;width:45px;height:45px;border-radius:50%;border:1px solid #32543d;background:#182c20;color:#9df4af;font-size:13px;font-weight:850}
+ .redesign .app-feed-body{min-width:0}
+ .redesign .app-feed-line{display:flex;align-items:center;flex-wrap:wrap;gap:8px;color:#ededf0;font-size:14px}
+ .redesign .app-feed-line strong{font-weight:800}
+ .redesign .app-feed-line small{font-size:11px;color:#8b8b93}
+ .redesign .app-feed-body p{margin:8px 0 13px;line-height:1.55;font-size:14px;color:#d5d5d9}
+ .redesign .app-feed-market{display:flex;align-items:center;gap:12px;padding:14px;border-radius:12px;border:1px solid #323338;background:#151518;color:#ececf0;text-decoration:none;overflow-wrap:anywhere}
+ .redesign .app-feed-market span:first-child{display:grid;place-items:center;flex:0 0 36px;width:36px;height:36px;background:#203126;border-radius:9px;color:#9ff5b7;font-weight:900}
+ .redesign .app-feed-market b{display:block;font-size:13px}
+ .redesign .app-feed-market small{display:block;color:#9b9da3;font-size:11px;margin-top:5px}
+ .redesign .app-feed-market .app-feed-arrow{margin-left:auto;color:#8af1ac;flex:0 0 auto}
+ .redesign .app-feed-disclosure{color:#8d9198;font-size:10px;line-height:1.5;margin:12px 4px}
+ .redesign #explore-section{border:0;border-radius:0;background:transparent;padding:8px 0 36px;box-shadow:none}
+ .redesign .app-explore-intro,.redesign .app-coin-table-head{display:block}
+ .redesign .app-explore-intro h1{font-size:30px;line-height:1.2;letter-spacing:-.7px;font-weight:780;margin:17px 0 22px;color:#f1f1f2}
+ .redesign .app-coin-filters{display:flex;align-items:center;overflow-x:auto;gap:5px;scrollbar-width:none;white-space:nowrap;padding:4px;border-radius:12px;background:#141416;border:1px solid #29292d;margin-bottom:22px}
+ .redesign .app-coin-filters button{font-size:13px;font-weight:750;min-height:42px;min-width:65px;width:auto;padding:8px 14px;border:0;border-radius:9px;background:transparent;color:#a7a7ae}
+ .redesign .app-coin-filters button.is-active{background:#85ebb1;color:#062014}
+ .redesign #explore-section>.section-title{display:flex;justify-content:flex-end;margin:0 0 3px}
+ .redesign #explore-section>.section-title>div{display:none}
+ .redesign #explore-section>.section-title>#refresh{min-height:35px;padding:6px 11px;font-size:11px;border-radius:7px}
+ .redesign #explore-section>.muted{display:none}
+ .redesign #explore-section>.market-toolbar{margin:4px 0 10px;display:flex;gap:8px}
+ .redesign #explore-section>.market-toolbar .market-search-label{flex:1;min-width:0;font-size:11px}
+ .redesign #explore-section>.market-toolbar .market-sort-label{flex:0 0 115px;font-size:11px}
+ .redesign #explore-section>.market-toolbar input,.redesign #explore-section>.market-toolbar select{margin:4px 0 0;border-radius:8px;min-height:42px;font-size:12px}
+ .redesign #explore-section>.fine,.redesign #explore-section>.market-filter-row,.redesign #verification-list-status{font-size:10px}
+ .redesign .app-coin-table-head{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(64px,.6fr) minmax(95px,.8fr);align-items:center;gap:6px;background:#141416;border:1px solid #29292d;border-radius:9px 9px 0 0;padding:12px 9px;color:#b5b6bd;font-size:10px;font-weight:900;letter-spacing:.8px}
+ .redesign .app-coin-table-head span:last-child{text-align:right}
+ .redesign #markets{display:grid;grid-template-columns:1fr;gap:0}
+ .redesign #markets .token-market-card{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(64px,.6fr) minmax(95px,.8fr);align-items:center;gap:6px;min-width:0;padding:15px 7px;min-height:89px;border:0;border-bottom:1px solid #2b2b2f;border-radius:0;background:transparent;color:#f1f1f4}
+ .redesign #markets .token-market-card::before{content:"View ↗";display:block;grid-column:2;grid-row:1;color:#7fe2a1;font-size:11px;text-align:center}
+ .redesign #markets .token-market-card::after{display:none}
+ .redesign #markets .token-market-card .token-card-head{grid-column:1;grid-row:1;display:flex;align-items:center;gap:8px;min-width:0}
+ .redesign #markets .token-market-card .token-avatar{width:43px;height:43px;min-width:43px;border-radius:50%;font-size:12px}
+ .redesign #markets .token-market-card .token-card-identity{overflow:hidden}
+ .redesign #markets .token-market-card .token-card-identity b{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .redesign #markets .token-market-card .token-card-identity .ticker{font-size:11px;color:#8b8c93;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .redesign #markets .token-market-card .token-age{display:none}
+ .redesign #markets .token-market-card .token-card-chips,.redesign #markets .token-market-card .token-card-progress,.redesign #markets .token-market-card .token-card-source{display:none}
+ .redesign #markets .token-market-card .token-card-metrics{grid-column:3;grid-row:1;min-width:0;display:block;text-align:right}
+ .redesign #markets .token-market-card .token-card-metrics span{display:none}
+ .redesign #markets .token-market-card .token-card-metrics span:nth-child(2){display:block;min-width:0}
+ .redesign #markets .token-market-card .token-card-metrics strong{font-size:12px;font-weight:800;overflow-wrap:anywhere;color:#dcece0}
+ .redesign #markets .token-market-card .token-card-metrics small{display:none}
+ .redesign #explore-section .trending-panel{border-radius:9px;font-size:12px}
+ .redesign #explore-section .trending-panel>p{font-size:11px}
+ .redesign #portfolio-section{padding:16px 12px}
+ .redesign .app-rewards-hub{display:block;padding:8px 0 24px}
+ .redesign .app-rewards-hub h1{font-size:30px;letter-spacing:-.7px;margin:8px 0}
+ .redesign .app-rewards-hub p{font-size:13px;color:#abadb2}
+ .redesign .app-reward-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+ .redesign .app-reward-actions a{display:inline-flex;align-items:center;justify-content:center;min-height:45px;padding:11px 14px;border-radius:9px;font-size:12px;font-weight:750;text-decoration:none}
+ .redesign .bottom-nav{position:fixed;bottom:0;left:0;transform:none;width:100%;max-width:none;min-height:72px;display:flex;justify-content:space-evenly;align-items:flex-start;gap:4px;padding:12px 10px max(12px,env(safe-area-inset-bottom));border:0;border-top:1px solid #323236;border-radius:0;background:#111113f7;box-shadow:0 -6px 25px #0007;z-index:48}
+ .redesign .bottom-nav button{display:flex;flex-direction:column;gap:5px;align-items:center;justify-content:center;min-height:49px;min-width:0;padding:4px 0;background:transparent;border:0;border-radius:6px;color:#d2d2d7}
+ .redesign .bottom-nav button[aria-current=page]{background:transparent;color:#8ae8af}
+ .redesign .bottom-nav button svg{width:29px;height:29px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+ .redesign .bottom-nav button[data-page=create] svg{width:34px;height:34px}
+ .redesign .bottom-nav button span{font-size:10px;line-height:1.1;color:inherit}
+ .redesign .bottom-nav button .nav-create span{background:transparent}
+ .redesign .app-popover-layer:not([hidden]){display:block;position:fixed;inset:0;z-index:59;pointer-events:none}
+ .redesign .app-popover-backdrop{position:absolute;top:0;left:0;right:0;bottom:72px;background:#0009;pointer-events:auto}
+ .redesign .app-action-sheet{position:absolute;pointer-events:auto;left:50%;bottom:82px;transform:translateX(-50%);width:min(395px,calc(100vw - 26px));max-height:min(64vh,620px);overflow-y:auto;padding:14px;border:1px solid #35383a;border-radius:16px;background:linear-gradient(160deg,#242528,#131618 70%,#183525);box-shadow:0 20px 58px #000b;outline:none}
+ .redesign .app-sheet-title{display:flex;align-items:center;justify-content:space-between;margin:0 0 8px;padding:0 5px}
+ .redesign .app-sheet-title strong{font-size:16px}
+ .redesign #app-sheet-close{min-height:35px;padding:5px 9px;background:#303236;border:0;border-radius:8px;color:#eee}
+ .redesign .app-sheet-items{display:grid;gap:2px}
+ .redesign .app-sheet-items button,.redesign .app-sheet-items a{display:flex;align-items:center;gap:14px;width:100%;min-height:55px;padding:9px 12px;margin:0;text-align:left;background:transparent;border:0;border-radius:8px;color:#ededf0;font-size:15px;font-weight:600;text-decoration:none}
+ .redesign .app-sheet-items button:hover,.redesign .app-sheet-items button:focus-visible,.redesign .app-sheet-items a:hover{background:#324b3d}
+ .redesign .app-sheet-items .app-sheet-icon{font-size:23px;flex:0 0 29px;width:29px;text-align:center;color:#b2e9c0}
+ .redesign .app-sheet-items small{display:block;margin-top:3px;color:#aab1aa;font-size:10px;font-weight:400}
+ .redesign .app-sheet-items button:disabled{opacity:.5;cursor:not-allowed}
+ .redesign #market-page{padding-top:12px}
+ .redesign .terminal-market-actions{position:sticky;top:66px;background:#0b0c0eea;z-index:20;padding:9px 0}
+ .redesign .terminal-market-actions button{min-height:43px}
+ .redesign footer{padding-bottom:110px}
+}
+@media(max-width:400px){
+ .app-header-tools{gap:2px!important}
+ .redesign #app-wallet-chip{min-width:72px;padding:0 6px;font-size:11px}
+ .redesign .app-feed-tabs{gap:15px}
+ .redesign .app-feed-tabs button{font-size:21px}
+}

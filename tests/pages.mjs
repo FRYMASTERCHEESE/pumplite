@@ -17,6 +17,8 @@ try {
     'index.html',
     'launchpad-terminal.css',
     'launchpad-terminal.js',
+    'pumplite-app.css',
+    'pumplite-app.js',
     'claim.html',
     'plsol.html',
     'plsol.js',
@@ -77,6 +79,8 @@ try {
   for (const publicPath of [
     'launchpad-terminal.css',
     'launchpad-terminal.js',
+    'pumplite-app.css',
+    'pumplite-app.js',
     'status.js',
     'manifest.webmanifest',
     'robots.txt',
@@ -291,7 +295,8 @@ try {
   const broken = await browser.newPage({ viewport: { width: 390, height: 844 } });
   await broken.route('**/assets/app.js*', route => route.abort());
   await broken.goto(base);
-  await broken.locator('#connect').click();
+  await broken.locator('#app-wallet-chip').click();
+   await broken.locator('#app-sheet-items button').filter({hasText:'Connect wallet'}).click();
   assert.match(await broken.locator('#phantom-tap').textContent(), /Tap received.*not ready/);
   const box = await broken.locator('#phantom-diagnostics').boundingBox();
   assert.ok(box && box.y < 400 && box.y + box.height < 844, 'Diagnostic visible near Connect without scrolling');
@@ -725,7 +730,8 @@ try {
       reason
     );
   }
-  await phantom.locator('#connect').click();
+  await phantom.locator('#app-wallet-chip').click();
+   await phantom.locator('#app-sheet-items button').filter({hasText:'Connect wallet'}).click();
   await phantom.waitForFunction(() => document.querySelector('#connect').textContent === 'Approve in Phantom');
   assert.match(
     await phantom
@@ -734,7 +740,8 @@ try {
     /phantom\.solana: present[\s\S]*Phantom ready/i,
     'Synthetic Phantom provider must be detected before account approval'
   );
-  await phantom.locator('#connect').click();
+  await phantom.locator('#app-wallet-chip').click();
+   await phantom.locator('#app-sheet-items button').filter({hasText:'Connect wallet'}).click();
   await phantom.waitForFunction(
     () => {
       const button =
@@ -1246,6 +1253,9 @@ try {
     assert.equal(await page.evaluate(() => document.activeElement.id), 'main-content');
     assert.equal(await page.locator('#amount').getAttribute('maxlength'), '96');
     await page.locator('#show-create:visible, [data-page=create]:visible').click();
+     if (width <= 740) {
+       await page.locator('#app-sheet-items button').filter({hasText:'Create coin'}).click();
+     }
     assert.equal(await page.locator('#create-section').isVisible(), true);
     await page.locator('#name').fill('Local document');
     await page.locator('#symbol').fill('DOC');
@@ -1261,7 +1271,12 @@ try {
     await page.waitForFunction(() =>
       document.querySelector('#status-text').textContent.includes('Metadata JSON copied to clipboard')
     );
-    await page.selectOption('#chain', 'base');
+    if (width <= 740) {
+       await page.locator('#app-wallet-chip').click();
+       await page.locator('#app-sheet-items button').filter({hasText:'Base Mainnet'}).click();
+     } else {
+       await page.selectOption('#chain', 'base');
+     }
     assert.match(await page.locator('#deployment').textContent(), /Base Mainnet/);
     assert.equal(await page.locator('#create').isDisabled(), false);
     await page.goto(

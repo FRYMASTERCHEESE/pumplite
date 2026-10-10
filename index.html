@@ -32,11 +32,19 @@
 <script type="module" src="./assets/app.js?boot=20261010audit1"></script>
 <link rel="stylesheet" href="./launchpad-terminal.css">
 <script defer src="./launchpad-terminal.js"></script>
+<link rel="stylesheet" href="./pumplite-app.css">
+<script defer src="./pumplite-app.js"></script>
 </head>
 <body class="redesign">
 <a class="skip-link" id="skip-content" href="#main-content">Skip to main content</a>
 <header>
-  <a class="brand" href="#" aria-label="PumpLite home"><span class="mark" aria-hidden="true">→</span> PumpLite<span class="beta">MAINNET</span></a>
+  <a class="brand" href="#" aria-label="PumpLite home"><span class="mark" aria-hidden="true">↗</span> PumpLite<span class="beta">MAINNET</span></a>
+  <nav id="app-header-tools" class="app-header-tools" aria-label="Mobile quick actions">
+    <button type="button" id="app-search" aria-label="Search coins" title="Search coins"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg></button>
+    <a id="app-claim-shortcut" href="./claim.html?from=mobile" aria-label="PLITE rewards" title="PLITE rewards"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="6" width="14" height="15" rx="2"/><path d="M9 6V4h6v2M9 11h6m-3-3v6"/></svg></a>
+    <button type="button" id="app-wallet-chip" aria-label="Connect wallet">Connect ▾</button>
+    <button type="button" id="app-profile" class="app-avatar" aria-label="Portfolio and profile">PL</button>
+  </nav>
   <nav class="terminal-header-links" aria-label="Trading shortcuts">
     <a href="./?page=markets" class="terminal-header-link">Explore</a>
     <a href="./?page=create" class="terminal-header-link terminal-create-link">+ Create coin</a>
@@ -71,6 +79,18 @@
       <button type="button" id="show-help" class="outline" aria-pressed="false">Help &amp; Safety</button>
     </nav>
     <section id="home-overview" class="home-dashboard" tabindex="-1">
+      <section class="app-home-feed" aria-labelledby="app-feed-title">
+        <h1 id="app-feed-title" class="sr-only">PumpLite coin activity</h1>
+        <nav class="app-feed-tabs" aria-label="Market activity feed">
+          <button type="button" class="is-active" data-app-feed="latest" aria-pressed="true">Callouts</button>
+          <button type="button" data-app-feed="following" aria-pressed="false">Friends</button>
+          <button type="button" data-app-feed="top" aria-pressed="false">Top</button>
+          <span class="app-feed-network" id="app-feed-network">Mainnet</span>
+        </nav>
+        <div id="app-feed-content" class="app-feed-content" aria-live="polite">
+          <p class="app-feed-loading">Reading genuine PumpLite market updates…</p>
+        </div>
+      </section>
       <div class="launchpad-hero">
         <div class="launchpad-hero-copy">
           <p class="live-pill"><span aria-hidden="true"></span> SOLANA + BASE MAINNET</p>
@@ -133,6 +153,7 @@
       </section>
     </section>
     <section id="portfolio-section" class="panel portfolio-panel" tabindex="-1" hidden>
+      <div class="app-rewards-hub"><p class="eyebrow">PUMPLITE REWARDS</p><h1>Rewards &amp; portfolio</h1><p>Real balances and current official claims. No invented rewards or payouts.</p><div class="app-reward-actions"><a class="primary" href="./claim.html?from=rewards">PLITE holder claim →</a><a class="outline" href="./creator-tokens.html">My coins</a></div></div>
       <div class="section-title"><div><p class="eyebrow">YOUR WALLET</p><h2>Portfolio</h2></div><button id="portfolio-refresh" class="outline" type="button">Read balances</button></div>
       <p id="portfolio-status" class="muted" role="status">Connect your wallet using the header, then read your balances.</p>
       <div id="portfolio-balances" class="portfolio-list"></div>
@@ -140,6 +161,7 @@
     </section>
     <div class="workspace" id="home-workspace">
       <section class="panel discovery" id="explore-section" tabindex="-1" hidden>
+        <div class="app-explore-intro"><h1>Explore coins</h1><div class="app-coin-filters" aria-label="Market ranking"><button type="button" class="is-active" data-app-sort="newest" aria-pressed="true">New</button><button type="button" data-app-sort="market-cap" aria-pressed="false">Market cap</button><button type="button" data-app-sort="volume" aria-pressed="false">Volume</button><button type="button" data-app-sort="distributed" aria-pressed="false">Progress</button></div></div>
         <div class="section-title"><div><p class="eyebrow">EXPLORE</p><h2>Explore coins</h2></div><button id="refresh" class="outline">Refresh live</button></div>
         <p class="muted">Newest PumpLite markets read from the selected Mainnet network. Prices, reserves and volume come from the chain.</p>
         <div class="market-toolbar">
@@ -157,6 +179,7 @@
           <p id="trending-status" class="fine" role="status">On demand: ranks up to 6 loaded markets by confirmed trades observed in the last 24 hours. Bounded history, not a complete market ranking. Includes agent activity; this is not an organic-volume leaderboard.</p>
           <div id="trending-markets"></div>
         </section>
+        <div class="app-coin-table-head" aria-hidden="true"><span>COIN</span><span>GRAPH</span><span>MCAP</span></div>
         <div id="markets" class="market-list"><p class="empty">Loading markets...</p></div>
         <button id="more" class="outline full-width-action" hidden>Load more markets</button>
       </section>
@@ -730,12 +753,19 @@
 
   <div id="status" class="status" role="status" aria-live="polite"><span id="status-text">No wallet connected. No transactions submitted.</span><a id="status-link" target="_blank" rel="noopener noreferrer" hidden>View transaction →</a></div>
 </main>
+<div id="app-popover-layer" class="app-popover-layer" hidden>
+  <div class="app-popover-backdrop" data-app-close></div>
+  <div id="app-action-sheet" class="app-action-sheet" role="dialog" aria-modal="true" aria-label="Quick actions" tabindex="-1">
+    <div class="app-sheet-title"><strong id="app-sheet-heading">Quick actions</strong><button type="button" id="app-sheet-close" aria-label="Close menu">✕</button></div>
+    <div id="app-sheet-items" class="app-sheet-items"></div>
+  </div>
+</div>
 <nav class="bottom-nav" aria-label="Primary navigation">
-  <button type="button" data-page="home" aria-current="page"><span aria-hidden="true">⌂</span>Home</button>
-  <button type="button" data-page="markets"><span aria-hidden="true">◎</span>Trade</button>
-  <button type="button" data-page="create" class="nav-create"><span aria-hidden="true">＋</span>Create</button>
-  <button type="button" data-page="portfolio"><span aria-hidden="true">▣</span>Portfolio</button>
-  <button type="button" data-page="help"><span aria-hidden="true">•••</span>More</button>
+  <button type="button" data-page="home" aria-current="page" aria-label="Home"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5V21h-6v-6H9v6H3z"/></svg><span>Home</span></button>
+  <button type="button" data-page="markets" aria-label="Explore coins"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m9 15 2-6 4-1-1 5z"/></svg><span>Explore</span></button>
+  <button type="button" data-page="create" class="nav-create" aria-label="Create menu"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M7 12h10"/></svg><span>Create</span></button>
+  <button type="button" data-page="portfolio" aria-label="Rewards and portfolio"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3h8l-2 5c5 3 7 6 7 10a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3c0-4 2-7 7-10zM8 8h8"/></svg><span>Rewards</span></button>
+  <button type="button" data-page="help" aria-label="More menu"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="7" cy="12" r=".8"/><circle cx="12" cy="12" r=".8"/><circle cx="17" cy="12" r=".8"/></svg><span>More</span></button>
 </nav>
 <footer><b>PumpLite</b><span>Solana + Base - Mainnet only</span><p><a href="./terms.html">Terms</a> | <a href="./privacy.html">Privacy</a> | <a href="./risk.html">Risk disclosure</a> | <a href="./verification.html">Verification</a> | <a href="./status.html">Status</a> | <a href="./.well-known/security.txt">Security</a></p><p>Official project contact: <a href="mailto:coreyedge123@gmail.com">coreyedge123@gmail.com</a></p><p>Coins can lose all value. Wallet approval spends real funds. The current contracts have not received an independent third-party smart-contract audit; availability depends on the selected network deployment.</p></footer>
 </body>

@@ -16,6 +16,12 @@ const localTerminalStyles =
 const localTerminalScript =
   await readFile('launchpad-terminal.js', 'utf8');
 
+const localMobileStyles =
+  await readFile('pumplite-app.css', 'utf8');
+
+const localMobileScript =
+  await readFile('pumplite-app.js', 'utf8');
+
 const localPlsolHtml =
   await readFile('plsol.html', 'utf8');
 
@@ -422,6 +428,18 @@ async function verifyOnce() {
     'Live terminal CSS differs from the reviewed source');
   assert.equal(normalizeTerminal(liveTerminalScript), normalizeTerminal(localTerminalScript),
     'Live terminal action handlers differ from the reviewed source');
+
+  assert.ok(index.includes('href="./pumplite-app.css"') &&
+    index.includes('src="./pumplite-app.js"'),
+    'Live mobile app UI references are missing');
+  const [liveMobileStyles, liveMobileScript] = await Promise.all([
+    fetchText('pumplite-app.css'),
+    fetchText('pumplite-app.js')
+  ]);
+  assert.equal(normalizeTerminal(liveMobileStyles), normalizeTerminal(localMobileStyles),
+    'Live mobile app styles differ from reviewed source');
+  assert.equal(normalizeTerminal(liveMobileScript), normalizeTerminal(localMobileScript),
+    'Live mobile app behavior differs from reviewed source');
 
   assert.ok(
     claim.includes(

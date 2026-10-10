@@ -31,7 +31,24 @@ try {
     assert.equal(response.headers()['x-frame-options'], 'DENY');
     assert.match(response.headers()['content-security-policy'], /frame-ancestors 'none'/);
     await page.waitForFunction(() => document.querySelector('#deployment').textContent.includes('Base Mainnet'));
-    await page.selectOption('#chain','solana');
+    async function chooseChain(chain) {
+      if (width <= 740) {
+        await page.locator('#app-wallet-chip').click();
+        await page.locator('#app-sheet-items button')
+          .filter({hasText:chain === 'solana' ? 'Solana Mainnet' : 'Base Mainnet'}).click();
+      } else {
+        await page.selectOption('#chain',chain);
+      }
+    }
+    async function pressConnect() {
+      if (width <= 740) {
+        await page.locator('#app-wallet-chip').click();
+        await page.locator('#app-sheet-items button').filter({hasText:'Connect wallet'}).click();
+      } else {
+        await page.locator('#connect').click();
+      }
+    }
+    await chooseChain('solana');
     assert.equal(await page.locator('#create').isDisabled(), true);
     assert.equal(
       await page.locator('#refresh').isDisabled(),
@@ -40,16 +57,16 @@ try {
     );
     assert.equal(await page.locator('body').evaluate(el => el.scrollWidth <= innerWidth), true);
     assert.equal(await page.locator('#chain option').count(), 2);
-    await page.locator('#connect').click();
+    await pressConnect();
     await page.waitForFunction(() => document.querySelector('#status-text').textContent.toLowerCase().includes('no compatible solana provider'));
-    await page.selectOption('#chain', 'base');
+    await chooseChain('base');
     assert.match(await page.locator('#deployment').textContent(), /Base Mainnet.*live configuration/);
-    await page.locator('#connect').click();
+    await pressConnect();
     await page.waitForFunction(() => document.querySelector('#status-text').textContent.includes('No EVM wallet detected'));
     assert.equal(await page.locator('#create').isDisabled(), false, 'Base create remains actionable so a user click can request wallet access');
     assert.equal(await page.locator('#trade').isDisabled(), true);
 
-    await page.selectOption('#chain', 'solana');
+    await chooseChain('solana');
     await page.screenshot({ path: 'build/screenshots/home-' + width + '.png', fullPage: true });
     assert.deepEqual(errors, []);
     assert.deepEqual(external, []);

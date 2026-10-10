@@ -11,6 +11,8 @@ on:
       - "index.html"
       - "launchpad-terminal.css"
       - "launchpad-terminal.js"
+      - "pumplite-app.css"
+      - "pumplite-app.js"
       - "claim.html"
       - "plsol.html"
       - "plsol.js"
