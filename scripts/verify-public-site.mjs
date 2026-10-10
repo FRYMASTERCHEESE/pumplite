@@ -22,6 +22,10 @@ const localMobileStyles =
 const localMobileScript =
   await readFile('pumplite-app.js', 'utf8');
 
+const communityAssets = await Promise.all([
+  'bounties.html','bounties.js','live.html','live.js','community.css'
+].map(path=>readFile(path,'utf8')));
+
 const localPlsolHtml =
   await readFile('plsol.html', 'utf8');
 
@@ -440,6 +444,18 @@ async function verifyOnce() {
     'Live mobile app styles differ from reviewed source');
   assert.equal(normalizeTerminal(liveMobileScript), normalizeTerminal(localMobileScript),
     'Live mobile app behavior differs from reviewed source');
+  assert.ok(liveMobileScript.includes("./bounties.html") &&
+    liveMobileScript.includes("./live.html"),
+    'The live app must link both community features');
+  const communityPaths=['bounties.html','bounties.js','live.html','live.js','community.css'];
+  const publicCommunity=await Promise.all(communityPaths.map(path=>fetchText(path)));
+  for(let i=0;i<communityPaths.length;i++){
+    assert.equal(normalizeTerminal(publicCommunity[i]),normalizeTerminal(communityAssets[i]),
+      'Live community asset differs from reviewed source: '+communityPaths[i]);
+  }
+  assert.ok(publicCommunity[0].includes('Funding is NOT active.') &&
+    publicCommunity[2].includes('Cloudflare Stream'),
+    'Public community feature gates are missing');
 
   assert.ok(
     claim.includes(
