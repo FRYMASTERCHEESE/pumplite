@@ -22,6 +22,7 @@ export async function verifyRedesignBrowser(browser, base) {
     await page.goto(base,{waitUntil:'networkidle'});
     await page.waitForFunction(()=>document.documentElement.dataset.walletAppReady==='ready');
     assert.equal(await page.locator('.terminal-header-links').isVisible(),true,'Create/Explore shortcuts visible at '+width);
+    assert.equal(await page.locator('.terminal-header-links .claim-header-link').isVisible(),true,'single Claim button visible at '+width);
     assert.equal(await page.locator('#terminal-search-form').isVisible(),true,'coin search visible on home at '+width);
     await page.locator('#terminal-token-query').fill('PLITE');
     await page.locator('#terminal-search-form button').click();
