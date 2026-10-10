@@ -109,11 +109,11 @@ export async function verifyRedesignBrowser(browser, base) {
       'Auto setup enabled by default for one-flow coin creation at '+width);
     await page.locator('#name').fill('Safe Fixture Coin');
     await page.locator('#symbol').fill('SAFE');
-    await page.locator('#create').focus();
-    await page.keyboard.press('Enter');
-    await page.waitForFunction(
-      () => document.querySelector('#create-action-status')?.textContent?.includes('Auto setup needs a token image')
-    );
+    await page.locator('#create-form').evaluate(form=>form.requestSubmit());
+    await page.waitForTimeout(300);
+    assert.match(await page.locator('#create-action-status').textContent(),
+      /Auto setup needs a token image/,
+      'Auto setup blocks missing images without requesting wallet approval at '+width);
     assert.equal(await page.locator('#initial-buy-dialog').isVisible(),false,
       'No publish, transaction review or spending occurs without the chosen image');
     assert.equal(await page.locator('#uri').inputValue(),'',
