@@ -11,6 +11,60 @@ const EXPLORER = 'https://base.blockscout.com';
 const MAX_PAGES = 12;
 const MAX_RESPONSE_BYTES = 256_000;
 
+
+/**
+ * A receipt-backed checkpoint for claims already publicly observed.
+ * This is NOT a mutable cache or an assumed event count: every run checks
+ * the real receipt and reconciles the complete sequence with contract state.
+ * Any later claim requires new receipt evidence or an archive-capable RPC.
+ */
+export const PINNED_BASE_CLAIM_TRANSACTIONS = Object.freeze([
+  '0xdff57d674bce2a2ca77d955ecdfa5ad926253b5c73c1bf15088f0abe0876b692'
+]);
+
+export async function discoverPinnedReceiptClaimLogs({
+  provider,
+  contractAddress,
+  claimedTopic,
+  creationBlock,
+  snapshotBlock,
+  expectedCount
+}) {
+  const contract = getAddress(contractAddress);
+  assert.match(claimedTopic, /^0x[0-9a-fA-F]{64}$/);
+  assert.ok(Number.isSafeInteger(creationBlock) && creationBlock > 0);
+  assert.ok(Number.isSafeInteger(snapshotBlock) && snapshotBlock >= creationBlock);
+  assert.ok(Number.isSafeInteger(expectedCount) && expectedCount >= 0 && expectedCount <= 50);
+  // Missing/new claims cannot be papered over by the stored proof inventory.
+  assert.equal(
+    expectedCount,
+    PINNED_BASE_CLAIM_TRANSACTIONS.length,
+    'On-chain claimCount differs from reviewed receipt checkpoint; new claim evidence needed'
+  );
+  const found = [];
+  for (const hash of PINNED_BASE_CLAIM_TRANSACTIONS) {
+    const receipt = await provider.getTransactionReceipt(hash);
+    assert.ok(receipt && receipt.status === 1, 'Pinned claim receipt missing or failed');
+    assert.ok(
+      receipt.blockNumber >= creationBlock && receipt.blockNumber <= snapshotBlock,
+      'Pinned claim receipt is outside the verified chain snapshot'
+    );
+    assert.equal(String(receipt.hash).toLowerCase(), hash, 'Pinned claim receipt transaction hash mismatch');
+    const matches = receipt.logs.filter(log =>
+      getAddress(log.address) === contract &&
+      String(log.topics?.[0]).toLowerCase() === claimedTopic.toLowerCase()
+    );
+    assert.equal(matches.length, 1, 'Pinned receipt does not prove exactly one Claimed event');
+    found.push(matches[0]);
+  }
+  assert.equal(found.length, expectedCount, 'Pinned claim receipts do not reconcile with chain claimCount');
+  return found.sort((a, b) =>
+    a.blockNumber - b.blockNumber ||
+    (a.transactionIndex ?? 0) - (b.transactionIndex ?? 0) ||
+    a.index - b.index
+  );
+}
+
 export async function verifiedClaimCreationBlock(provider, contractAddress) {
   const claim = getAddress(contractAddress);
   const receipt = await provider.getTransactionReceipt(CLAIM_CREATION_TRANSACTION);
