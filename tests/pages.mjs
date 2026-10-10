@@ -1,3 +1,4 @@
+import {verifyRedesignBrowser} from './ui-redesign-browser.mjs';
 import {verifySolanaRentBrowser} from './solana-rent-browser.mjs';
 import { verifyBrowser } from './verified-browser.mjs';
 import assert from 'node:assert/strict';
@@ -142,6 +143,7 @@ try {
   assert.equal(chunks.filter(name => /^base-v3-/.test(name)).length, 1, 'Base V3 Classic/Mayhem bundle must exist exactly once');
   browser = await chromium.launch({ headless: true, ...(process.env.BROWSER_EXECUTABLE ? { executablePath: process.env.BROWSER_EXECUTABLE } : {}) });
   await verifyBrowser(browser,base);
+  await verifyRedesignBrowser(browser,base);
   await verifySolanaRentBrowser(browser, base);
 
   // V3 injected-wallet boot does not race wallet discovery.
@@ -986,7 +988,7 @@ try {
     assert.equal(await page.locator('#create').isDisabled(), false, 'Base create button stays actionable before wallet access; wallet access is requested only after click');
     assert.deepEqual(
       await page.locator('.home-page-tabs').locator('button,a').allTextContents(),
-      ['Home','Create Coin','Markets & Trade','My Coins','Help & Safety']
+      ['Home','Create Coin','Markets & Trade','My Coins','Portfolio','Help & Safety']
     );
     assert.equal(
       await page.locator('.claim-header-link').getAttribute('href'),
@@ -1058,9 +1060,9 @@ try {
       await page.locator('[data-chart-range="LIVE"]').getAttribute('aria-pressed'),
       'true'
     );
-    await page.locator('#show-help').click();
+    await page.locator('#show-help:visible, [data-page=help]:visible').click();
     assert.equal(await page.locator('#help-section').isVisible(), true);
-    await page.locator('#show-home').click();
+    await page.locator('#show-home:visible, [data-page=home]:visible').click();
     assert.equal(await page.locator('#home-overview').isVisible(), true);
     assert.ok(requests.some(url => url.startsWith(base + 'config.json?boot=')));
     assert.ok(requests.some(url => url.startsWith(base + 'assets/app.js?boot=')));
@@ -1201,7 +1203,7 @@ try {
     await page.keyboard.press('Enter');
     assert.equal(await page.evaluate(() => document.activeElement.id), 'main-content');
     assert.equal(await page.locator('#amount').getAttribute('maxlength'), '96');
-    await page.locator('#show-create').click();
+    await page.locator('#show-create:visible, [data-page=create]:visible').click();
     assert.equal(await page.locator('#create-section').isVisible(), true);
     await page.locator('#name').fill('Local document');
     await page.locator('#symbol').fill('DOC');

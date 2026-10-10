@@ -31,7 +31,7 @@
 <script defer src="./assets/phantom-diagnostic.js"></script>
 <script type="module" src="./assets/app.js?boot=20261010audit1"></script>
 </head>
-<body>
+<body class="redesign">
 <a class="skip-link" id="skip-content" href="#main-content">Skip to main content</a>
 <header>
   <a class="brand" href="#" aria-label="PumpLite home"><span class="mark" aria-hidden="true">→</span> PumpLite<span class="beta">MAINNET</span></a>
@@ -59,6 +59,7 @@
       <button type="button" id="show-create" class="outline" aria-pressed="false">Create Coin</button>
       <button type="button" id="show-explore" class="outline" aria-pressed="false">Markets &amp; Trade</button>
       <a class="outline" href="./creator-tokens.html">My Coins</a>
+      <button type="button" id="show-portfolio" class="outline" aria-pressed="false">Portfolio</button>
       <button type="button" id="show-help" class="outline" aria-pressed="false">Help &amp; Safety</button>
     </nav>
     <section id="home-overview" class="home-dashboard" tabindex="-1">
@@ -66,8 +67,8 @@
         <div class="launchpad-hero-copy">
           <p class="live-pill"><span aria-hidden="true"></span> SOLANA + BASE MAINNET</p>
           <p class="eyebrow">PUMPLITE LAUNCHPAD</p>
-          <h1>Discover. Launch.<br>Trade on-chain.</h1>
-          <p class="intro">Launch and trade on Solana or Base Mainnet with live on-chain quotes and wallet approval.</p>
+          <h1>Your next discovery.<br><em>Starts here.</em></h1>
+          <p class="intro">Discover independent coins. Follow real markets. Create something of your own — on Solana and Base.</p>
           <div class="hero-actions">
             <a class="primary compact-action hero-link" href="./plsol.html">Buy PLSOL</a>
             <button id="hero-explore" class="primary compact-action" type="button">Explore coins</button>
@@ -117,20 +118,31 @@
         <div id="home-markets" class="market-list home-market-grid"><p class="empty">Loading the newest Base markets...</p></div>
       </section>
     </section>
+    <section id="portfolio-section" class="panel portfolio-panel" tabindex="-1" hidden>
+      <div class="section-title"><div><p class="eyebrow">YOUR WALLET</p><h2>Portfolio</h2></div><button id="portfolio-refresh" class="outline" type="button">Read balances</button></div>
+      <p id="portfolio-status" class="muted" role="status">Connect your wallet using the header, then read your balances.</p>
+      <div id="portfolio-balances" class="portfolio-list"></div>
+      <p class="fine">Read-only balances for up to 12 loaded PumpLite markets on the selected network. This is not your complete wallet portfolio. No estimated profit or liquidation value is invented.</p>
+    </section>
     <div class="workspace" id="home-workspace">
       <section class="panel discovery" id="explore-section" tabindex="-1" hidden>
-        <div class="section-title"><div><p class="eyebrow">EXPLORE</p><h2>Live coin markets</h2></div><button id="refresh" class="outline">Refresh live</button></div>
+        <div class="section-title"><div><p class="eyebrow">EXPLORE</p><h2>Explore coins</h2></div><button id="refresh" class="outline">Refresh live</button></div>
         <p class="muted">Newest PumpLite markets read from the selected Mainnet network. Prices, reserves and volume come from the chain.</p>
         <div class="market-toolbar">
           <label class="market-search-label" for="market-filter">Search coins<input id="market-filter" placeholder="Name, ticker, coin or market" autocomplete="off"></label>
-          <label class="market-sort-label" for="market-sort">Sort<select id="market-sort"><option value="newest">New</option><option value="market-cap">Market cap</option><option value="volume">Volume</option><option value="reserve">Curve backing</option><option value="distributed">Curve progress</option></select></label>
+          <label class="market-sort-label" for="market-sort">Sort<select id="market-sort"><option value="newest">New</option><option value="market-cap">Market cap</option><option value="volume">Cumulative volume</option><option value="reserve">Curve backing</option><option value="distributed">Curve progress</option></select></label>
         </div>
-        <div class="market-filter-row">
+        <p class="fine">Rankings cover loaded markets only. Cumulative volume is not a 24-hour trending score; Mayhem Agent activity is disclosed separately on each market.</p><div class="market-filter-row">
           <label class="filter"><input type="checkbox" id="verified-only"> Verified only</label>
           <span id="market-live-status" class="live-status"><span class="live-dot" aria-hidden="true"></span> Selected network live data</span>
         </div>
         <p id="verification-list-status" class="fine" role="status">Owner-reviewed identity labels are separate from factory provenance.</p>
         <form id="open-form" class="search"><label class="sr-only" for="market-address">Market address</label><input id="market-address" placeholder="Open an exact market address" required autocomplete="off"><button type="submit" class="outline">Open market</button></form>
+        <section class="trending-panel" aria-labelledby="trending-title">
+          <div class="section-title"><div><p class="eyebrow">ON-CHAIN ACTIVITY</p><h3 id="trending-title">Trending in loaded markets</h3></div><button id="trending-refresh" type="button" class="outline">Read recent trades</button></div>
+          <p id="trending-status" class="fine" role="status">On demand: ranks up to 6 loaded markets by confirmed trades observed in the last 24 hours. Bounded history, not a complete market ranking. Includes agent activity; this is not an organic-volume leaderboard.</p>
+          <div id="trending-markets"></div>
+        </section>
         <div id="markets" class="market-list"><p class="empty">Loading markets...</p></div>
         <button id="more" class="outline full-width-action" hidden>Load more markets</button>
       </section>
@@ -300,7 +312,14 @@
     <section id="help-section" class="panel home-page-panel" tabindex="-1" hidden>
       <p class="eyebrow">HELP &amp; SAFETY</p>
       <h2>Using PumpLite safely</h2>
+      <nav class="mobile-utility-links" aria-label="More PumpLite pages">
+        <a href="./creator-tokens.html">My Coins</a>
+      </nav>
 
+      <div class="wallet-guide">
+        <article><h3>Phantom · Solana</h3><p class="fine">Select Solana Mainnet in the header, then Connect wallet. On Android or iPhone, open PumpLite inside Phantom’s browser. Review the site and account before approving access.</p></article>
+        <article><h3>Coinbase Wallet · Base</h3><p class="fine">Select Base Mainnet, choose your detected wallet and Connect wallet. On mobile, open PumpLite in Coinbase Wallet’s browser. Connecting does not approve a trade or spend ETH.</p></article>
+      </div>
       <div class="help-grid">
         <article><h3>Create Coin</h3><p class="fine">Create a real coin on Base or Solana Mainnet, publish metadata and review wallet requests before approving them.</p></article>
         <article><h3>Markets &amp; Trade</h3><p class="fine">Browse real PumpLite markets, buy with the simple NZD/USD helper, or sell through your connected wallet.</p></article>
@@ -404,7 +423,11 @@
         <strong id="price-chart-change" class="chart-change">No trades yet</strong>
       </div>
 
-      <div id="price-chart" class="price-chart wallet-price-chart" role="img" aria-label="Real PumpLite market trade price chart"></div>
+      <div class="chart-tools" role="group" aria-label="Chart display">
+        <button type="button" data-chart-style="line" aria-pressed="true">Line</button>
+        <button type="button" data-chart-style="candles" aria-pressed="false">Candles</button>
+      </div>
+      <div id="price-chart" class="price-chart wallet-price-chart" role="group" aria-label="Real PumpLite market trade price chart"></div>
 
       <div class="chart-range-tabs" role="group" aria-label="Chart time range">
         <button type="button" class="chart-range active" data-chart-range="LIVE" aria-pressed="true">LIVE</button>
@@ -693,6 +716,13 @@
 
   <div id="status" class="status" role="status" aria-live="polite"><span id="status-text">No wallet connected. No transactions submitted.</span><a id="status-link" target="_blank" rel="noopener noreferrer" hidden>View transaction →</a></div>
 </main>
+<nav class="bottom-nav" aria-label="Primary navigation">
+  <button type="button" data-page="home" aria-current="page"><span aria-hidden="true">⌂</span>Home</button>
+  <button type="button" data-page="markets"><span aria-hidden="true">◎</span>Explore</button>
+  <button type="button" data-page="create" class="nav-create"><span aria-hidden="true">＋</span>Create</button>
+  <button type="button" data-page="portfolio"><span aria-hidden="true">▣</span>Portfolio</button>
+  <button type="button" data-page="help"><span aria-hidden="true">•••</span>More</button>
+</nav>
 <footer><b>PumpLite</b><span>Solana + Base - Mainnet only</span><p><a href="./terms.html">Terms</a> | <a href="./privacy.html">Privacy</a> | <a href="./risk.html">Risk disclosure</a> | <a href="./verification.html">Verification</a> | <a href="./status.html">Status</a> | <a href="./.well-known/security.txt">Security</a></p><p>Official project contact: <a href="mailto:coreyedge123@gmail.com">coreyedge123@gmail.com</a></p><p>Coins can lose all value. Wallet approval spends real funds. The current contracts have not received an independent third-party smart-contract audit; availability depends on the selected network deployment.</p></footer>
 </body>
 </html>

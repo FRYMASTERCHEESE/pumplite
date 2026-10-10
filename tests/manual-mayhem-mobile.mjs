@@ -20,7 +20,7 @@ try{
  });
  await page.goto(base+'#solana',{waitUntil:'networkidle'});
  await page.locator('#connect').click();await page.waitForTimeout(300);if((await page.locator('#connect').textContent()).includes('Approve'))await page.locator('#connect').click();
- await page.locator('#show-create').click();await page.locator('#name').fill('Offline Mayhem');await page.locator('#symbol').fill('TEST');
+ await page.locator('#show-create:visible, [data-page=create]:visible').click();await page.locator('#name').fill('Offline Mayhem');await page.locator('#symbol').fill('TEST');
  await page.locator('#solana-mayhem-manual').click();await page.locator('#create').click();await page.locator('#initial-buy-dialog').waitFor({state:'visible'});
  assert.equal(await page.locator('#initial-buy-eth').isEnabled(),true);await page.locator('#initial-buy-eth').fill('0.0001');
  assert.equal(await page.locator('.initial-buy-amount strong').textContent(),'SOL');assert.equal(await page.locator('#initial-buy-submit').textContent(),'Create Manual Mayhem coin');
