@@ -21,14 +21,50 @@ export async function verifyRedesignBrowser(browser, base) {
     });
     await page.goto(base,{waitUntil:'networkidle'});
     await page.waitForFunction(()=>document.documentElement.dataset.walletAppReady==='ready');
-    assert.equal(await page.locator('.terminal-header-links').isVisible(),true,'Create/Explore shortcuts visible at '+width);
-    assert.equal(await page.locator('.terminal-header-links .claim-header-link').isVisible(),true,'single Claim button visible at '+width);
-    assert.equal(await page.locator('#terminal-search-form').isVisible(),true,'coin search visible on home at '+width);
-    await page.locator('#terminal-token-query').fill('PLITE');
-    await page.locator('#terminal-search-form button').click();
-    assert.equal(await page.locator('#explore-section').isVisible(),true,'search switches to markets at '+width);
-    assert.equal(await page.locator('#market-filter').inputValue(),'PLITE','search query reaches existing market filter');
-    await page.locator('#market-filter').fill('');
+    if (width <= 740) {
+      assert.equal(await page.locator('#app-header-tools').isVisible(),true,
+        'compact icon header at '+width);
+      assert.equal(await page.locator('#app-search').isVisible(),true,
+        'search icon at '+width);
+      assert.equal(await page.locator('#app-feed-content').isVisible(),true,
+        'genuine market feed at '+width);
+      assert.equal(await page.locator('.app-feed-tabs button').count(),3,
+        'Callouts, Friends and Top tabs');
+      await page.locator('[data-app-feed="following"]').click();
+      assert.match(await page.locator('#app-feed-content').textContent(),/not connected yet/i);
+      await page.locator('[data-app-feed="latest"]').click();
+      await page.locator('#app-search').click();
+      assert.equal(await page.locator('#explore-section').isVisible(),true,
+        'search icon opens existing markets');
+      await page.locator('#market-filter').fill('PLITE');
+      assert.equal(await page.locator('#market-filter').inputValue(),'PLITE');
+      await page.locator('[data-app-sort="market-cap"]').click();
+      assert.equal(await page.locator('#market-sort').inputValue(),'market-cap',
+        'rank filter controls reviewed on-chain market sorting');
+      await page.locator('#market-filter').fill('');
+      await page.locator('.bottom-nav [data-page="create"]').click();
+      assert.equal(await page.locator('#app-action-sheet').isVisible(),true);
+      assert.equal(await page.locator('#app-sheet-items button').filter({hasText:'Create coin'}).count(),1);
+      assert.equal(await page.locator('#app-sheet-items button').filter({hasText:'Post bounty'}).isDisabled(),true,
+        'no fake bounty creation without payment backend');
+      await page.locator('#app-sheet-close').click();
+      await page.locator('.bottom-nav [data-page="help"]').click();
+      assert.equal(await page.locator('#app-action-sheet').isVisible(),true);
+      assert.equal(await page.locator('#app-sheet-items button').filter({hasText:'Leaderboard'}).count(),1);
+      await page.locator('#app-sheet-close').click();
+      await page.locator('.bottom-nav [data-page="home"]').click();
+    } else {
+      assert.equal(await page.locator('.terminal-header-links').isVisible(),true,
+        'desktop Create and Explore links visible');
+      assert.equal(await page.locator('.terminal-header-links .claim-header-link').isVisible(),true,
+        'desktop Claim remains discoverable');
+      assert.equal(await page.locator('#terminal-search-form').isVisible(),true);
+      await page.locator('#terminal-token-query').fill('PLITE');
+      await page.locator('#terminal-search-form button').click();
+      assert.equal(await page.locator('#explore-section').isVisible(),true);
+      assert.equal(await page.locator('#market-filter').inputValue(),'PLITE');
+      await page.locator('#market-filter').fill('');
+    }
     const navigation=width<=740?'[data-page="':'#show-';
     async function go(name) {
       const ids={markets:'explore',portfolio:'portfolio',create:'create',help:'help',home:'home'};
