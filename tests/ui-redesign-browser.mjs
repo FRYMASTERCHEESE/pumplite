@@ -21,6 +21,13 @@ export async function verifyRedesignBrowser(browser, base) {
     });
     await page.goto(base,{waitUntil:'networkidle'});
     await page.waitForFunction(()=>document.documentElement.dataset.walletAppReady==='ready');
+    assert.equal(await page.locator('.terminal-header-links').isVisible(),true,'Create/Explore shortcuts visible at '+width);
+    assert.equal(await page.locator('#terminal-search-form').isVisible(),true,'coin search visible on home at '+width);
+    await page.locator('#terminal-token-query').fill('PLITE');
+    await page.locator('#terminal-search-form button').click();
+    assert.equal(await page.locator('#explore-section').isVisible(),true,'search switches to markets at '+width);
+    assert.equal(await page.locator('#market-filter').inputValue(),'PLITE','search query reaches existing market filter');
+    await page.locator('#market-filter').fill('');
     const navigation=width<=740?'[data-page="':'#show-';
     async function go(name) {
       const ids={markets:'explore',portfolio:'portfolio',create:'create',help:'help',home:'home'};
@@ -51,6 +58,8 @@ export async function verifyRedesignBrowser(browser, base) {
       window.chartTestTrades=[{price:4000000n,timestamp:1700000000,blockNumber:1,isBuy:true},{price:8000000n,timestamp:1700000030,blockNumber:2,isBuy:true},{price:2000000n,timestamp:1700000150,blockNumber:3,isBuy:false}];
       window.ChartFixture.renderPriceChart(document.querySelector('#price-chart'),window.chartTestTrades,'FIXTURE',9,'SOL');
     });
+    assert.equal(await page.locator('[data-trade-jump="buy"]').isVisible(),true,'Buy shortcut visible on market');
+    assert.equal(await page.locator('[data-trade-jump="sell"]').isVisible(),true,'Sell shortcut visible on market');
     const svg=page.locator('#price-chart svg');
     await svg.focus();
     await svg.press('Home');
