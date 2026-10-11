@@ -122,3 +122,12 @@
  .redesign .app-feed-tabs{gap:8px}
  .redesign .app-feed-tabs button{font-size:17px;letter-spacing:-.6px}
 }
+
+/* Consent-gated launch assistance. No background wallet funding. */
+.auto-liquidity-handoff{margin:12px 0;padding:15px;border:1px solid #4c7a55;border-radius:12px;background:#14291c;color:#edfef1}
+.auto-liquidity-handoff h3{margin:0 0 8px;font-size:16px}
+.auto-liquidity-handoff p{line-height:1.6}
+.auto-liquidity-actions{display:flex;gap:9px;flex-wrap:wrap}
+.auto-liquidity-actions button{min-width:140px;flex:1}
+#auto-liquidity-market-note{border:1px solid #4c7a55;border-radius:9px;padding:10px;background:#15251a}
+@media(max-width:480px){.auto-liquidity-handoff{padding:12px}.auto-liquidity-actions button{width:100%}}
