@@ -1,3 +1,4 @@
+import { encodeV3Launch } from '../base-v3-launch.js';
 import { discoverEvm, watchWallet } from '../wallets.js';
 import { BrowserProvider, JsonRpcProvider, Contract, getAddress, FetchRequest, AbiCoder, ZeroAddress, ZeroHash, keccak256, solidityPacked, toUtf8Bytes } from 'ethers';
 import { gasBudget } from '../gas.js';
@@ -843,42 +844,11 @@ export function adapter(config, notify, changed = () => {}) {
       mintable,
       launchMode
     }) {
-      if (
-        typeof initialSupply !== "bigint" ||
-        typeof maxSupply !== "bigint" ||
-        initialSupply <= 0n ||
-        maxSupply < initialSupply
-      ) {
-        throw Error("Invalid V3 supply configuration");
-      }
-
-      if (
-        !Number.isInteger(launchMode) ||
-        launchMode < 0 ||
-        launchMode > 2
-      ) {
-        throw Error("Invalid V3 launch mode");
-      }
-
+      const data = encodeV3Launch({
+        name, symbol, uri, initialSupply, maxSupply, mintable, launchMode
+      });
       await wallet();
-
       const readFactory = factory();
-
-      const launchConfig = {
-        name,
-        symbol,
-        uri,
-        initialSupply,
-        maxSupply,
-        mintable: mintable === true,
-        launchMode
-      };
-
-      const data =
-        readFactory.interface.encodeFunctionData(
-          "createMarketV3",
-          [launchConfig]
-        );
 
       const gas = await provider.estimateGas({
         from: connectedAddress,

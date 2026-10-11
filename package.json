@@ -7,7 +7,7 @@
   "scripts": {
     "build:contracts": "node scripts/compile-base.mjs && node scripts/compile-base-v2.mjs",
     "build": "node scripts/compile-base.mjs && node scripts/compile-base-v2.mjs && node scripts/build.mjs",
-    "test": "node scripts/compile-base.mjs && node scripts/compile-base-v2.mjs && node scripts/compile-plite-holder-claim.mjs && node --test tests/*.test.mjs",
+    "test": "node scripts/compile-base.mjs && node scripts/compile-base-v2.mjs && node scripts/compile-plite-holder-claim.mjs && node scripts/compile-base-v3.mjs && node --test tests/*.test.mjs tests/base-v3-candidate.mjs tests/base-v3-static-candidate.mjs",
     "test:base": "node scripts/compile-base.mjs && node --test tests/base.test.mjs",
     "check": "node scripts/check.mjs",
     "preview": "node scripts/serve.mjs",
@@ -35,7 +35,8 @@
     "test:claim": "node scripts/compile-base-v2.mjs && node scripts/compile-plite-holder-claim.mjs && node --test tests/plite-holder-claim.test.mjs",
     "verify:hardening-28-50": "node scripts/verify-hardening-28-50.mjs",
     "verify:hardening-401-1000": "node scripts/verify-hardening-401-1000.mjs",
-    "verify:token-verification-1001-5000": "node scripts/verify-token-verification-1001-5000.mjs"
+    "verify:token-verification-1001-5000": "node scripts/verify-token-verification-1001-5000.mjs",
+    "test:base-v3": "node scripts/compile-base-v3.mjs && node --test tests/base-v3-candidate.mjs tests/base-v3-static-candidate.mjs tests/base-v3-launch.test.mjs"
   },
   "dependencies": {
     "@solana/web3.js": "1.98.4",

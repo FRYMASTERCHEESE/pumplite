@@ -7,6 +7,7 @@ import {
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import ganache from "ganache";
+import { encodeV3Launch } from '../web/base-v3-launch.js';
 
 import {
   BrowserProvider,
@@ -93,9 +94,10 @@ async function createMarket(
   };
 
   const receipt = await transact(
-    factory
-      .connect(creator)
-      .createMarketV3(config)
+    creator.sendTransaction({
+      to: await factory.getAddress(),
+      data: encodeV3Launch(config)
+    })
   );
 
   const event = receipt.logs
