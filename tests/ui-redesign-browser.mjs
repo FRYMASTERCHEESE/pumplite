@@ -110,7 +110,7 @@ export async function verifyRedesignBrowser(browser, base) {
     assert.match(await page.locator('#v2-mayhem-preview').textContent(),/NOT SELECTED: the next new Base V2 coin starts with Mayhem OFF/);
     await page.locator('#v2-initial-mayhem').check();
     assert.match(await page.locator('#v2-mayhem-preview').textContent(),/SELECTED for the NEXT new Base V2 coin/);
-    assert.match(await page.locator('#v2-mayhem-preview').textContent(),/creation transaction confirms/);
+    assert.match(await page.locator('#v2-mayhem-preview').textContent(),/if that transaction confirms/);
     assert.match(await page.locator('#v2-mayhem-preview').textContent(),/no bot trades automatically/);
     await page.locator('#v2-initial-mayhem').uncheck();
     assert.match(await page.locator('#v2-mayhem-preview').textContent(),/NOT SELECTED/);
