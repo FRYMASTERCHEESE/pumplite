@@ -167,6 +167,7 @@ if (checkOnly) {
     'community.css',
     'liquidity.html',
     'liquidity.js',
+    'launch-automation.js',
     'plsol.html',
     'creator-tokens.html',
     'claim.html',

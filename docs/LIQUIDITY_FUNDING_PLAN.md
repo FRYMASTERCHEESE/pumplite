@@ -47,3 +47,17 @@ Static tests: `tests/liquidity-plan.test.mjs`. Browser checks: `tests/community-
 Official Uniswap guidance:
 - https://support.uniswap.org/hc/en-us/articles/20915582427917-How-to-add-a-new-liquidity-position-to-Uniswap-v2
 - https://support.uniswap.org/hc/en-us/articles/20903989864205-How-to-provide-liquidity-on-the-Base-Network
+
+## Consent-gated handoff automation (phase 2)
+
+PumpLite's `/liquidity.html` now generates an opt-in **Continue with automatic launch setup** link for a planned first buy of **up to 1 ETH or 1 SOL**. The link carries only chain and intended native asset amount in the URL; it does not contain secrets, wallet credentials, signatures or payment authorizations. Larger amounts require the normal manual workflow.
+
+The creator page `/?page=create&liquidityChain=base|solana&liquidityBuy=<amount>` uses the separate `launch-automation.js` helper. It only reads and validates these **untrusted** parameters, waits for the existing wallet application to finish its read-only boot, then offers an explicit **Use planned buy amount** action. Nothing is armed by a URL alone. **Skip** disables the intended amount immediately. Changing the chain also clears the opt-in.
+
+- **Base:** after the user opts in, the helper pre-fills the amount in PumpLite's EXISTING optional first ETH buy dialog. It waits until the wallet application finishes its busy state and releases the input; otherwise it leaves the input untouched. It does not submit the form, create a token, purchase tokens, request connection or alter the on-chain quote. The user can edit the amount or choose zero before signing creation and then the separate buy.
+- **Solana Classic:** the deployed creator remains create-only. After the user opts in and deliberately finishes real mint creation, the helper can prepare the selected SOL amount in the new market's existing Buy input. It **does not request a quote, invoke Buy, connect Phantom or sign a transaction**. The user must review the exact mint, quote, slippage and wallet authorization.
+- **PLITE Uniswap V2:** remains a **separate opt-in contribution** of matching PLITE and WETH. The official existing pair link is supplied on the planner, and the user funds via Uniswap's reviewed interface only after separate approvals. No automatic LP token mint/lock or launch fee splitter has been authorized, designed or deployed.
+
+The standalone helper explicitly contains no wallet signing API, `fetch`, cross-origin requests, storage, automated button click or delayed transaction timer. Malformed amounts, negative amounts, wrong networks and intents above 1 native token are rejected. A blockchain signature is **never** triggered by page load.
+
+For full on-chain LP automation, define the exact amount/payer and custody model first, independently audit an allowance-bounded Uniswap interaction and its failure/idempotency handling, and obtain additional explicit owner approval before any spending, contract upgrades or changes to the 0% creator fee.
