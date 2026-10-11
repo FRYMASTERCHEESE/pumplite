@@ -21,7 +21,8 @@ try {
   const block = await provider.getBlockNumber();
   const code = await provider.getCode(address, block);
   assert.notEqual(code, '0x', 'Factory address has no deployed code');
-  assert.equal(mask(code), mask(artifact.deployedBytecode), 'V3 factory runtime mismatch');
+  assert.ok(code.length === artifact.deployedBytecode.length &&
+    mask(code) === mask(artifact.deployedBytecode), 'V3 factory runtime mismatch');
   const factory = new Contract(address, artifact.abi, provider);
   const options = { blockTag: block };
   const [controller, treasury, feeTreasury, limits, count] = await Promise.all([
