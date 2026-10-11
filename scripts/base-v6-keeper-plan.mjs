@@ -29,7 +29,7 @@ export async function planBaseV6Keeper({ provider, factory, market, controller,
     if (height > committedAt + 255n) method = 'expireMayhemCommitment';
     else {
       if (height <= committedAt + 1n) return idle('Future hash not available yet');
-      if (!secret || !secretDurablyStored) return idle('Recover durable secret or wait for expiry');
+      if (!secret || secretDurablyStored !== true) return idle('Recover durable secret or wait for expiry');
       if (await market.mayhemCommitmentHash(secret, tag) !== commitment) throw Error('Journal secret mismatch');
       if (state !== 1n) return idle('Paused; retain commitment for recovery');
       // Do not pick a new secret after seeing the future hash. An unexecutable
@@ -45,7 +45,7 @@ export async function planBaseV6Keeper({ provider, factory, market, controller,
     if (state !== 1n) return idle('Paused; keeper never adds funding');
     if (mode === 2n && !pendingManual) return idle('Creator Manual request required');
     if (lastTrade !== 0n && now < lastTrade + limits.minInterval) return idle('Minimum interval');
-    if (!secret || !secretDurablyStored) return idle('Persist one secret before committing');
+    if (!secret || secretDurablyStored !== true) return idle('Persist one secret before committing');
     method = 'commitMayhemTrade'; args = [await market.mayhemCommitmentHash(secret, tag)];
   }
   const data = new Interface(market.interface.fragments).encodeFunctionData(method, args);

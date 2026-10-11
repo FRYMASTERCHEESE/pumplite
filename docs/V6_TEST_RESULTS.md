@@ -60,7 +60,7 @@ Rust warnings: unmaintained `ansi_term`, `bincode`, `derivative`, `libsecp256k1`
 
 `deployments/v6-cost-estimate.json` records read-only RPC estimates and exact
 candidate hashes. At its recorded observation, Base factory gas is 5,199,029:
-execution plus L1 upper bound **0.00003145447527438 ETH**. Solana's optimized 311,360-byte
+execution plus L1 upper bound **0.000031447224521128 ETH**. Solana's optimized 311,360-byte
 binary requires **1.58342076 SOL retained rent**, plus **0.00175 SOL** upload
 fees in the specified 900-byte/no-priority/no-retry scenario: **1.58517076 SOL**.
 The loader normally reuses buffer rent; 3.16771776 SOL is conservative separate
@@ -87,7 +87,7 @@ wallet access. The separate frontend run passed 2 tests in 87.51 seconds. V6
 Chromium tests also exercised default V2 routing and disabled V6 creation at
 390/1440px. Both adapters and the staged router bundle without external imports.
 
-The optimized SBF suite passed all 35 tests in 37.43 seconds. No product feature,
+The final compiler-only optimized SBF suite passed all 35 tests in 13.50 seconds. No product feature,
 account constraint or checked arithmetic was removed. The previous Linux CI
 failure was a relative artifact path resolving from Cargo's test-package directory,
 not a contract failure. The workflow now supplies an absolute workspace path.

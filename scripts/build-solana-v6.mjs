@@ -20,12 +20,11 @@ await mkdir(guard);
 try {
   const extra = process.env.PUMPLITE_SKIP_TOOLS_INSTALL === '1' ? ['--skip-tools-install'] : [];
   // Size optimization is scoped to this child build, never the legacy program.
-  // no-idl omits unused on-chain IDL administration; all product instructions,
-  // validation, events, checked arithmetic and metadata CPIs remain enabled.
+  // All product instructions, validation, events, checked arithmetic and
+  // metadata CPIs remain enabled. No feature flags are removed to save rent.
   const result = spawnSync('cargo-build-sbf', [
     '--manifest-path', 'programs/pumplite-v6/Cargo.toml',
     '--tools-version', 'v1.52', '--arch', 'v0', '--sbf-out-dir', out,
-    '--features', 'no-idl',
     ...extra, '--', '--locked',
   ], { stdio: 'inherit', env: { ...process.env, CARGO_PROFILE_RELEASE_OPT_LEVEL: 'z' } });
   if (result.error) throw result.error;

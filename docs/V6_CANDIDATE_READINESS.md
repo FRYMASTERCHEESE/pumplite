@@ -140,8 +140,8 @@ approval of the exact runtime/controller. The engine's finite attempts limit
 does not by itself cap cumulative keeper fee spending.
 
 Solana build-only `opt-level=z` reduces the ELF from 343,912 to 311,360 bytes
-(32,552 bytes, 9.465%). `no-idl` disables unused on-chain IDL administration;
-product instruction discriminators, account layout, trading, metadata, checked
+(32,552 bytes, 9.465%). The savings come from compiler size optimization alone;
+no feature flags are removed. Product instruction discriminators, account layout, trading, metadata, checked
 math, events, supply protections and Mayhem remain unchanged. The full 35-test
 actual-SBF suite passes, including max-metadata compute-budget execution. Rust
 dependencies and legacy build settings are unchanged. Exact-size retained rent

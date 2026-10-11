@@ -1,10 +1,10 @@
 {
-  "observedAt": "2026-10-11T18:35:08.662Z",
+  "observedAt": "2026-10-11T18:43:41.413Z",
   "deployed": false,
   "approved": false,
   "caveat": "Current read-only estimates, not a final charge or approval. Costs must be refreshed after the exact release and public identities are approved.",
   "base": {
-    "block": 52477180,
+    "block": 52477436,
     "controller": "0x0de7fdcc798f7fac6b03b366c529133a9c60794d",
     "controllerIsOnlyAnEstimatePlaceholder": true,
     "constructorTreasury": "0x0de7fdcc798f7fac6b03b366c529133a9c60794d",
@@ -13,15 +13,15 @@
     "deploymentGas": "5199029",
     "gasPriceWei": "6000000",
     "executionETH": "0.000031194174",
-    "l1DataFeeUpperBoundETH": "0.00000026030127438",
-    "currentExecutionPlusL1UpperBoundETH": "0.00003145447527438",
+    "l1DataFeeUpperBoundETH": "0.000000253050521128",
+    "currentExecutionPlusL1UpperBoundETH": "0.000031447224521128",
     "excludes": "Later coin launches, keeper transactions, liquidity contributions and changes in fees or approved constructor addresses."
   },
   "solana": {
-    "slot": 455751826,
+    "slot": 455754175,
     "rpc": "https://solana-rpc.publicnode.com",
     "binaryBytes": 311360,
-    "binarySha256": "bd6b65bac4e2bd8c428e24ea454ea17efe46c052555e0dcb73643a0d78fe20d9",
+    "binarySha256": "fc79e1a815b14c3631a2dac4fcb6c4e0e1f6289ee79136f48060f2ef7fb45b23",
     "minimumAllocationBytes": 311360,
     "programAccountRentLamports": 833120,
     "programDataRentLamports": 1582587640,
