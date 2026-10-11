@@ -18,6 +18,8 @@ on:
       - "live.html"
       - "live.js"
       - "community.css"
+      - "liquidity.html"
+      - "liquidity.js"
       - "claim.html"
       - "plsol.html"
       - "plsol.js"

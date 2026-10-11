@@ -42,8 +42,34 @@ export async function verifyCommunityBrowser(browser,base) {
     assert.equal(await page.locator('#watch-url').inputValue(),publicUrl);
     await page.goto(base+'live.html?watch='+encodeURIComponent('https://evil.example/path'));
     assert.match(await page.locator('#watch-state').textContent(),/Invalid public viewer link/);
-    assert.deepEqual(errors,[],'bounty and live pages must have no JS runtime errors at '+width+'px');
+    await page.goto(base+'liquidity.html',{waitUntil:'networkidle'});
+    assert.match(await page.locator('.warning').textContent(),/Nothing funds itself when a coin is created/);
+    assert.match(await page.locator('#plan-output').textContent(),/No funds are requested|Review your proposed amounts/);
+    assert.equal(await page.locator('#plan-uniswap-link').getAttribute('href'),
+      'https://app.uniswap.org/explore/pools/base/0xDAD81f9f5DbF71Ce54D63f96eE45231D97d6B086');
+    await page.locator('#plan-chain').selectOption('solana');
+    assert.match(await page.locator('#plan-coin-instructions').textContent(),/Solana Classic/);
+    await page.locator('#plan-coin-amount').fill('0.005');
+    await page.locator('#plan-plite').fill('100');
+    await page.locator('#plan-review').click();
+    assert.match(await page.locator('#plan-output').textContent(),/requires both PLITE and WETH/);
+    await page.locator('#plan-weth').fill('0.000001');
+    await page.locator('#plan-review').click();
+    assert.match(await page.locator('#plan-output').textContent(),/separately buy 0.005 SOL/);
+    assert.match(await page.locator('#plan-output').textContent(),/100 PLITE and 0.000001 WETH/);
+    assert.match(await page.locator('#plan-output').textContent(),/unsubmitted funding intentions/);
+    await page.locator('#plan-coin-amount').fill('0.0000000001');
+    await page.locator('#plan-review').click();
+    assert.match(await page.locator('#plan-output').textContent(),/maximum 9 fractional digits/);
+    await page.locator('#plan-chain').selectOption('base');
+    await page.locator('#plan-coin-amount').fill('0.001');
+    await page.locator('#plan-review').click();
+    assert.match(await page.locator('#plan-output').textContent(),/enter 0.001 ETH as the optional first buy/);
+    await page.locator('#plan-clear').click();
+    assert.equal(await page.locator('#plan-plite').inputValue(),'');
+    assert.match(await page.locator('#plan-output').textContent(),/No funds or settings were changed/);
+    assert.deepEqual(errors,[],'bounty, live and liquidity planner pages must have no JS runtime errors at '+width+'px');
     await context.close();
-    console.log('PASS bounty/live '+width+'px: SOL+ETH private drafts, persistence, no unverified funding, strict WHIP/WHEP URL checks');
+    console.log('PASS bounty/live/liquidity '+width+'px: SOL+ETH private drafts, persistence, no unverified funding, strict WHIP/WHEP URL checks');
   }
 }
