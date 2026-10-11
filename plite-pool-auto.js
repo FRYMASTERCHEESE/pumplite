@@ -5,7 +5,7 @@
   if (window.top !== window.self) return;
   const $=id=>document.getElementById(id);
   const PAIR='0xdad81f9f5dbf71ce54d63f96ee45231d97d6b086';
-  const PLITE='0xb15a460142c77b42cdf57815b0eefe b24b593196'.replace(' ','');
+  const PLITE='0xb15a460142c77b42cdf57815b0eefeb24b593196';
   const WETH='0x4200000000000000000000000000000000000006';
   const FACTORY='0x8909dc15e40173ff4699343b6eb8132c65e18ec6';
   const RPCS=['https://base-rpc.publicnode.com','https://mainnet.base.org'];
