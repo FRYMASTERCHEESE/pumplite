@@ -107,6 +107,15 @@ export async function verifyRedesignBrowser(browser, base) {
     }
     assert.equal(await page.locator('#auto-prepare-metadata').isChecked(),true,
       'Auto setup enabled by default for one-flow coin creation at '+width);
+    assert.match(await page.locator('#v2-mayhem-preview').textContent(),/NOT SELECTED: the next new Base V2 coin starts with Mayhem OFF/);
+    await page.locator('#v2-initial-mayhem').check();
+    assert.match(await page.locator('#v2-mayhem-preview').textContent(),/SELECTED for the NEXT new Base V2 coin/);
+    assert.match(await page.locator('#v2-mayhem-preview').textContent(),/creation transaction confirms/);
+    assert.match(await page.locator('#v2-mayhem-preview').textContent(),/no bot trades automatically/);
+    await page.locator('#v2-initial-mayhem').uncheck();
+    assert.match(await page.locator('#v2-mayhem-preview').textContent(),/NOT SELECTED/);
+    assert.equal(await page.locator('#initial-buy-dialog').isVisible(),false,
+      'Checking Mayhem option does not send a transaction or activate an existing coin');
     await page.locator('#name').fill('Safe Fixture Coin');
     await page.locator('#symbol').fill('SAFE');
     await page.locator('#create-form').evaluate(form=>form.requestSubmit());
