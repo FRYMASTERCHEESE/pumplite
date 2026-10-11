@@ -23,7 +23,7 @@ const localMobileScript =
   await readFile('pumplite-app.js', 'utf8');
 
 const communityAssets = await Promise.all([
-  'bounties.html','bounties.js','live.html','live.js','community.css','liquidity.html','liquidity.js'
+  'bounties.html','bounties.js','live.html','live.js','community.css','liquidity.html','liquidity.js,'launch-automation.js'
 ].map(path=>readFile(path,'utf8')));
 
 const localPlsolHtml =
@@ -447,7 +447,7 @@ async function verifyOnce() {
   assert.ok(liveMobileScript.includes("./bounties.html") &&
     liveMobileScript.includes("./live.html"),
     'The live app must link both community features');
-  const communityPaths=['bounties.html','bounties.js','live.html','live.js','community.css','liquidity.html','liquidity.js'];
+  const communityPaths=['bounties.html','bounties.js','live.html','live.js','community.css','liquidity.html','liquidity.js,'launch-automation.js'];
   const publicCommunity=await Promise.all(communityPaths.map(path=>fetchText(path)));
   for(let i=0;i<communityPaths.length;i++){
     assert.equal(normalizeTerminal(publicCommunity[i]),normalizeTerminal(communityAssets[i]),
@@ -460,6 +460,9 @@ async function verifyOnce() {
     publicCommunity[6].includes('plan-output'),
     'Public liquidity policy or funding planner missing');
   assert.ok(index.includes('href="./liquidity.html"'), 'Creation flow missing liquidity policy');
+  assert.ok(index.includes('src="./launch-automation.js"') &&
+    publicCommunity[7].includes('auto-liquidity-handoff'),
+    'Production creator opt-in handoff missing');
 
   assert.ok(
     claim.includes(
