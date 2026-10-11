@@ -2,6 +2,18 @@
 
 Status: source-complete candidate. Not deployed by this change.
 
+## Verification and activation requirements
+
+The live Pages frontend was verified against repository main on 11 October 2026. Its creation target remains V2 (`0xdA8c34819ae397FD4bE3C95947DEA64f4A3278f4`); no V3 deployment identity is recorded in `deployments/`. A deployment page being available does not prove that its wallet transaction was approved or that V3 is active.
+
+`pnpm test` now includes the V3 candidate contract and static tests. `pnpm test:base-v3` runs the focused suite, including ABI-decoded creation calldata checks for Classic=0, Auto=1 and Manual=2. These are local simulations, not mainnet launch acceptance.
+
+Given a public deployed factory address, run `node scripts/verify-base-v3-live.mjs <factory-address>` after compiling V3. This read-only check verifies chain identity, pinned-block runtime against the committed compiler output (masking immutable slots), production treasury and constructor read-backs. Review the controller, fee treasury and all immutable limits separately before activation.
+
+Activation must retain V2 factory discovery and route existing V2 market links/trades to the V2 adapter. The current single-factory adapter selection does not yet provide that migration. Do not simply replace `base.factory` and `contractVersion`: it would strand existing V2 frontend routes. Production validator, configuration, discovery/routing, release checks and documentation must change together after the V3 identity is verified.
+
+Auto requires a funded controller/keeper to submit commit/reveal transactions. Manual requires the creator request plus controller execution; a request alone is not an executed agent trade. Keeper funding and mainnet wallet acceptance are unresolved and are not authorized by these offline checks.
+
 The public production configuration validator deliberately continues to reject `contractVersion: 3`. V3 source, ABI, UI compatibility code and tests may exist in the repository, but V3 cannot become an active production deployment until a later reviewed activation changes the validator and `config.json` together with an actual verified V3 factory address.
 
 PumpLite V3 is additive. The currently deployed V2 factory and every V2 market remain unchanged.

@@ -12,6 +12,8 @@ override this current status.
 
 PumpLite Base V2 is deployed and public writes are enabled.
 
+V3 investigation (11 October 2026): live Pages parity and read-only V2 runtime/controller/treasury checks passed. All available remote branch configurations and deployment history were searched; no recorded Base V3 factory identity was found. The latest [V3 Actions run](https://github.com/FRYMASTERCHEESE/pumplite/actions/runs/38099821778) compiled and tested a candidate locally, with no deployment artifact. [BaseScan contract-creation history](https://basescan.org/txs?a=0x0de7FdCc798F7FAC6b03b366c529133A9c60794d&f=5) lists only V1, V2 and the PLITE claim for the known deployer. A read-only scan of all 16 possible direct CREATE addresses at Base block 52,446,508 corroborated those three contracts and found no matching V3 runtime. This does not rule out another deployer or an indirect deployment. Existing V3 deployment must be identified and verified before activation; no redeployment or cryptocurrency spending was performed. See [V3 verification requirements](MAYHEM_V3.md).
+
 - Chain: Base Mainnet (8453)
 - Active V2 factory: `0xdA8c34819ae397FD4bE3C95947DEA64f4A3278f4`
 - Contract version: 2
