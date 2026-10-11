@@ -34,6 +34,7 @@
 <script defer src="./launchpad-terminal.js"></script>
 <link rel="stylesheet" href="./pumplite-app.css">
 <script defer src="./pumplite-app.js"></script>
+<script defer src="./launch-automation.js"></script>
 </head>
 <body class="redesign">
 <a class="skip-link" id="skip-content" href="#main-content">Skip to main content</a>
@@ -339,6 +340,15 @@
           <button id="download-metadata" type="button" class="outline full">Copy metadata JSON</button>
           <p class="fine">Mobile wallet browsers often block file downloads. This button copies the complete metadata JSON instead. You can paste it into a file later if you need the manual backup.</p></details>
           <p class="fine" id="launch-liquidity-disclosure"><strong>Real liquidity (opt-in only):</strong> On Base you may choose an optional first ETH buy, approved separately in your wallet, to back your new coin's PumpLite curve. On Solana Classic the new coin is created without a first buy; buy from its market later if you want real SOL backing. PLITE's separate Uniswap V2 PLITE/WETH pool is not funded by coin creation fees. <a href="./liquidity.html">Review both transparent liquidity routes →</a></p>
+          <section id="auto-liquidity-handoff" class="auto-liquidity-handoff" aria-labelledby="auto-liquidity-heading" hidden>
+            <h3 id="auto-liquidity-heading">Automatic funding setup · opt-in</h3>
+            <p id="auto-liquidity-description" class="fine"></p>
+            <div class="auto-liquidity-actions">
+              <button id="auto-liquidity-apply" type="button" class="outline">Use planned buy amount</button>
+              <button id="auto-liquidity-skip" type="button" class="outline">Skip planned buy</button>
+            </div>
+            <p id="auto-liquidity-status" class="fine" role="status" aria-live="polite">No funding instructions are active.</p>
+          </section>
           <p id="creation-review" class="fine">Check the name, ticker and metadata first. PumpLite charges 0% to create; Base network gas still applies. If PumpLite does not yet have wallet access, tapping Create coin will request access to the same wallet you are using.</p>
           <button id="create" class="primary" type="submit" disabled>Create coin</button>
           <p id="create-action-status" class="fine" role="status" aria-live="polite">Auto setup is on: enter your coin name and ticker, choose an image, then tap Create coin. Approve the metadata message and final transaction in your wallet. No funds move without wallet approval.</p>
