@@ -10,7 +10,8 @@ import abis from './web/generated/base-v6-abi.json';
 import {Interface} from 'ethers';
 import {PublicKey} from '@solana/web3.js';
 import {createInstructions,tradeInstructions,mayhemInstruction} from './web/solana-v6-instructions.js';
-window.v6={encodeV6Launch,abis,Interface,PublicKey,createInstructions,tradeInstructions,mayhemInstruction};`,resolveDir:process.cwd()},
+import {baseVersionRouter} from './web/base-version-router.js';
+window.v6={encodeV6Launch,abis,Interface,PublicKey,createInstructions,tradeInstructions,mayhemInstruction,baseVersionRouter};`,resolveDir:process.cwd()},
   bundle:true,write:false,format:'esm',platform:'browser',target:['es2022'],define:{'process.env.NODE_ENV':'"production"'}});
 const server=createServer((req,res)=>{res.setHeader('Content-Type',req.url==='/fixture.js'?'text/javascript':'text/html');
   res.end(req.url==='/fixture.js'?built.outputFiles[0].contents:'<!doctype html><meta name="viewport" content="width=device-width"><title>V6 local instruction fixture</title><script type="module" src="/fixture.js"></script>');});
@@ -26,7 +27,19 @@ try {
     await page.addInitScript(()=>{window.ethereum={request(){throw Error('Wallet must not be accessed');}};window.solana={connect(){throw Error('Wallet must not be accessed');}};});
     await page.goto(origin);await page.waitForFunction(()=>Boolean(window.v6));
     const result=await page.evaluate(async()=>{
-      const {encodeV6Launch,Interface,abis,PublicKey,createInstructions,tradeInstructions,mayhemInstruction}=window.v6;
+      const {encodeV6Launch,Interface,abis,PublicKey,createInstructions,tradeInstructions,mayhemInstruction,baseVersionRouter}=window.v6;
+      const legacyFactory='0xdA8c34819ae397FD4bE3C95947DEA64f4A3278f4';
+      const candidateFactory='0x0000000000000000000000000000000000000006';
+      const fixture = version => ({id:'0x'+String(version).padStart(40,'0'), token:'0x'+String(version+10).padStart(40,'0'),contractVersion:version,
+        provenance:{registered:true,chainId:8453,factory:version===2?legacyFactory:candidateFactory,market:'0x'+String(version).padStart(40,'0')}});
+      const fake = version => ({market:async id=>{if(id!==fixture(version).id)throw Error('Unregistered');return fixture(version);},
+        list:async()=>({markets:[fixture(version)],next:null}),create:async()=>version});
+      const router=baseVersionRouter({v2:fake(2),v6:fake(6),legacyFactory,candidateFactory});
+      const routed=await router.list();
+      if(routed.markets.length!==2 || (await router.market(fixture(2).id)).contractVersion!==2 || await router.create({})!==2)
+        throw Error('Legacy routing failed');
+      try { await router.create({},6); throw Error('Unapproved V6 write accepted'); }
+      catch(error) { if(!error.message.includes('not been approved')) throw error; }
       const key=n=>new PublicKey(new Uint8Array(32).fill(n)),owner=key(1),programId=key(2);
       const modes=[];
       for(const launchMode of [0,1,2]) {

@@ -7,8 +7,8 @@ engineering verification, not independent audit approval.
 | Run | Result |
 | --- | --- |
 | `pnpm test` (existing Base, V3, website, Solana builders and new wire regressions) | 497 passed; 0 failed/cancelled/skipped |
-| `pnpm test:v6` | 41 passed; 0 failed/cancelled/skipped |
-| V6 breakdown | 13 Base candidate, 13 adversarial Base security, 2 frontend/wallet lifecycle, 5 Base calldata, 8 Solana instructions |
+| `pnpm test:v6` | 42 passed; 0 failed/cancelled/skipped |
+| V6 breakdown | 14 Base candidate/keeper, 13 adversarial Base security, 2 frontend/wallet/legacy-routing lifecycle, 5 Base calldata, 8 Solana instructions |
 | `cargo test --locked --workspace --lib` | 13 passed: 4 existing + 9 V6; 0 failed/ignored |
 | Compiled Solana V6 SBF `markets` integration suite | 35 passed; 0 failed/ignored |
 | Pages export/browser integration | 15 PASS scenarios, including 390/768/1440px and wallet consent |
@@ -60,10 +60,10 @@ Rust warnings: unmaintained `ansi_term`, `bincode`, `derivative`, `libsecp256k1`
 
 `deployments/v6-cost-estimate.json` records read-only RPC estimates and exact
 candidate hashes. At its recorded observation, Base factory gas is 5,199,029:
-execution plus L1 upper bound **0.000031558107775795 ETH**. Solana's 343,912-byte
-binary requires **1.74878492 SOL retained rent**, plus **0.001935 SOL** upload
-fees in the specified 900-byte/no-priority/no-retry scenario: **1.75071992 SOL**.
-The loader normally reuses buffer rent; 3.49863108 SOL is conservative separate
+execution plus L1 upper bound **0.00003145447527438 ETH**. Solana's optimized 311,360-byte
+binary requires **1.58342076 SOL retained rent**, plus **0.00175 SOL** upload
+fees in the specified 900-byte/no-priority/no-retry scenario: **1.58517076 SOL**.
+The loader normally reuses buffer rent; 3.16771776 SOL is conservative separate
 prefunding, not the normal required minimum. These are current estimates, not
 guaranteed final charges. Approved identities, a rebuilt Solana program ID,
 priority fees/retries, allocation and release-time RPC values can change them.
@@ -76,3 +76,21 @@ and explicit cost/release approval. External DEX migration is not implemented.
 See `V6_CANDIDATE_READINESS.md` for the complete remaining requirements.
 
 No deployment, spending, production merge or live settings change occurred.
+
+## Cost-first continuation evidence
+
+The final combined 42-test run passed in 99.58 seconds, including the unsigned
+keeper's real local Auto/Manual actions, missing-secret expiry recovery and fee
+ceilings. Actual V2/V6 website adapters discovered both factories and executed V2
+buy/sell through the staged router; unapproved V6 writes were rejected before
+wallet access. The separate frontend run passed 2 tests in 87.51 seconds. V6
+Chromium tests also exercised default V2 routing and disabled V6 creation at
+390/1440px. Both adapters and the staged router bundle without external imports.
+
+The optimized SBF suite passed all 35 tests in 37.43 seconds. No product feature,
+account constraint or checked arithmetic was removed. The previous Linux CI
+failure was a relative artifact path resolving from Cargo's test-package directory,
+not a contract failure. The workflow now supplies an absolute workspace path.
+Remote results for the updated commit must be read separately from GitHub checks.
+Cloudflare's unrelated existing worker builds report failure but expose no cause
+in their GitHub output; worker/deployment settings remain untouched.

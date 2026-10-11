@@ -8,6 +8,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import ganache from "ganache";
 import { encodeV6Launch } from '../web/base-v6-launch.js';
+import { planBaseV6Keeper } from '../scripts/base-v6-keeper-plan.mjs';
 
 import {
   BrowserProvider,
@@ -25,6 +26,75 @@ let trader;
 let feeTreasury;
 let factory;
 let artifacts;
+
+test('V6 keeper planner executes Auto/Manual locally, recovers expiry and respects fee limits', async () => {
+  // Actual contracts/estimateGas with only the Base L1 fee oracle substituted:
+  // Ganache does not deploy Base system contracts. No public RPC or real signer.
+  const keeperProvider = new Proxy(provider, { get(target, key) {
+    if (key === 'call') return async tx => {
+      assert.equal(tx.to, '0x420000000000000000000000000000000000000F');
+      return '0x' + (100n).toString(16).padStart(64, '0');
+    };
+    const value = target[key]; return typeof value === 'function' ? value.bind(target) : value;
+  }});
+  for (const mode of [1, 2]) {
+    const { market } = await createMarket(mode);
+    const secret = id('durably-journaled-test-secret-' + mode);
+    const inputs = { provider: keeperProvider, factory, market, controller: controller.address,
+      secret, secretDurablyStored: true, maxGasPriceWei: 10n ** 12n, remainingFeeBudgetWei: 10n ** 18n };
+    assert.equal((await planBaseV6Keeper(inputs)).action, 'wait'); // Paused, no funding.
+    await makeMayhemActive(market);
+    if (mode === 2) {
+      assert.match((await planBaseV6Keeper(inputs)).reason, /Manual/);
+      await transact(market.connect(creator).requestManualMayhemTrade());
+    }
+    assert.match((await planBaseV6Keeper({...inputs, secretDurablyStored:false})).reason, /Persist/);
+    assert.match((await planBaseV6Keeper({...inputs, maxGasPriceWei:1n})).reason, /Gas/);
+    assert.match((await planBaseV6Keeper({...inputs, remainingFeeBudgetWei:1n})).reason, /budget/);
+    await assert.rejects(planBaseV6Keeper({...inputs, controller:trader.address}), /Unverified/);
+    let plan = await planBaseV6Keeper(inputs);
+    assert.equal(plan.action, 'commitMayhemTrade'); assert.equal(plan.value, 0n);
+    await transact(controller.sendTransaction({to:plan.to, data:plan.data, value:plan.value}));
+    assert.match((await planBaseV6Keeper(inputs)).reason, /Future/);
+    await provider.send('evm_mine', []); await provider.send('evm_mine', []);
+    assert.match((await planBaseV6Keeper({...inputs, secret:undefined})).reason, /Recover/);
+    await assert.rejects(planBaseV6Keeper({...inputs, secret:id('wrong-secret')}), /mismatch/);
+    plan = await planBaseV6Keeper(inputs);
+    const backing = await market.nativeReserve() + await market.agentNativeBank();
+    if (plan.action === 'revealMayhemTrade') {
+      await transact(controller.sendTransaction({to:plan.to, data:plan.data, value:0n, gasLimit:plan.gasLimit}));
+      assert.equal(await market.mayhemTradeCount(), 1n);
+    } else {
+      assert.match(plan.reason, /expiry/);
+      for (let n = 0; n < 256; n++) await provider.send('evm_mine', []);
+      plan = await planBaseV6Keeper({...inputs, secret:undefined});
+      assert.equal(plan.action, 'expireMayhemCommitment');
+      await transact(controller.sendTransaction({to:plan.to, data:plan.data, value:0n}));
+      assert.equal(await market.expiredCommitments(), 1n);
+    }
+    assert.equal(await market.nativeReserve() + await market.agentNativeBank(), backing);
+    // Simulate a restarted keeper whose durable reveal record cannot be recovered.
+    await provider.send('evm_increaseTime', [301]); await provider.send('evm_mine', []);
+    if (mode === 2 && !await market.pendingManualRequest()) await transact(market.connect(creator).requestManualMayhemTrade());
+    const nextInputs = {...inputs, secret:id('second-durable-secret-' + mode)};
+    plan = await planBaseV6Keeper(nextInputs);
+    assert.equal(plan.action, 'commitMayhemTrade');
+    await transact(controller.sendTransaction({to:plan.to, data:plan.data, value:0n}));
+    const expiriesBefore = await market.expiredCommitments();
+    for (let n = 0; n < 256; n++) await provider.send('evm_mine', []);
+    plan = await planBaseV6Keeper({...nextInputs, secret:undefined});
+    assert.equal(plan.action, 'expireMayhemCommitment');
+    await transact(controller.sendTransaction({to:plan.to, data:plan.data, value:0n}));
+    assert.equal(await market.expiredCommitments(), expiriesBefore + 1n);
+    assert.equal(await market.nativeReserve() + await market.agentNativeBank(), backing);
+    await provider.send('evm_increaseTime', [86401]); await provider.send('evm_mine', []);
+    plan = await planBaseV6Keeper({...inputs, secret:undefined});
+    assert.equal(plan.action, 'finalizeMayhem');
+    await transact(controller.sendTransaction({to:plan.to, data:plan.data, value:0n}));
+    assert.equal(await market.agentNativeBank(), 0n);
+    assert.equal((await planBaseV6Keeper(inputs)).action, 'wait');
+  }
+});
 
 const ONE_BILLION =
   1_000_000_000n *
@@ -244,7 +314,7 @@ before(async () => {
       quiet: true
     },
     chain: {
-      chainId: 31337,
+      chainId: 8453,
       hardfork: "shanghai"
     },
     wallet: {

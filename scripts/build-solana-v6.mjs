@@ -19,11 +19,15 @@ catch (e) { if (e.code !== 'ENOENT') throw e; }
 await mkdir(guard);
 try {
   const extra = process.env.PUMPLITE_SKIP_TOOLS_INSTALL === '1' ? ['--skip-tools-install'] : [];
+  // Size optimization is scoped to this child build, never the legacy program.
+  // no-idl omits unused on-chain IDL administration; all product instructions,
+  // validation, events, checked arithmetic and metadata CPIs remain enabled.
   const result = spawnSync('cargo-build-sbf', [
     '--manifest-path', 'programs/pumplite-v6/Cargo.toml',
     '--tools-version', 'v1.52', '--arch', 'v0', '--sbf-out-dir', out,
+    '--features', 'no-idl',
     ...extra, '--', '--locked',
-  ], { stdio: 'inherit' });
+  ], { stdio: 'inherit', env: { ...process.env, CARGO_PROFILE_RELEASE_OPT_LEVEL: 'z' } });
   if (result.error) throw result.error;
   if (result.status !== 0) throw Error('SBF build failed with exit code ' + result.status);
   const bytes = await readFile(resolve(out, 'pumplite_v6.so'));

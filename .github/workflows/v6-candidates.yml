@@ -84,7 +84,7 @@ jobs:
       - name: Execute actual SBF and website instructions in local VM
         run: cargo test --locked -p pumplite-v6-svm-tests --features sbf-tests --test markets
         env:
-          PUMPLITE_V6_SBF: target/deploy-v6/pumplite_v6.so
+          PUMPLITE_V6_SBF: ${{ github.workspace }}/target/deploy-v6/pumplite_v6.so
       - name: Assert no deployment signing files exist
         shell: bash
         run: |

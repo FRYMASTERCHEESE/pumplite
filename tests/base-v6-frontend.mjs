@@ -5,6 +5,8 @@ import ganache from 'ganache';
 import solc from 'solc';
 import { BrowserProvider, JsonRpcProvider, ContractFactory, Contract, parseEther } from 'ethers';
 import { adapter } from '../web/adapters/base-v6.js';
+import { adapter as legacyAdapter } from '../web/adapters/base-v2.js';
+import { baseVersionRouter } from '../web/base-version-router.js';
 const config = {...JSON.parse(await readFile(new URL('../config.json', import.meta.url))).base, contractVersion: 6};
 
 test('Base adapter rejects wrong configuration and wrong RPC before wallet access', async t => {
@@ -136,6 +138,40 @@ test('V6 frontend lifecycle executes only in a process-local EVM with a syntheti
   assert.equal((await client.balances(market)).tokens, 0n);
   assert.equal(await token.allowance(signer.address, id), 0n);
   assert.ok(notifications.filter(text => text.startsWith('Confirmed')).length >= 4);
+  // Both real website adapters route real local markets; production identities
+  // below exist only inside this isolated Ganache process.
+  const legacyArtifact = JSON.parse(await readFile('build/base-v2/LaunchFactoryV2.json'));
+  const legacyFactory = await new ContractFactory(legacyArtifact.abi, legacyArtifact.evm.bytecode.object, signer)
+    .deploy(signer.address, config.treasury);
+  await legacyFactory.waitForDeployment();
+  const legacyAddress = '0xdA8c34819ae397FD4bE3C95947DEA64f4A3278f4';
+  await rpc.request({method:'evm_setAccountCode', params:[legacyAddress, await provider.getCode(await legacyFactory.getAddress())]});
+  const legacyClient = legacyAdapter({...config, contractVersion:2, factory:legacyAddress}, () => {});
+  t.after(() => legacyClient.close());
+  const router = baseVersionRouter({v2:legacyClient,v6:client,legacyFactory:legacyAddress,candidateFactory:await factory.getAddress()});
+  await router.connect();
+  const legacyId = await router.create({name:'Preserved legacy',symbol:'OLD',uri:'',initialSupply:10n**27n,maxSupply:10n**27n,mintable:false,initialMayhem:false});
+  const legacyMarket = await router.market(legacyId);
+  assert.equal(legacyMarket.contractVersion, 2);
+  assert.equal((await router.market(id)).contractVersion, 6);
+  const combined = await router.list();
+  assert.equal(combined.warnings.length, 0);
+  assert.ok(combined.markets.some(m => m.id === legacyId));
+  assert.ok(combined.markets.some(m => m.id === id));
+  const sendsBefore = requests.filter(m => m === 'eth_sendTransaction').length;
+  await assert.rejects(router.trade(market,'buy',parseEther('0.01'),1n), /not been approved/);
+  await assert.rejects(router.create({},6), /not been approved/);
+  await assert.rejects(router.trade({...legacyMarket,contractVersion:6},'buy',1n,1n), /changed/);
+  assert.equal(requests.filter(m => m === 'eth_sendTransaction').length, sendsBefore);
+  await router.trade(legacyMarket,'buy',parseEther('0.01'),1n);
+  const legacyHeld = (await router.balances(legacyMarket)).tokens;
+  await router.trade(legacyMarket,'sell',legacyHeld,1n);
+  assert.equal((await router.balances(legacyMarket)).tokens,0n);
+  // V6 outage cannot hide the legacy discovery page.
+  const outage = baseVersionRouter({v2:legacyClient,v6:{list:async()=>{throw Error('offline');},market:async()=>{throw Error('offline');}},
+    legacyFactory:legacyAddress,candidateFactory:await factory.getAddress()});
+  assert.equal((await outage.list()).warnings[0].version,6);
+  assert.equal((await outage.market(legacyId)).contractVersion,2);
   accountOverride = [];
   await assert.rejects(client.balances(market), /Wallet changed/);
   accountOverride = undefined; chainOverride = '0x1';
