@@ -61,3 +61,18 @@ The creator page `/?page=create&liquidityChain=base|solana&liquidityBuy=<amount>
 The standalone helper explicitly contains no wallet signing API, `fetch`, cross-origin requests, storage, automated button click or delayed transaction timer. Malformed amounts, negative amounts, wrong networks and intents above 1 native token are rejected. A blockchain signature is **never** triggered by page load.
 
 For full on-chain LP automation, define the exact amount/payer and custody model first, independently audit an allowance-bounded Uniswap interaction and its failure/idempotency handling, and obtain additional explicit owner approval before any spending, contract upgrades or changes to the 0% creator fee.
+
+## Automated real PLITE reserve discovery and matching (phase 3)
+
+The `/pumplite/liquidity.html` funding planner now offers an **automatic read-only PLITE/WETH live pool matcher**. It can reduce manual calculations but **cannot add liquidity**.
+
+- Reads from the two **reviewed Base Mainnet RPC URLs** only (`https://base-rpc.publicnode.com`, `https://mainnet.base.org`) using `eth_chainId`, `eth_blockNumber`, and static `eth_call`. The client refuses any chain other than Base `8453`.
+- Reads the official Uniswap V2 pair at `0xDAD81f9f5DbF71Ce54D63f96eE45231D97d6B086` at a **consistent block number**; checks `token0()` and `token1()` against both canonical PLITE `0xb15A460142c77b42cDF57815b0eeFEb24b593196` and canonical Base WETH `0x4200000000000000000000000000000000000006`; checks `factory()` against Uniswap V2 Base factory `0x8909Dc15e40173Ff4699343b6eB8132c65e18eC6`.
+- Reads `getReserves()` and rejects empty, malformed, out-of-range, wrong-token or wrong-network results. Data are considered **stale after 45 seconds**, at which point auto-match is disabled until refreshed.
+- The user chooses starting token and enters the intended amount, then **Auto-match other amount** calculates the corresponding 18-decimal amount with exact `BigInt` reserve math and conservative rounding. Both entries remain completely editable; a new plan review is required after any automatic change.
+- No wallet API, signing, transaction creation, allowance, token transfer, deposit or LP minting is exposed by this feature. Public Base RPC reads may fail under rate limits or provider outages; the app must report this honestly without inventing prices/reserves or pretending a contribution is funded.
+- **Safety warning:** A correct reserve ratio may still be economically unsafe, particularly in a thin pool, and is not a quote. Uniswap's final wallet preview is authoritative for fee/gas/slippage, matched amounts, LP token ownership, price impact and impermanent-loss risk. Users must separately approve the real deposit in the official Uniswap interface.
+
+Tests: `tests/plite-pool-auto.test.mjs` and `tests/plite-pool-auto-browser.mjs`, covering canonical identity, failures, amount precision, mobile and desktop rendering, and no wallet writes.
+
+No new coin fees, secret custody, PLITE liquidity, cross-chain transfers, or recurring spending were created by this implementation.

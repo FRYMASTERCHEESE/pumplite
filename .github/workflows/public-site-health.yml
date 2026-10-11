@@ -20,6 +20,7 @@ on:
       - "community.css"
       - "liquidity.html"
       - "liquidity.js"
+      - "plite-pool-auto.js"
       - "launch-automation.js"
       - "claim.html"
       - "plsol.html"
