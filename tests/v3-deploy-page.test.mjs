@@ -1,5 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+test('V3 activation instructions preserve V2 markets and require controller verification', async () => {
+  const html = await readFile('v3-deploy.html', 'utf8');
+  assert.match(html, /preserve existing V2 coins, discovery and trading through their V2 adapter/);
+  assert.match(html, /Do not replace the live factory address alone/);
+  assert.match(html, /Verify the controller service before enabling Mayhem Auto or Manual/);
+  assert.doesNotMatch(html, /then switch production from V2 to V3/);
+});
 import {
   access,
   readFile
