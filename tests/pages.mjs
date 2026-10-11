@@ -1,5 +1,6 @@
 import {verifyRedesignBrowser} from './ui-redesign-browser.mjs';
 import {verifyCommunityBrowser} from './community-browser.mjs';
+import {verifyLaunchAutomationBrowser} from './launch-automation-browser.mjs';
 import {verifySolanaRentBrowser} from './solana-rent-browser.mjs';
 import { verifyBrowser } from './verified-browser.mjs';
 import assert from 'node:assert/strict';
@@ -206,6 +207,7 @@ try {
   await verifyBrowser(browser,base);
   await verifyRedesignBrowser(browser,base);
   await verifyCommunityBrowser(browser,base);
+  await verifyLaunchAutomationBrowser(browser,base);
   await verifySolanaRentBrowser(browser, base);
 
   // V3 injected-wallet boot does not race wallet discovery.
