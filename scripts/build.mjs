@@ -169,6 +169,7 @@ if (checkOnly) {
     'liquidity.js',
     'plite-pool-auto.js',
     'launch-automation.js',
+    'base-mayhem-explainer.js',
     'plsol.html',
     'creator-tokens.html',
     'claim.html',
