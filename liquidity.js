@@ -67,6 +67,22 @@
       for(const msg of [newRoute,poolRoute,'These are two independent, unsubmitted funding intentions. Neither contribution is promised or booked. No wallet, transfer or automatic fee diversion is triggered here.']){
         const p=document.createElement('p');p.textContent=msg;p.className='muted';output.append(p);
       }
+      if(positive(backing)) {
+        const link=document.createElement('a');
+        link.id='plan-auto-launch';
+        const intent=new URL('./',location.href);
+        intent.searchParams.set('page','create');
+        if(BigInt(backing.split('.')[0])<=1n &&
+           BigInt(backing.split('.')[0]+(backing.split('.')[1]||'').padEnd(data[chain].decimals,'0'))<=10n**BigInt(data[chain].decimals)){
+          intent.searchParams.set('liquidityChain',chain);
+          intent.searchParams.set('liquidityBuy',backing);
+          link.textContent='Continue with automatic launch setup →';
+        } else {
+          link.textContent='Open coin creator — enter large amounts manually →';
+        }
+        link.href=intent.href;
+        output.append(link);
+      }
       output.setAttribute('role','status');
     }catch(error){setReview(error.message||'Invalid funding amount.',true);}
   });
