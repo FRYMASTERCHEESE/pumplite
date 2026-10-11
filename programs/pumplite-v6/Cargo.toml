@@ -1,0 +1,31 @@
+[package]
+name = "pumplite-v6"
+version = "0.6.0"
+edition = "2021"
+rust-version = "1.89"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "pumplite_v6"
+
+[features]
+default = []
+cpi = ["no-entrypoint"]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
+anchor-debug = []
+custom-heap = []
+custom-panic = []
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("solana"))'] }
+
+[dependencies]
+solana-sha256-hasher = { version = "=3.1.0", features = ["sha2"] }
+anchor-lang = "=1.0.2"
+# Anchor 1.0 mint init code references token-interface extension helpers even for legacy SPL mints.
+# Program<Token> still restricts all product operations to the legacy SPL Token program.
+anchor-spl = { version = "=1.0.2", default-features = false, features = ["token", "associated_token", "token_2022", "token_2022_extensions"] }

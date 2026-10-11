@@ -1,5 +1,5 @@
 [workspace]
-members = ["programs/pumplite", "tests/solana"]
+members = ["programs/pumplite", "programs/pumplite-v6", "tests/solana", "tests/solana-v6"]
 resolver = "2"
 
 [workspace.metadata.solana]

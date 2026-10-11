@@ -1,0 +1,50 @@
+{
+  "observedAt": "2026-10-11T18:19:11.558Z",
+  "deployed": false,
+  "approved": false,
+  "caveat": "Current read-only estimates, not a final charge or approval. Costs must be refreshed after the exact release and public identities are approved.",
+  "base": {
+    "block": 52476701,
+    "controller": "0x0de7fdcc798f7fac6b03b366c529133a9c60794d",
+    "controllerIsOnlyAnEstimatePlaceholder": true,
+    "constructorTreasury": "0x0de7fdcc798f7fac6b03b366c529133a9c60794d",
+    "feeTreasury": "0x0de7fdcc798f7fac6b03b366c529133a9c60794d",
+    "bytecodeSha256": "98e3feb17783d9520ef7fa8936ec720dcd8e217815165294f3014479daf13c0a",
+    "deploymentGas": "5199029",
+    "gasPriceWei": "6000000",
+    "executionETH": "0.000031194174",
+    "l1DataFeeUpperBoundETH": "0.000000363933775795",
+    "currentExecutionPlusL1UpperBoundETH": "0.000031558107775795",
+    "excludes": "Later coin launches, keeper transactions, liquidity contributions and changes in fees or approved constructor addresses."
+  },
+  "solana": {
+    "slot": 455747448,
+    "rpc": "https://solana-rpc.publicnode.com",
+    "binaryBytes": 343912,
+    "binarySha256": "e2e6ac7bc2122f7068857dca72d63fa82df648367cc4b088ad0b6b96fea68292",
+    "minimumAllocationBytes": 343912,
+    "programAccountRentLamports": 833120,
+    "programDataRentLamports": 1747951800,
+    "temporaryBufferRentLamports": 1747911160,
+    "minimumRetainedRentSOL": 1.74878492,
+    "normalLoaderReusesBufferRent": true,
+    "minimumExpectedFundingWithScenarioFeesSOL": 1.75071992,
+    "conservativeTemporaryRentFundingSOL": 3.49669608,
+    "twiceSizeAllocationRetainedRentSOL": 3.49585788,
+    "feeScenario": {
+      "publicAuthorityPlaceholder": "BNpFPPuy2h12dryy4dayemjA4YS17ccVaF82jBDuiwct",
+      "writeBytesPerTransaction": 900,
+      "writeTransactions": 383,
+      "bufferCreationFeeLamports": 10000,
+      "deployFeeLamports": 10000,
+      "ordinaryWriteFeeLamports": 5000,
+      "lastWriteFeeLamports": 5000,
+      "priorityFeeLamports": 0,
+      "estimatedNetworkFeesSOL": 0.001935,
+      "retainedRentPlusScenarioFeesSOL": 1.75071992,
+      "conservativeTemporaryFundingPlusScenarioFeesSOL": 3.49863108
+    },
+    "networkTransactionFees": "Current getFeeForMessage values for unsigned estimation-only messages; 900-byte writes, no priority fee or retries. Final deployer/messages and priority fee remain unapproved. CLI chunk batching/allocation can change this estimate.",
+    "warning": "No deployment key exists. The current program ID is an unassigned build ID. Rebuild and re-estimate after selecting a new user-controlled public program ID. Loader-v3 drains buffer rent to the payer before paying for ProgramData, so the normal deployment reuses these funds. The conservative sum assumes unnecessary separate prefunding of both accounts; it is not the normal minimum. Failed buffer recovery and settlement still require verification."
+  }
+}
