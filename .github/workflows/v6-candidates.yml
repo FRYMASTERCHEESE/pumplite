@@ -1,0 +1,97 @@
+name: V6 candidates - build and verification only
+on:
+  pull_request:
+  push:
+    branches: [codex/v6-mainnet-candidates]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: v6-candidates-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  base-v6:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
+        with:
+          version: 10.11.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm test:v6
+      - name: Verify committed V6 ABI and deployment bytecode
+        run: git diff --exit-code -- web/generated/base-v6-abi.json web/generated/base-v6-deploy.json
+      - name: Bundle isolated V6 browser adapters without changing the live site
+        run: node scripts/check-v6-browser-bundles.mjs
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Verify V6 builders in mobile and desktop browsers with all wallets blocked
+        run: node tests/v6-browser.mjs
+      - name: Preserve reviewed production deployment locks
+        run: pnpm check
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: base-v6-verification-candidate
+          if-no-files-found: error
+          path: build/base-v6/
+  solana-v6:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
+        with:
+          version: 10.11.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Install pinned host Rust and Agave compiler
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.94.0 --profile minimal --component rustfmt
+          rustup default 1.94.0
+          mkdir -p "$RUNNER_TEMP/agave-v6"
+          cd "$RUNNER_TEMP/agave-v6"
+          curl --fail --location --retry 3 -o agave.tar.bz2 https://github.com/anza-xyz/agave/releases/download/v3.1.10/solana-release-x86_64-unknown-linux-gnu.tar.bz2
+          echo 'a7205ff29bcf0f7199740225ecae2b85a28ea9668892d5ec21bd9749882984a1  agave.tar.bz2' | sha256sum --check --strict
+          tar -xjf agave.tar.bz2
+          echo "$RUNNER_TEMP/agave-v6/solana-release/bin" >> "$GITHUB_PATH"
+      - run: cargo fmt --package pumplite-v6 --package pumplite-v6-svm-tests --check
+      - run: cargo test --locked --workspace --lib
+      - name: RustSec dependency audit with reviewed warnings kept visible
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo install cargo-audit --version 0.22.2 --locked
+          mkdir -p build
+          cargo audit --json > build/rust-audit.json
+          cargo tree --locked -p pumplite-v6 --edges normal,build > build/v6-normal-dependencies.txt
+          node scripts/check-v6-rust-audit.mjs
+      - name: Compile SBF with private-key generation blocked
+        run: node scripts/build-solana-v6.mjs
+      - run: node scripts/prepare-runtime-fixtures.mjs
+      - name: Execute actual SBF and website instructions in local VM
+        run: cargo test --locked -p pumplite-v6-svm-tests --features sbf-tests --test markets
+        env:
+          PUMPLITE_V6_SBF: ${{ github.workspace }}/target/deploy-v6/pumplite_v6.so
+      - name: Assert no deployment signing files exist
+        shell: bash
+        run: |
+          test ! -e target/deploy-v6/pumplite_v6-keypair.json
+          test ! -e target/deploy/pumplite-keypair.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: solana-v6-unassigned-build-candidate
+          if-no-files-found: error
+          path: target/deploy-v6/pumplite_v6.so

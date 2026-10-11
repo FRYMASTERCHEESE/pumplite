@@ -1,0 +1,27 @@
+{
+  "protocolVersion": 6,
+  "status": "development candidate - not approved for deployment",
+  "mainnetApproved": false,
+  "transactionsEnabled": false,
+  "base": {
+    "chainId": 8453,
+    "factory": null,
+    "mayhemController": null,
+    "contractPath": "contracts/base/v6/LaunchFactoryV6.sol"
+  },
+  "solana": {
+    "programId": null,
+    "unassignedBuildId": "5squ4au25LQGEWrFhQejekDQAr9pjiXwscvFCoQFcAkw",
+    "programPath": "programs/pumplite-v6",
+    "newPublicProgramIdAndRebuildRequired": true
+  },
+  "productionConfiguration": "config.json remains pinned to existing Base V2 and Solana tiny markets",
+  "activationRequirements": [
+    "User approval of exact release, current costs and security findings",
+    "Independent contract/program security and economic review",
+    "Separate confirmed deployment identities and bytecode verification",
+    "Keeper controller and authenticated signing/service operation",
+    "Website routing and discovery for both new V6 and all legacy markets",
+    "Separate authorization and review for any external DEX liquidity or migration"
+  ]
+}

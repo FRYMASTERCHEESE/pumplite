@@ -2012,6 +2012,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "pumplite-v6"
+version = "0.6.0"
+dependencies = [
+ "anchor-lang",
+ "anchor-spl",
+ "solana-sha256-hasher",
+]
+
+[[package]]
+name = "pumplite-v6-svm-tests"
+version = "0.1.0"
+dependencies = [
+ "anchor-lang",
+ "anchor-spl",
+ "litesvm",
+ "pumplite-v6",
+ "solana-address 2.7.0",
+ "solana-instruction",
+ "solana-keypair",
+ "solana-message",
+ "solana-signer",
+ "solana-transaction",
+]
+
+[[package]]
 name = "qstring"
 version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
