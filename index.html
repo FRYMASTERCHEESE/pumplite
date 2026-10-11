@@ -35,6 +35,7 @@
 <link rel="stylesheet" href="./pumplite-app.css">
 <script defer src="./pumplite-app.js"></script>
 <script defer src="./launch-automation.js"></script>
+<script defer src="./base-mayhem-explainer.js"></script>
 </head>
 <body class="redesign">
 <a class="skip-link" id="skip-content" href="#main-content">Skip to main content</a>
@@ -208,8 +209,11 @@
 
             <label id="v2-initial-mayhem-row">
               <input id="v2-initial-mayhem" type="checkbox">
-              Enable V2 Mayhem support for the first 24 hours
+              Start this new V2 coin with Mayhem reserve support for its first 24 hours
             </label>
+            <p id="v2-mayhem-preview" class="fine" role="status" aria-live="polite">Not selected: a new V2 coin starts with Mayhem OFF. Checking this box affects only a new coin after its creation transaction confirms. V2 Mayhem is not an autonomous trading agent.</p>
+            <p class="fine">When V2 Mayhem is ON, 0.75% of each real buy or sell amount is retained as market backing in addition to the 0.25% PumpLite trading fee. It does not create trades, automatically buy coins, or fund the PLITE/WETH Uniswap pool. After 24 hours, the designated on-chain controller can change V2 Mayhem using a separate wallet-approved transaction.</p>
+            <p class="fine">To verify activation, finish creating the coin and open its Base market page: the <strong>Mayhem</strong> status is read from the deployed contract. V3 Mayhem Auto requires a separate V3 deployment; Base currently creates V2 coins.</p>
 
             <div id="base-v3-mode-options" class="v3-launch-mode" hidden>
               <label for="v3-launch-mode">Launch mode</label>
