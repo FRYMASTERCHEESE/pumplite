@@ -62,6 +62,8 @@
        message('Prepared '+raw+' ETH as your requested optional first buy. Review the exact amount in the creation dialog. Base creation and buying require separate wallet approvals.');
      };
      new MutationObserver(fillBase).observe(dialog,{attributes:true,attributeFilter:['open']});
+     const buyInput=$('initial-buy-eth');
+     if(buyInput)new MutationObserver(fillBase).observe(buyInput,{attributes:true,attributeFilter:['disabled']});
      fillBase();
    }
    function fillSolanaDraft(){
