@@ -23,7 +23,7 @@ const localMobileScript =
   await readFile('pumplite-app.js', 'utf8');
 
 const communityAssets = await Promise.all([
-  'bounties.html','bounties.js','live.html','live.js','community.css','liquidity.html','liquidity.js','plite-pool-auto.js','launch-automation.js'
+  'bounties.html','bounties.js','live.html','live.js','community.css','liquidity.html','liquidity.js','plite-pool-auto.js','launch-automation.js','base-mayhem-explainer.js'
 ].map(path=>readFile(path,'utf8')));
 
 const localPlsolHtml =
@@ -447,7 +447,7 @@ async function verifyOnce() {
   assert.ok(liveMobileScript.includes("./bounties.html") &&
     liveMobileScript.includes("./live.html"),
     'The live app must link both community features');
-  const communityPaths=['bounties.html','bounties.js','live.html','live.js','community.css','liquidity.html','liquidity.js','plite-pool-auto.js','launch-automation.js'];
+  const communityPaths=['bounties.html','bounties.js','live.html','live.js','community.css','liquidity.html','liquidity.js','plite-pool-auto.js','launch-automation.js','base-mayhem-explainer.js'];
   const publicCommunity=await Promise.all(communityPaths.map(path=>fetchText(path)));
   for(let i=0;i<communityPaths.length;i++){
     assert.equal(normalizeTerminal(publicCommunity[i]),normalizeTerminal(communityAssets[i]),
@@ -463,6 +463,10 @@ async function verifyOnce() {
   assert.ok(index.includes('src="./launch-automation.js"') &&
     publicCommunity[8].includes('auto-liquidity-handoff'),
     'Production creator opt-in handoff missing');
+  assert.ok(index.includes('src="./base-mayhem-explainer.js"') &&
+    publicCommunity[9].includes('SELECTED for the NEXT new Base V2 coin') &&
+    index.includes('Mayhem reserve support for its first 24 hours'),
+    'Live V2 checkbox on-chain activation explanation missing');
   assert.ok(publicCommunity[7].includes('Read a fresh verified pool snapshot first') &&
     publicCommunity[5].includes('Automatically match real pool reserves'),
     'Verified PLITE/WETH auto-matching is not live');

@@ -31,6 +31,7 @@ try {
     'liquidity.js',
     'plite-pool-auto.js',
     'launch-automation.js',
+    'base-mayhem-explainer.js',
     'claim.html',
     'plsol.html',
     'plsol.js',
@@ -100,6 +101,7 @@ try {
     'liquidity.js',
     'plite-pool-auto.js',
     'launch-automation.js',
+    'base-mayhem-explainer.js',
     'status.js',
     'manifest.webmanifest',
     'robots.txt',
@@ -1233,7 +1235,7 @@ try {
       200,
       'PLITE public metadata record must be published'
     );
-    assert.ok(!requests.some(url => /\/(solana|base)-/.test(url)), 'No wallet SDK is fetched initially');
+    assert.ok(!requests.some(url => /\/assets\/chunks\/(solana|base)-/.test(url)), 'No wallet adapter SDK chunks are fetched initially');
     assert.equal(await page.locator('body').evaluate(el => el.scrollWidth <= innerWidth), true);
     // Resolve only the production adapter graphs without calling
     // connect or signing. Retired Pump compatibility chunks must not ship.
