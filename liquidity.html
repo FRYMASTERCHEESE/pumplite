@@ -16,6 +16,17 @@
 <section class="card" aria-labelledby="plite-pool-heading">
 <h2 id="plite-pool-heading">2 · Fund the PLITE/WETH pool on Base</h2>
 <p class="muted">The original PLITE token has an existing <strong>Uniswap V2</strong> pool, separate from the bonding curve. To provide real liquidity, a contributor must hold <strong>both</strong> PLITE and WETH on Base, and match the pool’s <em>current</em> reserve ratio in Uniswap. Do not send tokens directly to the pair contract.</p>
+<section id="pool-auto-match" class="draft" aria-labelledby="pool-auto-title">
+<h3 id="pool-auto-title">Automatically match real pool reserves</h3>
+<p class="muted">PumpLite can read the actual Base Uniswap V2 PLITE/WETH reserves, verify both tokens and the official pool factory, then calculate the matching token amount. Reading reserves and calculating amounts is free. No wallet access is needed.</p>
+<p id="pool-auto-status" role="status" aria-live="polite" class="muted">Waiting to check the on-chain pool. No funds have been moved.</p>
+<div class="row"><button id="pool-auto-refresh" type="button" class="secondary">Refresh live reserves</button>
+<label for="pool-auto-source">Start with
+<select id="pool-auto-source"><option value="plite">PLITE</option><option value="weth">WETH</option></select></label>
+<button id="pool-auto-fill" type="button" disabled>Auto-match other amount</button></div>
+<p id="pool-auto-result" class="muted" role="status">Enter how much PLITE or WETH you wish to contribute; then auto-match the other amount from verified on-chain reserves.</p>
+<p class="muted"><small>Thin-pool ratios can be manipulated and can change before your transaction. This is an indicative ratio, not a trade quote or guaranteed deposit. The official Uniswap wallet review must confirm the actual pool, current token amounts, network, price impact, allowances, LP ownership and fees.</small></p>
+</section>
 <div class="cols">
 <label for="plan-plite">PLITE intended contribution<input type="text" id="plan-plite" inputmode="decimal" autocomplete="off" maxlength="32" placeholder="100000"></label>
 <label for="plan-weth">WETH intended contribution<input type="text" id="plan-weth" inputmode="decimal" autocomplete="off" maxlength="32" placeholder="0.001"></label>
@@ -40,4 +51,4 @@
 <section class="card"><h2>What cannot happen automatically yet?</h2><p class="muted">PumpLite currently has no audited launch-fee splitter, automated PLITE/WETH liquidity allocator, LP-token lock, cross-chain funding mechanism or permission to take money from creators. A production system that splits launch proceeds to a second asset/pool would need explicit creator consent, fresh contract and security reviews, precise allocations/receipt accounting, refunds/failures handling, user-controlled wallet approvals and a new deployment. No part of this page assumes that infrastructure already exists.</p>
 <p class="muted">Real on-chain deposits and verified trading activity—not extra accounts, displayed market cap or metadata edits—are the relevant evidence of liquidity. An optional first buy is not a promise of a market price or profitable exit.</p>
 </section>
-</main><script defer src="./liquidity.js"></script></body></html>
+</main><script defer src="./liquidity.js"></script><script defer src="./plite-pool-auto.js"></script></body></html>
